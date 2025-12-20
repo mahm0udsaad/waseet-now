@@ -1,4 +1,3 @@
-import BottomTabBar from "@/components/BottomTabBar";
 import { useTranslation } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,10 +16,11 @@ import {
   Search,
   Star,
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, ActivityIndicator } from "react-native";
 import Animated, { FadeInDown, SlideInRight } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetchAdsByType } from "@/utils/supabase/ads";
 
 export default function TaqibListScreen() {
   const router = useRouter();
@@ -28,80 +28,31 @@ export default function TaqibListScreen() {
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Service Provider Ads (Offices/Individuals offering services)
-  const serviceProviderAds = [
-    {
-      id: "ad_001",
-      title: isRTL ? "خدمات الجوازات" : "Passport Services",
-      providerName: isRTL ? "مكتب الريادة للخدمات" : "Al-Riyada Services Office",
-      icon: Plane,
-      rating: 4.8,
-      reviewCount: 156,
-      servicesCount: 8,
-      isVerified: true,
-    },
-    {
-      id: "ad_002",
-      title: isRTL ? "خدمات مكتب العمل" : "Labor Office Services",
-      providerName: isRTL ? "مكتب الإنجاز للتعقيب" : "Al-Injaz Follow-up Office",
-      icon: Briefcase,
-      rating: 4.6,
-      reviewCount: 98,
-      servicesCount: 6,
-      isVerified: true,
-    },
-    {
-      id: "ad_003",
-      title: isRTL ? "خدمات وزارة التجارة" : "Ministry of Commerce Services",
-      providerName: isRTL ? "مكتب التميز للخدمات" : "Excellence Services Office",
-      icon: Building2,
-      rating: 4.9,
-      reviewCount: 234,
-      servicesCount: 6,
-      isVerified: true,
-    },
-    {
-      id: "ad_004",
-      title: isRTL ? "خدمات المرور" : "Traffic Police Services",
-      providerName: isRTL ? "مكتب السرعة للتعقيب" : "Speed Follow-up Office",
-      icon: Briefcase,
-      rating: 4.5,
-      reviewCount: 76,
-      servicesCount: 4,
-      isVerified: false,
-    },
-    {
-      id: "ad_005",
-      title: isRTL ? "تجديد الإقامات" : "Residency Renewal",
-      providerName: isRTL ? "مكتب الأمانة" : "Al-Amanah Office",
-      icon: Plane,
-      rating: 4.7,
-      reviewCount: 112,
-      servicesCount: 3,
-      isVerified: true,
-    },
-    {
-      id: "ad_006",
-      title: isRTL ? "تأشيرات خروج وعودة" : "Exit Re-entry Visas",
-      providerName: isRTL ? "مكتب السفر السريع" : "Quick Travel Office",
-      icon: Plane,
-      rating: 4.4,
-      reviewCount: 45,
-      servicesCount: 2,
-      isVerified: false,
-    },
-    {
-      id: "ad_007",
-      title: isRTL ? "خدمات البلدية" : "Municipality Services",
-      providerName: isRTL ? "مكتب العمران" : "Al-Omran Office",
-      icon: Building2,
-      rating: 4.8,
-      reviewCount: 189,
-      servicesCount: 5,
-      isVerified: true,
-    },
-  ];
+  useEffect(() => {
+    loadAds();
+  }, []);
+
+  const loadAds = async () => {
+    setLoading(true);
+    try {
+      const result = await fetchAdsByType("taqib");
+      setAds(result);
+      setError(null);
+    } catch (err) {
+      setError(err?.message || "Failed to load ads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAds = ads.filter((ad) => {
+    const target = `${ad.title || ""} ${ad.description || ""}`.toLowerCase();
+    return target.includes(searchQuery.toLowerCase());
+  });
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
@@ -164,9 +115,24 @@ export default function TaqibListScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Service Provider Ads */}
-          {serviceProviderAds.map((ad, index) => {
-            const AdIcon = ad.icon;
+          {loading && (
+            <View style={{ paddingVertical: 40 }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+
+          {error && (
+            <Text style={{ color: colors.error, textAlign: isRTL ? "right" : "left", marginBottom: 12 }}>{error}</Text>
+          )}
+
+          {!loading && filteredAds.length === 0 && !error && (
+            <Text style={{ color: colors.textMuted, textAlign: isRTL ? "right" : "left" }}>
+              {isRTL ? "لا توجد إعلانات" : "No ads yet"}
+            </Text>
+          )}
+
+          {filteredAds.map((ad, index) => {
+            const AdIcon = Building2;
             return (
               <Animated.View key={ad.id} entering={FadeInDown.delay(250 + index * 80)}>
                 <Pressable
@@ -193,48 +159,48 @@ export default function TaqibListScreen() {
 
                     {/* Text Content */}
                     <View style={styles.adTextContainer}>
-                      <Text 
+                      <Text
                         style={[
-                          styles.adTitle, 
-                          { 
-                            color: colors.text, 
+                          styles.adTitle,
+                          {
+                            color: colors.text,
                             textAlign: isRTL ? "right" : "left",
-                          }
+                          },
                         ]}
                       >
                         {ad.title}
                       </Text>
-                      <Text 
+                      <Text
                         style={[
-                          styles.adProviderName, 
-                          { 
-                            color: colors.textSecondary, 
+                          styles.adProviderName,
+                          {
+                            color: colors.textSecondary,
                             textAlign: isRTL ? "right" : "left",
-                          }
+                          },
                         ]}
                       >
-                        {ad.providerName}
+                        {ad.metadata?.providerName || ad.description || ""}
                       </Text>
-                      
+
                       {/* Rating & Services - single line */}
                       <View style={[styles.adMetaRow, { justifyContent: isRTL ? "flex-end" : "flex-start" }]}>
                         {/* Rating */}
                         <View style={[styles.adRating, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                           <Star size={12} color={colors.warning} fill={colors.warning} />
                           <Text style={[styles.adRatingText, { color: colors.text }]}>
-                            {ad.rating} ({ad.reviewCount})
+                            {ad.metadata?.rating ?? "4.5"} ({ad.metadata?.reviewCount ?? 0})
                           </Text>
                         </View>
-                        
+
                         <View style={[styles.adDot, { backgroundColor: colors.textMuted }]} />
-                        
+
                         {/* Services count */}
                         <Text style={[styles.adServicesCount, { color: colors.textSecondary }]}>
-                          {ad.servicesCount} {isRTL ? "خدمة" : "services"}
+                          {ad.metadata?.servicesCount ?? 1} {isRTL ? "خدمة" : "services"}
                         </Text>
-                        
+
                         {/* Verified badge */}
-                        {ad.isVerified && (
+                        {ad.metadata?.isVerified && (
                           <>
                             <View style={[styles.adDot, { backgroundColor: colors.textMuted }]} />
                             <View style={[styles.adVerified, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
@@ -258,12 +224,6 @@ export default function TaqibListScreen() {
             );
           })}
         </ScrollView>
-
-        {/* Bottom Tab Bar */}
-        <BottomTabBar 
-          activeTab="home"
-          onNewRequest={() => router.push("/create-taqib")}
-        />
       </View>
     </LinearGradient>
   );

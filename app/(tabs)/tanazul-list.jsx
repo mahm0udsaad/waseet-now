@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, TextInput, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, Pressable, ScrollView, TextInput, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +18,7 @@ import {
 } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
+import { fetchAdsByType } from "@/utils/supabase/ads";
 
 export default function TanazulListScreen() {
   const router = useRouter();
@@ -25,48 +26,31 @@ export default function TanazulListScreen() {
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const tanazulAds = [
-    {
-      id: "tnz_001",
-      title: isRTL ? "عاملة فلبينية للتنازل" : "Filipino Worker Transfer",
-      profession: isRTL ? "طباخة" : "Cook",
-      nationality: isRTL ? "فلبينية" : "Filipino",
-      flag: "🇵🇭",
-      age: 28,
-      location: isRTL ? "الرياض" : "Riyadh",
-      price: 8500,
-      postedTime: isRTL ? "منذ 3 ساعات" : "3 hours ago",
-      verified: true,
-      rating: 4.8,
-    },
-    {
-      id: "tnz_002",
-      title: isRTL ? "عاملة منزلية للتنازل" : "Domestic Worker Transfer",
-      profession: isRTL ? "رعاية أطفال" : "Childcare",
-      nationality: isRTL ? "إندونيسية" : "Indonesian",
-      flag: "🇮🇩",
-      age: 32,
-      location: isRTL ? "جدة" : "Jeddah",
-      price: 12000,
-      postedTime: isRTL ? "منذ يوم" : "1 day ago",
-      verified: true,
-      rating: 4.5,
-    },
-    {
-      id: "tnz_003",
-      title: isRTL ? "سائق خاص للتنازل" : "Private Driver Transfer",
-      profession: isRTL ? "سائق" : "Driver",
-      nationality: isRTL ? "هندي" : "Indian",
-      flag: "🇮🇳",
-      age: 35,
-      location: isRTL ? "الدمام" : "Dammam",
-      price: 5000,
-      postedTime: isRTL ? "منذ يومين" : "2 days ago",
-      verified: false,
-      rating: 4.0,
-    },
-  ];
+  useEffect(() => {
+    loadAds();
+  }, []);
+
+  const loadAds = async () => {
+    setLoading(true);
+    try {
+      const result = await fetchAdsByType("tanazul");
+      setAds(result);
+      setError(null);
+    } catch (err) {
+      setError(err?.message || "Failed to load ads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAds = ads.filter((ad) => {
+    const target = `${ad.title || ""} ${ad.metadata?.profession || ""} ${ad.metadata?.nationality || ""}`.toLowerCase();
+    return target.includes(searchQuery.toLowerCase());
+  });
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
@@ -129,10 +113,28 @@ export default function TanazulListScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {tanazulAds.map((ad, index) => (
+          {loading && (
+            <View style={{ paddingVertical: 40 }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+
+          {error && (
+            <Text style={{ textAlign: isRTL ? "right" : "left", color: colors.error, marginBottom: 12 }}>
+              {error}
+            </Text>
+          )}
+
+          {!loading && filteredAds.length === 0 && !error && (
+            <Text style={{ color: colors.textMuted, textAlign: isRTL ? "right" : "left" }}>
+              {isRTL ? "لا توجد إعلانات حالياً" : "No ads yet"}
+            </Text>
+          )}
+
+          {filteredAds.map((ad, index) => (
             <Animated.View key={ad.id} entering={FadeInDown.delay(300 + index * 100)}>
               <Pressable
-                onPress={() => router.push("/tanazul-details")}
+                onPress={() => router.push({ pathname: "/tanazul-details", params: { id: ad.id } })}
                 style={({ pressed }) => [
                   styles.adCard,
                   {
@@ -144,7 +146,7 @@ export default function TanazulListScreen() {
               >
                 {/* Header: Verified & Time */}
                 <View style={[styles.adHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-                  {ad.verified && (
+                  {ad.metadata?.verified && (
                     <View style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight }]}>
                       <CheckCircle size={12} color={colors.primary} style={{ marginHorizontal: 4 }} />
                       <Text style={[styles.verifiedText, { color: colors.primary }]}>
@@ -154,14 +156,16 @@ export default function TanazulListScreen() {
                   )}
                   <View style={[styles.timeRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                     <Clock size={12} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
-                    <Text style={[styles.timeText, { color: colors.textMuted }]}>{ad.postedTime}</Text>
+                    <Text style={[styles.timeText, { color: colors.textMuted }]}>
+                      {ad.created_at ? new Date(ad.created_at).toLocaleString() : ""}
+                    </Text>
                   </View>
                 </View>
 
                 {/* Main Content */}
                 <View style={[styles.adMain, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                   <View style={[styles.flagCircle, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-                    <Text style={styles.flagEmoji}>{ad.flag}</Text>
+                    <Text style={styles.flagEmoji}>{ad.metadata?.flag || "🏳️"}</Text>
                   </View>
 
                   <View style={styles.adTextContainer}>
@@ -171,7 +175,7 @@ export default function TanazulListScreen() {
                     <View style={[styles.professionRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                       <Briefcase size={12} color={colors.textSecondary} style={{ marginHorizontal: 4 }} />
                       <Text style={[styles.professionText, { color: colors.textSecondary }]}>
-                        {ad.profession} • {ad.nationality}
+                        {ad.metadata?.profession || ""} • {ad.metadata?.nationality || ""}
                       </Text>
                     </View>
                   </View>
@@ -184,7 +188,7 @@ export default function TanazulListScreen() {
                       {isRTL ? "العمر" : "Age"}
                     </Text>
                     <Text style={[styles.footerValue, { color: colors.text }]}>
-                      {ad.age} {isRTL ? "سنة" : "yrs"}
+                      {ad.metadata?.age ? `${ad.metadata.age} ${isRTL ? "سنة" : "yrs"}` : isRTL ? "غير محدد" : "N/A"}
                     </Text>
                   </View>
                   <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
@@ -194,7 +198,7 @@ export default function TanazulListScreen() {
                     </Text>
                     <View style={[styles.locationRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
                       <MapPin size={10} color={colors.primary} style={{ marginHorizontal: 2 }} />
-                      <Text style={[styles.footerValue, { color: colors.text }]}>{ad.location}</Text>
+                      <Text style={[styles.footerValue, { color: colors.text }]}>{ad.location || ad.metadata?.location || ""}</Text>
                     </View>
                   </View>
                   <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
@@ -203,7 +207,7 @@ export default function TanazulListScreen() {
                       {isRTL ? "السعر" : "Price"}
                     </Text>
                     <Text style={[styles.priceValue, { color: colors.primary }]}>
-                      {ad.price} {isRTL ? "ر.س" : "SAR"}
+                      {ad.price ?? ad.metadata?.transferAmount ?? "-"} {isRTL ? "ر.س" : "SAR"}
                     </Text>
                   </View>
                 </View>

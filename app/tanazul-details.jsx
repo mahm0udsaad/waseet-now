@@ -1,40 +1,36 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from "react-native";
+import { useTranslation } from "@/utils/i18n/store";
+import { useTheme } from "@/utils/theme/store";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeInDown,
-  SlideInRight,
-  BounceIn,
-  ZoomIn,
-} from "react-native-reanimated";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Phone,
-  MessageCircle,
-  Shield,
-  Calendar,
-  Clock,
-  User,
-  Heart,
-  Share2,
-  AlertTriangle,
-  ChefHat,
   Baby,
-  Sparkles,
   CheckCircle,
-  Star,
-  MapPin,
+  ChefHat,
   FileText,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Share2,
+  Sparkles,
+  Star,
+  User
 } from "lucide-react-native";
-import { useTheme } from "@/utils/theme/store";
-import { useTranslation } from "@/utils/i18n/store";
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  BounceIn,
+  FadeInDown,
+  SlideInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  ZoomIn,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TanazulDetailsScreen() {
   const router = useRouter();

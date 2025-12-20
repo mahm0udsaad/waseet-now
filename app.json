@@ -2,23 +2,40 @@
   "expo": {
     "name": "Kafel",
     "slug": "kafel",
-    "version": "1.0.0",
+    "version": "1.0.1", 
+    "platforms": ["ios", "android"],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "kafel",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mahm09d.kafel",
+      "buildNumber": "2",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
+
     "android": {
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.mahm09d.kafel"
     },
+
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "lang": "ar",
+      "dir": "rtl"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -34,10 +51,12 @@
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
+
     "extra": {
       "router": {},
       "eas": {

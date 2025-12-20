@@ -36,6 +36,7 @@ import {
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+import { createAd } from "@/utils/supabase/ads";
 
 export default function CreateDhamenScreen() {
   const router = useRouter();
@@ -115,13 +116,29 @@ export default function CreateDhamenScreen() {
       buttonScale.value = withSpring(1);
     });
 
-    // Simulate request
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createAd({
+        type: "dhamen",
+        title: formData.serviceTypeOrDetails || "Dhamen Request",
+        description: formData.serviceTypeOrDetails,
+        price: calculations.total,
+        metadata: {
+          ...formData,
+          total: calculations.total,
+          commission: calculations.commission,
+          tax: calculations.tax,
+        },
+      });
+
       Alert.alert(t.dhamen.requestSent, t.dhamen.requestSentMessage, [
         { text: t.dhamen.ok, onPress: () => router.back() },
       ]);
-    }, 1500);
+    } catch (error) {
+      const message = error?.message || (isRTL ? "حدث خطأ أثناء الحفظ" : "Failed to save request");
+      Alert.alert(t.common.error, message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({

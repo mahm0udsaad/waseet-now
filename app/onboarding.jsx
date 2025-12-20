@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { markOnboardingCompleted } from "@/utils/onboarding/store";
 import {
     ArrowLeft,
     ArrowRight,
@@ -175,7 +176,8 @@ export default function OnboardingScreen() {
     }
   };
 
-  const getStarted = () => {
+  const getStarted = async () => {
+    await markOnboardingCompleted();
     router.replace("/register");
   };
 

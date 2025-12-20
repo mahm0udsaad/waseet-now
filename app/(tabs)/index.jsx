@@ -5,19 +5,40 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Building, ChevronLeft, ChevronRight, FileText, Moon, Shield, Sun } from "lucide-react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hasCompletedOnboarding } from "@/utils/onboarding/store";
 
 const { width } = Dimensions.get("window");
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
   const insets = useSafeAreaInsets();
   const { colors, isDark, toggleTheme } = useTheme();
   const { language, toggleLanguage, isRTL } = useLanguage();
   const { t } = useTranslation();
+
+  // Check onboarding status on mount
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const completed = await hasCompletedOnboarding();
+      if (!completed) {
+        router.replace("/onboarding");
+      } else {
+        setIsCheckingOnboarding(false);
+      }
+    };
+    
+    checkOnboarding();
+  }, [router]);
+
+  // Don't render content until onboarding check is complete
+  if (isCheckingOnboarding) {
+    return null;
+  }
 
   const categories = [
     {

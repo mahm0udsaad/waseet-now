@@ -31,15 +31,19 @@ import {
 } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
-import { useAuth } from "@/utils/auth/useAuth";
+import { supabase } from "@/utils/supabase/client";
+import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+
+// Complete the OAuth session in the browser
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useTranslation();
-  const { signUp } = useAuth();
 
   const [method, setMethod] = useState(null); // 'phone' | 'google'
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -71,13 +75,90 @@ export default function RegisterScreen() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    // Use the existing auth system
-    signUp();
-    // For dummy flow, continue directly after Google sign-in
-    setTimeout(() => {
+    try {
+      // Get the redirect URL for the app - use the app scheme
+      const redirectUrl = makeRedirectUri({
+        scheme: 'kafel',
+        path: 'auth/callback',
+        useProxy: true,
+        preferLocalhost: false,
+      });
+
+      console.log('Redirect URL:', redirectUrl);
+
+      // Start OAuth flow with Supabase - use skipBrowserRedirect to handle manually
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true, // We'll handle the browser redirect manually
+        },
+      });
+
+      if (error) throw error;
+
+      // Open the OAuth URL in browser
+      if (data?.url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url,
+          redirectUrl,
+          {
+            showInRecents: true,
+          }
+        );
+        
+        if (result.type === 'success') {
+          // Supabase OAuth uses hash fragments (#) not query params (?)
+          const url = new URL(result.url);
+          const hashParams = new URLSearchParams(url.hash.substring(1)); // Remove # and parse
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          
+          // Also check query params as fallback
+          const queryAccessToken = url.searchParams.get('access_token');
+          const queryRefreshToken = url.searchParams.get('refresh_token');
+          
+          const finalAccessToken = accessToken || queryAccessToken;
+          const finalRefreshToken = refreshToken || queryRefreshToken;
+          
+          if (finalAccessToken && finalRefreshToken) {
+            // Set the session
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: finalAccessToken,
+              refresh_token: finalRefreshToken,
+            });
+
+            if (sessionError) throw sessionError;
+            
+            // Success - redirect to tabs
+            router.replace("/(tabs)");
+          } else {
+            // If tokens not in URL, check if session was set automatically
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData?.session) {
+              router.replace("/(tabs)");
+            } else {
+              throw new Error('Failed to get authentication tokens');
+            }
+          }
+        } else if (result.type === 'cancel') {
+          Alert.alert(
+            isRTL ? "تم الإلغاء" : "Cancelled",
+            isRTL ? "تم إلغاء تسجيل الدخول مع جوجل" : "Google sign in was cancelled"
+          );
+        } else {
+          throw new Error('OAuth flow failed');
+        }
+      }
+    } catch (error) {
+      console.error('Google sign in error:', error);
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        error.message || (isRTL ? "فشل تسجيل الدخول مع جوجل" : "Google sign in failed")
+      );
+    } finally {
       setLoading(false);
-      handleContinue();
-    }, 500);
+    }
   };
 
   const handleSendCode = async () => {
@@ -94,22 +175,49 @@ export default function RegisterScreen() {
       verifyScale.value = withSpring(1);
     });
 
-    // Simulate sending code
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: `+966${phoneNumber}`,
+      });
+      if (error) throw error;
       setIsVerifying(false);
       setCodeSent(true);
-    }, 1500);
-  };
-
-  const handleVerifyOtp = () => {
-    if (otpCode === "0000") {
-      setIsVerified(true);
-      setCodeSent(false);
-    } else {
+    } catch (error) {
       Alert.alert(
         isRTL ? "خطأ" : "Error",
-        isRTL ? "رمز التحقق غير صحيح. استخدم 0000 للاختبار" : "Invalid verification code. Use 0000 for testing"
+        error.message || (isRTL ? "فشل إرسال رمز التحقق" : "Failed to send verification code")
       );
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      Alert.alert(
+        isRTL ? "تنبيه" : "Alert",
+        isRTL ? "يرجى إدخال رمز التحقق المكون من 6 أرقام" : "Please enter 6-digit verification code"
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: `+966${phoneNumber}`,
+        token: otpCode,
+        type: "sms",
+      });
+      if (error) throw error;
+      setIsVerified(true);
+      setCodeSent(false);
+      router.replace("/(tabs)");
+    } catch (error) {
+      Alert.alert(
+        isRTL ? "خطأ" : "Error",
+        error.message || (isRTL ? "رمز التحقق غير صحيح" : "Invalid verification code")
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,25 +230,12 @@ export default function RegisterScreen() {
       return;
     }
 
-    setLoading(true);
-    submitScale.value = withSpring(0.95, {}, () => {
-      submitScale.value = withSpring(1);
-    });
-
-    // Simulate account creation
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert(
-        isRTL ? "تم بنجاح!" : "Success!",
-        isRTL ? "تم إنشاء حسابك بنجاح" : "Your account has been created successfully",
-        [
-          {
-            text: isRTL ? "متابعة" : "Continue",
-            onPress: () => router.replace("/"),
-          },
-        ]
-      );
-    }, 1500);
+    // Phone registration is handled in handleVerifyOtp
+    // This is mainly for Google OAuth flow
+    if (method === "google") {
+      // OAuth redirects automatically, so this shouldn't be reached
+      router.replace("/(tabs)");
+    }
   };
 
   const phoneAnimatedStyle = useAnimatedStyle(() => ({

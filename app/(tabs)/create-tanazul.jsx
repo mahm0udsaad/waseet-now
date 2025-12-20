@@ -43,6 +43,7 @@ import {
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+import { createAd } from "@/utils/supabase/ads";
 
 export default function CreateTanazulScreen() {
   const router = useRouter();
@@ -139,14 +140,30 @@ export default function CreateTanazulScreen() {
       buttonScale.value = withSpring(1);
     });
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createAd({
+        type: "tanazul",
+        title: formData.nationality ? `${formData.nationality} - ${formData.profession}` : "Tanazul",
+        description: formData.description,
+        price: transferAmount || null,
+        metadata: {
+          ...formData,
+          commission,
+          totalListingPrice,
+        },
+      });
+
       Alert.alert(
         isRTL ? "تم النشر!" : "Published!",
         isRTL ? "تم نشر إعلان التنازل بنجاح" : "Transfer ad published successfully",
         [{ text: isRTL ? "موافق" : "OK", onPress: () => router.back() }]
       );
-    }, 1500);
+    } catch (error) {
+      const message = error?.message || (isRTL ? "تعذر حفظ الإعلان" : "Could not save ad");
+      Alert.alert(isRTL ? "خطأ" : "Error", message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({

@@ -32,6 +32,7 @@ import {
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+import { createAd } from "@/utils/supabase/ads";
 
 export default function CreateTaqibScreen() {
   const router = useRouter();
@@ -71,14 +72,28 @@ export default function CreateTaqibScreen() {
       buttonScale.value = withSpring(1);
     });
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await createAd({
+        type: "taqib",
+        title: formData.requestTitle || "Follow-up Request",
+        description: formData.description,
+        price: formData.expectedAmount || null,
+        metadata: {
+          ...formData,
+        },
+      });
+
       Alert.alert(
         isRTL ? "تم الإرسال!" : "Sent!",
         isRTL ? "تم إرسال طلب التعقيب بنجاح" : "Follow-up request sent successfully",
         [{ text: isRTL ? "موافق" : "OK", onPress: () => router.back() }]
       );
-    }, 1500);
+    } catch (error) {
+      const message = error?.message || (isRTL ? "تعذر حفظ الطلب" : "Failed to save request");
+      Alert.alert(isRTL ? "خطأ" : "Error", message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({

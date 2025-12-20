@@ -1,37 +1,32 @@
-import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "@/utils/i18n/store";
+import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeInDown,
-  SlideInRight,
-  BounceIn,
-  ZoomIn,
-} from "react-native-reanimated";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
   ArrowRight,
-  Phone,
-  MessageCircle,
-  Clock,
-  Heart,
-  Share2,
-  FileText,
   Building,
-  Briefcase,
-  CreditCard,
   CheckCircle,
-  AlertCircle,
-  Calendar,
+  Clock,
   DollarSign,
+  FileText,
+  Heart,
+  MessageCircle,
+  Share2
 } from "lucide-react-native";
-import { useTheme } from "@/utils/theme/store";
-import { useTranslation } from "@/utils/i18n/store";
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  BounceIn,
+  FadeInDown,
+  SlideInRight,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  ZoomIn,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TaqibDetailsScreen() {
   const router = useRouter();
