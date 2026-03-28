@@ -1,0 +1,17 @@
+# Smoke Test Suite
+# Quick validation: login + create ad + browse list
+# Run: maestro test .maestro/suites/smoke.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+
+---
+
+- runFlow: ../flows/01-login.yaml
+- runFlow: ../flows/02-create-tanazul-ad.yaml
+- runFlow: ../flows/03-browse-tanazul-list.yaml

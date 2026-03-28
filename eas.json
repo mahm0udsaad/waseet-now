@@ -5,13 +5,16 @@
   },
   "build": {
     "development": {
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "channel": "preview",
       "distribution": "internal"
     },
     "production": {
+      "channel": "production",
       "autoIncrement": true
     }
   },
@@ -20,6 +23,10 @@
       "ios": {
         "ascAppId": "6756179253",
         "appleTeamId": "U99WN82SXG"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./play-store-service-account.json",
+        "track": "production"
       }
     }
   }

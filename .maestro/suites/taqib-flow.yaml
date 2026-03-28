@@ -1,0 +1,15 @@
+# Taqib Flow Suite
+# Run: maestro test .maestro/suites/taqib-flow.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+
+---
+
+- runFlow: ../flows/18-browse-taqib-list.yaml
+- runFlow: ../flows/19-create-taqib-ad.yaml

@@ -1,4 +1,4 @@
-import { supabase, ensureSupabaseSession } from "./client";
+import { ensureSupabaseSession, supabase } from "./client";
 
 const ADS_BUCKET = "ads";
 
@@ -39,6 +39,7 @@ export async function createAd({ type, title, description, price, location, meta
   const userId = session.user.id;
 
   const uploaded = await uploadAdImages(userId, images);
+  const normalizedPrice = type === "taqib" ? null : price ? Number(price) : null;
 
   const { data, error } = await supabase
     .from("ads")
@@ -47,7 +48,7 @@ export async function createAd({ type, title, description, price, location, meta
       type,
       title,
       description,
-      price: price ? Number(price) : null,
+      price: normalizedPrice,
       location,
       metadata,
     })
@@ -74,6 +75,7 @@ export async function fetchAdsByType(type) {
     .from("ads")
     .select("*, ad_images(storage_path, sort_order)")
     .eq("type", type)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -85,5 +87,23 @@ export async function fetchAdsByType(type) {
       publicUrl: buildPublicUrl(img.storage_path),
     })),
   }));
+}
+
+export async function fetchAdById(adId) {
+  const { data, error } = await supabase
+    .from("ads")
+    .select("*, ad_images(storage_path, sort_order)")
+    .eq("id", adId)
+    .single();
+
+  if (error) throw error;
+
+  return {
+    ...data,
+    images: (data.ad_images || []).map((img) => ({
+      ...img,
+      publicUrl: buildPublicUrl(img.storage_path),
+    })),
+  };
 }
 

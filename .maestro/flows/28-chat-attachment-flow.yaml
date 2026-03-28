@@ -1,0 +1,91 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 28: Chat image attachment flow
+# Tests: sending an image attachment in a chat conversation
+# Verifies: attachment picker opens, image can be selected, image message appears in chat
+# Prerequisite: an active chat conversation exists between seller and buyer
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to chats
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Open first chat conversation
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Tap the attachment button (camera/image icon in chat input area)
+- tapOn:
+    id: "chat-attachment-btn"
+- waitForAnimationToEnd
+
+# Verify attachment options appeared (bottom sheet with camera, gallery options)
+- assertVisible:
+    id: "attachment-gallery-btn"
+
+# Select gallery option to pick an image
+- tapOn:
+    id: "attachment-gallery-btn"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# The system image picker should open
+# In Maestro, we can tap on the first available image in the picker
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# If there's a confirm/done button in the image picker, tap it
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "تم"
+    commands:
+      - tapOn: "تم"
+      - waitForAnimationToEnd
+
+# Wait for image upload to complete
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# Verify the image message appeared in the chat
+- extendedWaitUntil:
+    visible:
+      id: "chat-image-message"
+    timeout: 15000
+
+# === Step 2: Verify buyer can see the image ===
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to chats
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Open first chat conversation
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify the image message is visible from buyer side
+- extendedWaitUntil:
+    visible:
+      id: "chat-image-message"
+    timeout: 10000

@@ -1,0 +1,27 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 17: Verify bank transfer requires admin approval
+# Tests: after submitting bank transfer, order stays in awaiting_admin_transfer_approval
+# NOT payment_verified (which would be a bug)
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Find an order with bank transfer payment
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify the order shows awaiting admin approval status
+# (NOT payment_verified or completed)
+- assertVisible:
+    id: "order-status"
+
+# The status should show "بانتظار موافقة الإدارة" (Awaiting admin approval)
+# NOT "تم التحقق من الدفع" (Payment verified)

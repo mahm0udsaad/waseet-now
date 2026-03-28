@@ -1,0 +1,47 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 20: Seller creates a SECOND receipt in an existing chat (after first payment done)
+# Requires: First receipt+payment flow completed, seller in chat
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to chats tab
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+
+# Open the first chat (same conversation as before)
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify first payment is already complete (payment receipt visible)
+- assertVisible: "✅"
+
+# Verify chat screen loaded
+- assertVisible:
+    id: "chat-text-input"
+
+# Tap receipt button to create a SECOND receipt
+- tapOn:
+    id: "chat-receipt-btn"
+- waitForAnimationToEnd
+
+# Fill receipt details with a different amount
+- tapOn:
+    id: "receipt-desc-input"
+- inputText: "رسوم خدمة إضافية - تجديد اقامة"
+
+- tapOn:
+    id: "receipt-amount-input"
+- inputText: ${TEST_AMOUNT_2}
+
+# Create the receipt
+- tapOn:
+    id: "receipt-create-btn"
+- waitForAnimationToEnd
+
+# Verify the second receipt appears in chat with the new amount
+- assertVisible: "${TEST_AMOUNT_2}"

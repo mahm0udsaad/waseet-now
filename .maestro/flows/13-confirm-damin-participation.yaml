@@ -1,0 +1,27 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 13: Confirm Damin order participation (both parties)
+# Tests: payer and beneficiary confirm participation
+
+# Login as buyer (beneficiary) and confirm participation
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the latest damin order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Confirm participation
+- tapOn:
+    id: "damin-confirm-btn"
+- waitForAnimationToEnd
+
+# Verify confirmation recorded
+- assertVisible: "تم التأكيد"

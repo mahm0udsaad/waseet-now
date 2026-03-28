@@ -1,0 +1,46 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 06: Send messages in chat (buyer)
+# Tests typing and sending a text message
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to tanazul list
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Tap on the test ad
+- tapOn: "${TEST_AMOUNT}"
+- waitForAnimationToEnd
+
+# Start chat
+- tapOn:
+    id: "tanazul-chat-btn"
+- waitForAnimationToEnd
+
+# Type a message
+- tapOn:
+    id: "chat-text-input"
+- inputText: "مرحبا، أريد الاستفسار عن الإعلان"
+
+# Send the message
+- tapOn:
+    id: "chat-send-btn"
+
+# Wait for message to appear
+- waitForAnimationToEnd
+
+# Verify message was sent
+- assertVisible: "مرحبا، أريد الاستفسار عن الإعلان"
+
+# Send a second message
+- tapOn:
+    id: "chat-text-input"
+- inputText: "هل لا يزال متاح؟"
+- tapOn:
+    id: "chat-send-btn"
+- waitForAnimationToEnd
+- assertVisible: "هل لا يزال متاح؟"

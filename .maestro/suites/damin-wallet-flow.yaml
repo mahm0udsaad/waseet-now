@@ -1,0 +1,28 @@
+# Damin Order + Wallet Flow Suite
+# Tests: damin order lifecycle, wallet balance, and withdrawal
+# Run: maestro test .maestro/suites/damin-wallet-flow.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+
+---
+
+# Step 1: Seller creates a damin order
+- runFlow: ../flows/12-create-damin-order.yaml
+
+# Step 2: Buyer confirms participation
+- runFlow: ../flows/13-confirm-damin-participation.yaml
+
+# Step 3: Card payment for damin order
+- runFlow: ../flows/14-damin-card-payment.yaml
+
+# Step 4: Check wallet balance reflects earnings
+- runFlow: ../flows/15-check-wallet-balance.yaml
+
+# Step 5: Test withdrawal flow
+- runFlow: ../flows/16-wallet-withdrawal.yaml

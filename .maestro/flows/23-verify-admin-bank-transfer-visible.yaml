@@ -1,0 +1,61 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 23: Verify admin bank transfer approval visibility
+# Tests: after bank transfer submitted (flow 17), order shows awaiting_admin_transfer_approval
+# Verifies: status badge displays correct Arabic text, admin action buttons are NOT visible to buyer
+# Prerequisite: bank transfer payment already submitted
+
+# Login as buyer to check the order status from buyer perspective
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the most recent order (bank transfer order)
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify order details loaded
+- assertVisible:
+    id: "order-status"
+
+# Verify the status text shows "بانتظار موافقة الإدارة" (Awaiting admin approval)
+- assertVisible: "بانتظار موافقة الإدارة"
+
+# Verify the order is NOT showing as completed or payment_verified
+# These would indicate a bug in the bank transfer flow
+- assertNotVisible: "تم التحقق من الدفع"
+- assertNotVisible: "مكتمل"
+
+# Verify the buyer cannot approve their own transfer (no admin action buttons)
+- assertNotVisible:
+    id: "admin-approve-btn"
+- assertNotVisible:
+    id: "admin-reject-btn"
+
+# Now login as seller to verify the same status from seller side
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the same order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify the seller also sees awaiting admin approval status
+- assertVisible:
+    id: "order-status"
+- assertVisible: "بانتظار موافقة الإدارة"
+
+# Verify seller cannot approve either (only admin can)
+- assertNotVisible:
+    id: "admin-approve-btn"

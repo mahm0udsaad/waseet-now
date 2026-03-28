@@ -1,0 +1,26 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 08: Accept receipt and sign (buyer)
+# Requires: Receipt created by seller in chat
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to chats tab
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+
+# Open the chat with seller
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify chat loaded and receipt is visible
+- assertVisible: "${TEST_AMOUNT}"
+
+# Tap "Accept & Sign" button on the receipt
+- tapOn:
+    id: "receipt-accept-btn"
+- waitForAnimationToEnd

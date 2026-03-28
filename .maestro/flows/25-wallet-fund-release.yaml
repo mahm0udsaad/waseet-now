@@ -1,0 +1,67 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 25: Wallet fund release after order completion
+# Tests: after an order is marked completed, seller's wallet balance increases
+# Verifies: available balance visible, escrow section present, transaction history has entries
+# Prerequisite: at least one completed order exists for the seller
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to profile tab
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Tap on wallet
+- tapOn:
+    id: "profile-wallet-btn"
+- waitForAnimationToEnd
+
+# Verify wallet screen loaded
+- assertVisible:
+    id: "wallet-available-balance"
+
+# Verify escrow section is visible (funds move from escrow to available on completion)
+- assertVisible:
+    id: "wallet-escrow-held"
+
+# Navigate to transaction history to verify fund release entry
+- tapOn:
+    id: "wallet-transactions-list"
+- waitForAnimationToEnd
+
+# Look for a fund release transaction (released funds from completed order)
+- extendedWaitUntil:
+    visible:
+      id: "transaction-item-0"
+    timeout: 10000
+
+# Verify the transaction list contains at least one entry
+- assertVisible:
+    id: "transaction-item-0"
+
+# Go back to wallet main screen
+- back
+- waitForAnimationToEnd
+
+# Verify the available balance section still shows
+- assertVisible:
+    id: "wallet-available-balance"
+
+# Verify the wallet shows the correct breakdown:
+# - Available balance (released funds)
+# - Escrow held (funds still in escrow for active orders)
+- assertVisible:
+    id: "wallet-escrow-held"
+
+# Test: tap on "View All Transactions" to see full history
+- tapOn:
+    id: "wallet-view-all-transactions"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify transactions screen loaded with history
+- assertVisible:
+    id: "transactions-list"

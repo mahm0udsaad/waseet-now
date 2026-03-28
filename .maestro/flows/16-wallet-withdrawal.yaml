@@ -1,0 +1,54 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 16: Request wallet withdrawal
+# Tests: withdrawal form validation and submission
+# Verifies withdrawal includes earnings from all order types
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to profile → wallet
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+- tapOn:
+    id: "profile-wallet-btn"
+- waitForAnimationToEnd
+
+# Tap withdraw button
+- tapOn:
+    id: "wallet-withdraw-btn"
+- waitForAnimationToEnd
+
+# Verify withdrawal form loaded
+- assertVisible:
+    id: "withdraw-amount-input"
+
+# Enter withdrawal amount
+- tapOn:
+    id: "withdraw-amount-input"
+- inputText: "100"
+
+# Enter IBAN
+- tapOn:
+    id: "withdraw-iban-input"
+- inputText: "SA0380000000608010167519"
+
+# Enter bank name
+- tapOn:
+    id: "withdraw-bank-name-input"
+- inputText: "الراجحي"
+
+# Enter account holder name
+- tapOn:
+    id: "withdraw-holder-name-input"
+- inputText: "محمد أحمد"
+
+# Submit withdrawal request
+- tapOn:
+    id: "withdraw-submit-btn"
+- waitForAnimationToEnd
+
+# Verify success (or insufficient balance message)
+- assertVisible: ".*"

@@ -1,0 +1,44 @@
+# Multi-Receipt Flow Suite
+# Tests: multiple receipts + multiple payments within the same chat conversation
+# Run: maestro test .maestro/suites/multi-receipt-flow.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+  TEST_AMOUNT_2: "500"
+
+---
+
+# === FIRST RECEIPT + PAYMENT (standard flow) ===
+
+# Step 1: Seller creates a tanazul ad
+- runFlow: ../flows/01-login.yaml
+- runFlow: ../flows/02-create-tanazul-ad.yaml
+
+# Step 2: Buyer browses, opens ad, starts chat
+- runFlow: ../flows/03-browse-tanazul-list.yaml
+- runFlow: ../flows/04-open-tanazul-details.yaml
+- runFlow: ../flows/05-start-chat-from-ad.yaml
+- runFlow: ../flows/06-send-messages.yaml
+
+# Step 3: Seller creates first receipt
+- runFlow: ../flows/07-create-receipt-seller.yaml
+
+# Step 4: Buyer accepts first receipt, pays via bank transfer
+- runFlow: ../flows/08-accept-receipt-buyer.yaml
+- runFlow: ../flows/09-bank-transfer-payment.yaml
+
+# === SECOND RECEIPT + PAYMENT (the new multi-receipt flow) ===
+
+# Step 5: Seller creates a SECOND receipt in the same chat
+- runFlow: ../flows/20-create-second-receipt-seller.yaml
+
+# Step 6: Buyer accepts second receipt, verifies new payment link
+- runFlow: ../flows/21-accept-second-receipt-buyer.yaml
+
+# Step 7: Buyer pays for the second receipt
+- runFlow: ../flows/22-pay-second-receipt-buyer.yaml

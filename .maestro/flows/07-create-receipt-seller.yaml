@@ -1,0 +1,44 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 07: Create a receipt in chat (seller)
+# Requires: Seller logged in, chat already started by buyer
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to chats tab
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+
+# Open the first chat (most recent conversation with buyer)
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify chat screen loaded
+- assertVisible:
+    id: "chat-text-input"
+
+# Tap receipt button in header (seller-only)
+- tapOn:
+    id: "chat-receipt-btn"
+- waitForAnimationToEnd
+
+# Fill receipt details
+- tapOn:
+    id: "receipt-desc-input"
+- inputText: "رسوم تنازل عاملة منزلية فلبينية"
+
+- tapOn:
+    id: "receipt-amount-input"
+- inputText: ${TEST_AMOUNT}
+
+# Create the receipt
+- tapOn:
+    id: "receipt-create-btn"
+- waitForAnimationToEnd
+
+# Verify receipt was created and appears in chat
+- assertVisible: "${TEST_AMOUNT}"

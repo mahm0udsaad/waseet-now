@@ -1,0 +1,96 @@
+# Production Readiness Suite
+# Comprehensive E2E test covering ALL critical paths in sequence:
+# Login -> Tanazul full flow -> Damin full flow -> Wallet verification -> Push notifications -> Multi-receipt
+# Run: maestro test .maestro/suites/production-readiness.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+  TEST_AMOUNT_2: "500"
+
+---
+
+# ============================================================
+# PHASE 1: Authentication
+# ============================================================
+
+# Verify seller can login
+- runFlow: ../flows/01-login.yaml
+
+# ============================================================
+# PHASE 2: Tanazul Full Lifecycle
+# ============================================================
+
+# Seller creates a tanazul ad
+- runFlow: ../flows/02-create-tanazul-ad.yaml
+
+# Buyer browses, opens ad, starts chat
+- runFlow: ../flows/03-browse-tanazul-list.yaml
+- runFlow: ../flows/04-open-tanazul-details.yaml
+- runFlow: ../flows/05-start-chat-from-ad.yaml
+- runFlow: ../flows/06-send-messages.yaml
+
+# Seller creates receipt, buyer accepts and pays via bank transfer
+- runFlow: ../flows/07-create-receipt-seller.yaml
+- runFlow: ../flows/08-accept-receipt-buyer.yaml
+- runFlow: ../flows/09-bank-transfer-payment.yaml
+
+# Verify bank transfer requires admin approval (critical security check)
+- runFlow: ../flows/17-bank-transfer-requires-admin.yaml
+- runFlow: ../flows/23-verify-admin-bank-transfer-visible.yaml
+
+# Buyer views order and confirms service
+- runFlow: ../flows/10-view-order-details.yaml
+- runFlow: ../flows/11-confirm-service-received.yaml
+
+# ============================================================
+# PHASE 3: Damin Full Lifecycle
+# ============================================================
+
+# Create damin order, confirm participation, pay via card
+- runFlow: ../flows/12-create-damin-order.yaml
+- runFlow: ../flows/13-confirm-damin-participation.yaml
+- runFlow: ../flows/14-damin-card-payment.yaml
+
+# Complete damin service and verify fund release
+- runFlow: ../flows/27-complete-damin-service.yaml
+
+# ============================================================
+# PHASE 4: Wallet Verification
+# ============================================================
+
+# Check wallet balance reflects completed orders
+- runFlow: ../flows/15-check-wallet-balance.yaml
+
+# Verify fund release transaction entries
+- runFlow: ../flows/25-wallet-fund-release.yaml
+
+# Test withdrawal flow
+- runFlow: ../flows/16-wallet-withdrawal.yaml
+
+# ============================================================
+# PHASE 5: Push Notification Check
+# ============================================================
+
+# Verify in-app notification delivery between users
+- runFlow: ../flows/24-push-notification-delivery.yaml
+
+# ============================================================
+# PHASE 6: Multi-Receipt Flow
+# ============================================================
+
+# Create and pay a second receipt in existing chat
+- runFlow: ../flows/20-create-second-receipt-seller.yaml
+- runFlow: ../flows/21-accept-second-receipt-buyer.yaml
+- runFlow: ../flows/22-pay-second-receipt-buyer.yaml
+
+# ============================================================
+# PHASE 7: Chat Attachments
+# ============================================================
+
+# Verify image attachments work in chat
+- runFlow: ../flows/28-chat-attachment-flow.yaml

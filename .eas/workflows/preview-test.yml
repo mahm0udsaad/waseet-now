@@ -1,0 +1,51 @@
+# Preview + Test Workflow
+# Runs on pull requests: lint, build preview, run Maestro E2E tests
+name: Preview & Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Step 1: Lint and type check
+  lint:
+    name: Lint & Type Check
+    runs_on: linux-medium
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - run:
+          name: Run ESLint
+          command: npx expo lint
+      - run:
+          name: TypeScript check
+          command: npx tsc --noEmit --skipLibCheck
+
+  # Step 2: Build iOS preview for testing
+  build_preview:
+    name: Build iOS Preview
+    needs: [lint]
+    type: build
+    params:
+      platform: ios
+      profile: preview
+
+  # Step 3: Run Maestro smoke tests against the preview build
+  e2e_smoke:
+    name: E2E Smoke Tests
+    needs: [build_preview]
+    runs_on: macos-large
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - run:
+          name: Install Maestro CLI
+          command: |
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+            export PATH="$PATH:$HOME/.maestro/bin"
+      - run:
+          name: Run Smoke Tests
+          command: |
+            export PATH="$PATH:$HOME/.maestro/bin"
+            maestro test .maestro/suites/smoke.yaml

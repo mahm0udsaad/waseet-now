@@ -1,0 +1,20 @@
+# OTA Update Workflow
+# Publishes an over-the-air update for quick fixes without a full rebuild
+# Use for urgent hotfixes when serving 300+ users
+name: OTA Hotfix Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        type: string
+        description: "Update message describing the hotfix"
+        required: true
+
+jobs:
+  update:
+    name: Publish OTA Update
+    type: update
+    params:
+      branch: production
+      message: ${{ inputs.message }}

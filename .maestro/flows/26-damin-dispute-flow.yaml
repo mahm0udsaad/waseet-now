@@ -1,0 +1,59 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 26: Damin dispute submission flow
+# Tests: submitting a dispute on an active damin order
+# Verifies: dispute form loads, reason can be entered, submission succeeds
+# Prerequisite: an active damin order exists (payment completed, status = in_progress)
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the damin order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify order details loaded
+- assertVisible:
+    id: "order-status"
+
+# Tap the dispute/report button on the order
+- tapOn:
+    id: "damin-dispute-btn"
+- waitForAnimationToEnd
+
+# Verify dispute form / bottom sheet appeared
+- assertVisible:
+    id: "dispute-reason-input"
+
+# Enter a dispute reason
+- tapOn:
+    id: "dispute-reason-input"
+- inputText: "الخدمة لم تكتمل كما هو متفق عليه"
+
+# Add additional details
+- tapOn:
+    id: "dispute-details-input"
+- inputText: "تم الاتفاق على تسليم الخدمة خلال 3 أيام ولم يتم التسليم حتى الآن. أرجو التدخل لحل المشكلة."
+
+# Submit the dispute
+- tapOn:
+    id: "dispute-submit-btn"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify dispute was submitted successfully
+- assertVisible: "تم تقديم النزاع"
+
+# Verify the order status now reflects the dispute
+- waitForAnimationToEnd
+
+# Order should now show dispute status indicator
+- assertVisible:
+    id: "order-status"

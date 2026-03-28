@@ -1,0 +1,31 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 15: Check wallet balance
+# Tests: wallet screen loads and shows balance information
+# Verifies wallet displays earnings from both damin and tanazul orders
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to profile tab
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Tap on wallet
+- tapOn:
+    id: "profile-wallet-btn"
+- waitForAnimationToEnd
+
+# Verify wallet screen loaded with balance info
+- assertVisible:
+    id: "wallet-available-balance"
+
+# Verify escrow section is visible
+- assertVisible:
+    id: "wallet-escrow-held"
+
+# Verify transaction history section
+- assertVisible:
+    id: "wallet-transactions-list"

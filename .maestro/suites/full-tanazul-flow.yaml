@@ -1,0 +1,34 @@
+# Full Tanazul Flow Suite
+# Complete lifecycle: create ad → browse → chat → receipt → payment → order
+# Run: maestro test .maestro/suites/full-tanazul-flow.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"
+
+---
+
+# Step 1: Seller creates a tanazul ad
+- runFlow: ../flows/01-login.yaml
+- runFlow: ../flows/02-create-tanazul-ad.yaml
+
+# Step 2: Buyer browses, opens ad, starts chat, sends messages
+- runFlow: ../flows/03-browse-tanazul-list.yaml
+- runFlow: ../flows/04-open-tanazul-details.yaml
+- runFlow: ../flows/05-start-chat-from-ad.yaml
+- runFlow: ../flows/06-send-messages.yaml
+
+# Step 3: Seller creates a receipt
+- runFlow: ../flows/07-create-receipt-seller.yaml
+
+# Step 4: Buyer accepts receipt, makes payment
+- runFlow: ../flows/08-accept-receipt-buyer.yaml
+- runFlow: ../flows/09-bank-transfer-payment.yaml
+
+# Step 5: Buyer views order and confirms service received
+- runFlow: ../flows/10-view-order-details.yaml
+- runFlow: ../flows/11-confirm-service-received.yaml

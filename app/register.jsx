@@ -1,63 +1,55 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import CountryPickerModal from "@/components/CountryPickerModal";
+import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
+import { COUNTRIES, getCountryName } from "@/utils/countries";
+import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { supabase } from "@/utils/supabase/client";
+import { useTheme } from "@/utils/theme/store";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeInDown,
-  FadeInUp,
-  SlideInRight,
-  ZoomIn,
-} from "react-native-reanimated";
 import {
-  Phone,
   ArrowLeft,
   ArrowRight,
+  ChevronDown,
+  Phone,
   Send,
-  CheckCircle,
-  Mail,
-  Shield,
 } from "lucide-react-native";
-import { useTheme } from "@/utils/theme/store";
-import { useTranslation } from "@/utils/i18n/store";
-import { supabase } from "@/utils/supabase/client";
-import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri } from "expo-auth-session";
-import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
-
-// Complete the OAuth session in the browser
-WebBrowser.maybeCompleteAuthSession();
+import React, { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  ZoomIn,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, rowDirection } = useTranslation();
 
-  const [method, setMethod] = useState(null); // 'phone' | 'google'
+  const [method, setMethod] = useState(null); // 'phone'
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // default: Saudi Arabia
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   // Animation values
   const phoneScale = useSharedValue(1);
-  const googleScale = useSharedValue(1);
   const verifyScale = useSharedValue(1);
-  const submitScale = useSharedValue(1);
 
   const handleSelectMethod = (selectedMethod) => {
     if (selectedMethod === "phone") {
@@ -65,107 +57,20 @@ export default function RegisterScreen() {
         phoneScale.value = withSpring(1);
       });
       setMethod("phone");
-    } else if (selectedMethod === "google") {
-      googleScale.value = withSpring(0.95, {}, () => {
-        googleScale.value = withSpring(1);
-      });
-      handleGoogleSignIn();
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      // Get the redirect URL for the app - use the app scheme
-      const redirectUrl = makeRedirectUri({
-        scheme: 'kafel',
-        path: 'auth/callback',
-        useProxy: true,
-        preferLocalhost: false,
-      });
-
-      console.log('Redirect URL:', redirectUrl);
-
-      // Start OAuth flow with Supabase - use skipBrowserRedirect to handle manually
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true, // We'll handle the browser redirect manually
-        },
-      });
-
-      if (error) throw error;
-
-      // Open the OAuth URL in browser
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUrl,
-          {
-            showInRecents: true,
-          }
-        );
-        
-        if (result.type === 'success') {
-          // Supabase OAuth uses hash fragments (#) not query params (?)
-          const url = new URL(result.url);
-          const hashParams = new URLSearchParams(url.hash.substring(1)); // Remove # and parse
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-          
-          // Also check query params as fallback
-          const queryAccessToken = url.searchParams.get('access_token');
-          const queryRefreshToken = url.searchParams.get('refresh_token');
-          
-          const finalAccessToken = accessToken || queryAccessToken;
-          const finalRefreshToken = refreshToken || queryRefreshToken;
-          
-          if (finalAccessToken && finalRefreshToken) {
-            // Set the session
-            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-              access_token: finalAccessToken,
-              refresh_token: finalRefreshToken,
-            });
-
-            if (sessionError) throw sessionError;
-            
-            // Success - redirect to tabs
-            router.replace("/(tabs)");
-          } else {
-            // If tokens not in URL, check if session was set automatically
-            const { data: sessionData } = await supabase.auth.getSession();
-            if (sessionData?.session) {
-              router.replace("/(tabs)");
-            } else {
-              throw new Error('Failed to get authentication tokens');
-            }
-          }
-        } else if (result.type === 'cancel') {
-          Alert.alert(
-            isRTL ? "تم الإلغاء" : "Cancelled",
-            isRTL ? "تم إلغاء تسجيل الدخول مع جوجل" : "Google sign in was cancelled"
-          );
-        } else {
-          throw new Error('OAuth flow failed');
-        }
-      }
-    } catch (error) {
-      console.error('Google sign in error:', error);
-      Alert.alert(
-        isRTL ? "خطأ" : "Error",
-        error.message || (isRTL ? "فشل تسجيل الدخول مع جوجل" : "Google sign in failed")
-      );
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSendCode = async () => {
-    if (!phoneNumber || phoneNumber.length < 9) {
+    const isValidLength =
+      phoneNumber.length >= selectedCountry.minLength &&
+      phoneNumber.length <= selectedCountry.maxLength;
+
+    if (!phoneNumber || !isValidLength) {
       Alert.alert(
         isRTL ? "تنبيه" : "Alert",
-        isRTL ? "يرجى إدخال رقم جوال صحيح" : "Please enter a valid phone number"
+        isRTL
+          ? `يرجى إدخال رقم جوال صحيح ل${getCountryName(selectedCountry, isRTL)}`
+          : `Please enter a valid phone number for ${getCountryName(selectedCountry, isRTL)}`
       );
       return;
     }
@@ -176,12 +81,13 @@ export default function RegisterScreen() {
     });
 
     try {
+      const fullPhone = `${selectedCountry.dialCode}${phoneNumber}`;
       const { error } = await supabase.auth.signInWithOtp({
-        phone: `+966${phoneNumber}`,
+        phone: fullPhone,
       });
       if (error) throw error;
       setIsVerifying(false);
-      setCodeSent(true);
+      router.push({ pathname: "/otp", params: { phone: fullPhone, flow: "signup" } });
     } catch (error) {
       Alert.alert(
         isRTL ? "خطأ" : "Error",
@@ -191,67 +97,12 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otpCode || otpCode.length !== 6) {
-      Alert.alert(
-        isRTL ? "تنبيه" : "Alert",
-        isRTL ? "يرجى إدخال رمز التحقق المكون من 6 أرقام" : "Please enter 6-digit verification code"
-      );
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: `+966${phoneNumber}`,
-        token: otpCode,
-        type: "sms",
-      });
-      if (error) throw error;
-      setIsVerified(true);
-      setCodeSent(false);
-      router.replace("/(tabs)");
-    } catch (error) {
-      Alert.alert(
-        isRTL ? "خطأ" : "Error",
-        error.message || (isRTL ? "رمز التحقق غير صحيح" : "Invalid verification code")
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleContinue = async () => {
-    if (method === "phone" && !isVerified) {
-      Alert.alert(
-        isRTL ? "تنبيه" : "Alert",
-        isRTL ? "يرجى التحقق من رقم الجوال" : "Please verify your phone number"
-      );
-      return;
-    }
-
-    // Phone registration is handled in handleVerifyOtp
-    // This is mainly for Google OAuth flow
-    if (method === "google") {
-      // OAuth redirects automatically, so this shouldn't be reached
-      router.replace("/(tabs)");
-    }
-  };
-
   const phoneAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: phoneScale.value }],
   }));
 
-  const googleAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: googleScale.value }],
-  }));
-
   const verifyAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: verifyScale.value }],
-  }));
-
-  const submitAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: submitScale.value }],
   }));
 
   const gradientColors = isDark
@@ -261,12 +112,23 @@ export default function RegisterScreen() {
   // Method Selection Screen
   const renderMethodSelection = () => (
     <View style={styles.methodSelectionContainer}>
+      {/* Logo */}
+      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.logoSection}>
+        <View style={[styles.logoCircle, { backgroundColor: "#FFFFFF", shadowColor: colors.primary }]}>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.logoImage}
+            contentFit="contain"
+          />
+        </View>
+      </Animated.View>
+
       <Animated.View entering={FadeInDown.delay(200)} style={styles.methodSelectionHeader}>
         <Text style={[styles.methodSelectionTitle, { color: colors.text }]}>
-          {isRTL ? "التسجيل" : "Sign Up"}
+          {isRTL ? "إنشاء حساب" : "Create Account"}
         </Text>
         <Text style={[styles.methodSelectionSubtitle, { color: colors.textSecondary }]}>
-          {isRTL ? "اختر طريقة التسجيل" : "Choose your sign up method"}
+          {isRTL ? "اختر طريقة التسجيل المفضلة" : "Choose your preferred sign up method"}
         </Text>
       </Animated.View>
 
@@ -291,36 +153,23 @@ export default function RegisterScreen() {
               {isRTL ? "رقم الجوال" : "Phone Number"}
             </Text>
             <Text style={[styles.methodCardDesc, { color: colors.textSecondary }]}>
-              {isRTL ? "سجل باستخدام رقم جوالك" : "Sign up with your phone number"}
-            </Text>
-          </Pressable>
-        </Animated.View>
-
-        {/* Google Option */}
-        <Animated.View entering={ZoomIn.delay(400)} style={googleAnimatedStyle}>
-          <Pressable
-            onPress={() => handleSelectMethod("google")}
-            style={({ pressed }) => [
-              styles.methodCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              },
-            ]}
-          >
-            <View style={[styles.methodIconBox, { backgroundColor: colors.surfaceSecondary }]}>
-              <Mail size={36} color={colors.primary} />
-            </View>
-            <Text style={[styles.methodCardTitle, { color: colors.text }]}>
-              {isRTL ? "جوجل" : "Google"}
-            </Text>
-            <Text style={[styles.methodCardDesc, { color: colors.textSecondary }]}>
-              {isRTL ? "سجل باستخدام حساب جوجل" : "Sign up with Google"}
+              {isRTL ? "سجل باستخدام رقم جوالك" : "Sign up with your phone"}
             </Text>
           </Pressable>
         </Animated.View>
       </View>
+
+      {/* Sign In Link */}
+      <Animated.View entering={FadeIn.delay(600)} style={[styles.footerLink, { flexDirection: rowDirection }]}>
+        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+          {isRTL ? "لديك حساب بالفعل؟ " : "Already have an account? "}
+        </Text>
+        <Pressable onPress={() => router.push("/signin")}>
+          <Text style={[styles.linkText, { color: colors.primary }]}>
+            {isRTL ? "تسجيل الدخول" : "Sign In"}
+          </Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 
@@ -328,6 +177,9 @@ export default function RegisterScreen() {
   const renderPhoneEntry = () => (
     <View style={styles.phoneEntryContainer}>
       <Animated.View entering={FadeInDown.delay(200)} style={styles.phoneEntryHeader}>
+        <View style={[styles.phoneIconCircle, { backgroundColor: colors.primaryLight }]}>
+          <Phone size={36} color={colors.primary} />
+        </View>
         <Text style={[styles.phoneEntryTitle, { color: colors.text }]}>
           {isRTL ? "أدخل رقم الجوال" : "Enter Phone Number"}
         </Text>
@@ -337,40 +189,65 @@ export default function RegisterScreen() {
       </Animated.View>
 
       <Animated.View entering={FadeInUp.delay(300)} style={styles.phoneInputContainer}>
+        <CountryPickerModal
+          visible={showCountryPicker}
+          onClose={() => setShowCountryPicker(false)}
+          onSelect={(country) => {
+            setSelectedCountry(country);
+            setPhoneNumber("");
+          }}
+          selectedCode={selectedCountry.code}
+        />
+
         <View
           style={[
             styles.phoneInputWrapper,
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              flexDirection: isRTL ? "row-reverse" : "row",
+              flexDirection: rowDirection,
             },
           ]}
         >
           <View style={[styles.phoneIconBox, { backgroundColor: colors.primaryLight }]}>
             <Phone size={20} color={colors.primary} />
           </View>
-          <Text style={[styles.countryCode, { color: colors.text }]}>+966</Text>
+
+          {/* Country Selector */}
+          <Pressable
+            onPress={() => setShowCountryPicker(true)}
+            style={({ pressed }) => [
+              styles.countrySelector,
+              {
+                backgroundColor: pressed ? colors.surfaceSecondary : "transparent",
+                flexDirection: rowDirection,
+              },
+            ]}
+          >
+            <Text style={[styles.countryFlag, { marginHorizontal: 4 }]}>{selectedCountry.flag}</Text>
+            <Text style={[styles.countryCode, { color: colors.text }]}>{selectedCountry.dialCode}</Text>
+            <ChevronDown size={16} color={colors.textSecondary} style={{ marginHorizontal: 4 }} />
+          </Pressable>
+
           <TextInput
             style={[
               styles.phoneInput,
-              { color: colors.text, textAlign: isRTL ? "right" : "left" },
+              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
             ]}
-            placeholder={isRTL ? "5XXXXXXXX" : "5XXXXXXXX"}
+            placeholder={"XXXXXXXXXX"}
             placeholderTextColor={colors.textMuted}
             value={phoneNumber}
             onChangeText={(text) => {
-              // Only allow numbers
-              const cleaned = text.replace(/[^0-9]/g, "");
+              const cleaned = text.replace(/[^0-9]/g, "").replace(/^0+/, "");
               setPhoneNumber(cleaned);
-              setIsVerified(false);
             }}
             keyboardType="phone-pad"
-            maxLength={9}
+            maxLength={selectedCountry.maxLength}
+            autoFocus
           />
         </View>
 
-        {phoneNumber.length >= 9 && !codeSent && !isVerified && (
+        {phoneNumber.length >= selectedCountry.minLength && (
           <Animated.View style={verifyAnimatedStyle} entering={FadeInDown.delay(100)}>
             <Pressable
               onPress={handleSendCode}
@@ -392,85 +269,6 @@ export default function RegisterScreen() {
             </Pressable>
           </Animated.View>
         )}
-
-        {codeSent && !isVerified && (
-          <Animated.View entering={FadeInUp.delay(200)} style={styles.otpContainer}>
-            <Text style={[styles.otpLabel, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
-              {isRTL ? "أدخل رمز التحقق" : "Enter Verification Code"}
-            </Text>
-            <Text style={[styles.otpHint, { color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }]}>
-              {isRTL ? "استخدم 0000 للاختبار" : "Use 0000 for testing"}
-            </Text>
-            <View
-              style={[
-                styles.otpInputWrapper,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  flexDirection: isRTL ? "row-reverse" : "row",
-                },
-              ]}
-            >
-              <View style={[styles.otpIconBox, { backgroundColor: colors.primaryLight }]}>
-                <Shield size={20} color={colors.primary} />
-              </View>
-              <TextInput
-                style={[
-                  styles.otpInput,
-                  { color: colors.text, textAlign: "center" },
-                ]}
-                placeholder={isRTL ? "0000" : "0000"}
-                placeholderTextColor={colors.textMuted}
-                value={otpCode}
-                onChangeText={(text) => {
-                  // Only allow numbers, max 4 digits
-                  const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
-                  setOtpCode(cleaned);
-                }}
-                keyboardType="number-pad"
-                maxLength={4}
-                autoFocus
-              />
-            </View>
-            <Pressable
-              onPress={handleVerifyOtp}
-              disabled={otpCode.length !== 4}
-              style={[
-                styles.verifyOtpButton,
-                {
-                  backgroundColor: otpCode.length === 4 ? colors.primary : colors.textMuted,
-                  opacity: otpCode.length === 4 ? 1 : 0.6,
-                },
-              ]}
-            >
-              <CheckCircle size={18} color="#fff" />
-              <Text style={styles.verifyOtpButtonText}>
-                {isRTL ? "تحقق" : "Verify"}
-              </Text>
-            </Pressable>
-          </Animated.View>
-        )}
-
-        {isVerified && (
-          <Animated.View entering={FadeInUp.delay(200)} style={styles.continueContainer}>
-            <Pressable
-              onPress={handleContinue}
-              disabled={loading}
-              style={[
-                styles.continueButton,
-                {
-                  backgroundColor: loading ? colors.textMuted : colors.primary,
-                },
-              ]}
-            >
-              <Text style={styles.continueButtonText}>
-                {loading
-                  ? (isRTL ? "جاري إنشاء الحساب..." : "Creating Account...")
-                  : (isRTL ? "متابعة" : "Continue")}
-              </Text>
-            </Pressable>
-          </Animated.View>
-        )}
       </Animated.View>
     </View>
   );
@@ -483,23 +281,19 @@ export default function RegisterScreen() {
         <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
           {/* Header */}
           <Animated.View
-            entering={SlideInRight.delay(100)}
-            style={[styles.header, { flexDirection: isRTL ? "row-reverse" : "row" }]}
+            entering={FadeInDown.delay(100)}
+            style={[styles.header, { flexDirection: rowDirection }]}
           >
             <Pressable
               onPress={() => {
                 if (method) {
                   setMethod(null);
                   setPhoneNumber("");
-                  setOtpCode("");
-                  setCodeSent(false);
-                  setIsVerified(false);
                 } else {
-                  // Check if we can go back, otherwise navigate to home
                   if (router.canGoBack()) {
                     router.back();
                   } else {
-                    router.replace("/");
+                    router.replace("/onboarding");
                   }
                 }
               }}
@@ -554,6 +348,27 @@ const styles = StyleSheet.create({
     width: 44,
   },
 
+  // Logo Section
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  logoImage: {
+    width: 50,
+    height: 50,
+  },
+
   // Method Selection
   methodSelectionContainer: {
     flex: 1,
@@ -562,7 +377,7 @@ const styles = StyleSheet.create({
   },
   methodSelectionHeader: {
     alignItems: "center",
-    marginBottom: 50,
+    marginBottom: 40,
   },
   methodSelectionTitle: {
     fontSize: 28,
@@ -574,40 +389,76 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   methodCards: {
-    gap: 20,
+    gap: 16,
   },
   methodCard: {
     borderRadius: 20,
-    padding: 28,
+    padding: 24,
     alignItems: "center",
     borderWidth: 1.5,
   },
   methodIconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   methodCardTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   methodCardDesc: {
     fontSize: 14,
     textAlign: "center",
   },
 
+  // Footer Link
+  footerLink: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 40,
+  },
+  footerText: {
+    fontSize: 15,
+  },
+  linkText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  skipButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 20,
+  },
+  skipButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   // Phone Entry
   phoneEntryContainer: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingTop: 30,
   },
   phoneEntryHeader: {
-    marginBottom: 40,
+    marginBottom: 36,
+    alignItems: 'center',
+  },
+  phoneIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   phoneEntryTitle: {
     fontSize: 24,
@@ -622,6 +473,7 @@ const styles = StyleSheet.create({
   },
   phoneInputContainer: {
     gap: 20,
+    position: "relative",
   },
   phoneInputWrapper: {
     borderRadius: 16,
@@ -629,18 +481,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     gap: 12,
+    position: "relative",
+  },
+  countrySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  countryFlag: {
+    fontSize: 20,
   },
   phoneIconBox: {
     padding: 10,
     borderRadius: 10,
   },
   countryCode: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
   },
   phoneInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     paddingVertical: 4,
   },
   verifyButton: {
@@ -661,24 +525,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  continueContainer: {
-    marginTop: 10,
-  },
-  continueButton: {
-    alignItems: "center",
-    paddingVertical: 16,
-    borderRadius: 14,
-    shadowColor: "#D83A3A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  continueButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
   otpContainer: {
     gap: 12,
   },
@@ -686,10 +532,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginTop: 8,
-  },
-  otpHint: {
-    fontSize: 13,
-    marginBottom: 4,
   },
   otpInputWrapper: {
     borderRadius: 16,
@@ -704,7 +546,7 @@ const styles = StyleSheet.create({
   },
   otpInput: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
     letterSpacing: 8,
     paddingVertical: 4,

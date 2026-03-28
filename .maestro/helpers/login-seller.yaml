@@ -1,0 +1,44 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Login as Seller (phone: +966500000001)
+- launchApp:
+    clearState: true
+
+# Wait for signin screen to load
+- waitForAnimationToEnd
+
+# Enter phone number
+- tapOn:
+    id: "signin-phone-input"
+- inputText: ${SELLER_PHONE}
+
+# Tap continue
+- tapOn:
+    id: "signin-continue-btn"
+
+# Wait for OTP screen
+- waitForAnimationToEnd
+
+# Tap the OTP hidden input (now slightly visible for automation)
+- tapOn:
+    id: "otp-input"
+
+# Small pause to ensure keyboard focus
+- waitForAnimationToEnd
+
+# Enter the 6-digit OTP
+- inputText: ${TEST_OTP}
+
+# Wait for verification + screen transition (may take a moment)
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# If complete-profile screen appears, skip it
+- runFlow:
+    when:
+      visible: "تخطي الآن"
+    commands:
+      - tapOn: "تخطي الآن"
+      - waitForAnimationToEnd

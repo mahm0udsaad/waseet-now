@@ -1,0 +1,21 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 10: View order details (buyer)
+# Requires: Order created after payment
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Tap on the first order in the list
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify order details screen loaded with correct amount
+- assertVisible: "${TEST_AMOUNT}"

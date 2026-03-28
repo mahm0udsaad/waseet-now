@@ -1,4 +1,4 @@
-import { useTranslation } from "@/utils/i18n/store";
+import { useTranslation, getRTLTextAlign, getRTLEndAlign } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -33,7 +33,7 @@ export default function TaqibDetailsScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, rowDirection } = useTranslation();
   const [isFavorited, setIsFavorited] = useState(false);
 
   // Mock data - in real app this would come from route params or API
@@ -85,7 +85,12 @@ export default function TaqibDetailsScreen() {
     });
     router.push({
       pathname: "/chat",
-      params: { requestId: requestData.id, requestTitle: requestData.title },
+      params: { 
+        adId: requestData.id, 
+        ownerId: requestData.ownerId || "",
+        adTitle: requestData.title,
+        price: 0,
+      },
     });
   };
 
@@ -154,21 +159,49 @@ export default function TaqibDetailsScreen() {
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
 
+  const backButton = (
+    <Pressable
+      onPress={() => router.back()}
+      style={[styles.headerButton, { backgroundColor: colors.surface }]}
+    >
+      {isRTL ? (
+        <ArrowRight size={22} color={colors.text} />
+      ) : (
+        <ArrowLeft size={22} color={colors.text} />
+      )}
+    </Pressable>
+  );
+
+  const headerActions = (
+    <View style={[styles.headerActions, { flexDirection: "row" }]}>
+      <Animated.View style={favoriteAnimatedStyle}>
+        <Pressable
+          onPress={handleFavorite}
+          style={[styles.headerButton, { backgroundColor: colors.surface }]}
+        >
+          <Heart
+            size={20}
+            color={isFavorited ? colors.primary : colors.textSecondary}
+            fill={isFavorited ? colors.primary : "transparent"}
+          />
+        </Pressable>
+      </Animated.View>
+
+      <Pressable
+        onPress={handleShare}
+        style={[styles.headerButton, { backgroundColor: colors.surface, marginLeft: 8 }]}
+      >
+        <Share2 size={20} color={colors.textSecondary} />
+      </Pressable>
+    </View>
+  );
+
   const renderHeader = () => (
     <Animated.View
       entering={SlideInRight.delay(100)}
-      style={[styles.header, { flexDirection: isRTL ? "row-reverse" : "row" }]}
+      style={[styles.header, { flexDirection: "row" }]}
     >
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.headerButton, { backgroundColor: colors.surface }]}
-      >
-        {isRTL ? (
-          <ArrowRight size={22} color={colors.text} />
-        ) : (
-          <ArrowLeft size={22} color={colors.text} />
-        )}
-      </Pressable>
+      {isRTL ? headerActions : backButton}
 
       <View style={styles.headerTitleContainer}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
@@ -176,27 +209,7 @@ export default function TaqibDetailsScreen() {
         </Text>
       </View>
 
-      <View style={[styles.headerActions, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-        <Animated.View style={favoriteAnimatedStyle}>
-          <Pressable
-            onPress={handleFavorite}
-            style={[styles.headerButton, { backgroundColor: colors.surface }]}
-          >
-            <Heart
-              size={20}
-              color={isFavorited ? colors.primary : colors.textSecondary}
-              fill={isFavorited ? colors.primary : "transparent"}
-            />
-          </Pressable>
-        </Animated.View>
-
-        <Pressable
-          onPress={handleShare}
-          style={[styles.headerButton, { backgroundColor: colors.surface, marginLeft: 8 }]}
-        >
-          <Share2 size={20} color={colors.textSecondary} />
-        </Pressable>
-      </View>
+      {isRTL ? backButton : headerActions}
     </Animated.View>
   );
 
@@ -207,16 +220,16 @@ export default function TaqibDetailsScreen() {
         style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
         {/* Header with Category Icon and Status */}
-        <View style={[styles.mainCardHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-          <View style={[styles.categoryRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+        <View style={[styles.mainCardHeader, { flexDirection: rowDirection }]}>
+          <View style={[styles.categoryRow, { flexDirection: rowDirection }]}>
             <View style={[styles.categoryIcon, { backgroundColor: colors.primary }]}>
               <CategoryIcon size={28} color="#fff" />
             </View>
             <View style={{ marginHorizontal: 16 }}>
-              <Text style={[styles.categoryTitle, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
+              <Text style={[styles.categoryTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
                 {requestData.title}
               </Text>
-              <Text style={[styles.categorySubtitle, { color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }]}>
+              <Text style={[styles.categorySubtitle, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
                 {requestData.category}
               </Text>
             </View>
@@ -248,7 +261,7 @@ export default function TaqibDetailsScreen() {
           <Text style={[styles.descriptionLabel, { color: colors.textSecondary }]}>
             {isRTL ? "الوصف" : "Description"}
           </Text>
-          <Text style={[styles.descriptionText, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
+          <Text style={[styles.descriptionText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
             {requestData.description}
           </Text>
         </View>
@@ -298,7 +311,7 @@ export default function TaqibDetailsScreen() {
         {/* Progress Bar */}
         {requestData.status === "active" && (
           <View style={styles.progressContainer}>
-            <View style={[styles.progressHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+            <View style={[styles.progressHeader, { flexDirection: rowDirection }]}>
               <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
                 {isRTL ? "التقدم" : "Progress"}
               </Text>
@@ -328,7 +341,7 @@ export default function TaqibDetailsScreen() {
       entering={FadeInDown.delay(300)}
       style={[styles.documentsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      <View style={[styles.documentsHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+      <View style={[styles.documentsHeader, { flexDirection: rowDirection }]}>
         <FileText size={20} color={colors.primary} />
         <Text style={[styles.documentsTitle, { color: colors.text }]}>
           {isRTL ? "الوثائق المطلوبة" : "Required Documents"}
@@ -337,11 +350,11 @@ export default function TaqibDetailsScreen() {
 
       <View style={styles.documentsList}>
         {requestData.documents.map((doc, index) => (
-          <View key={index} style={[styles.documentItem, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+          <View key={index} style={[styles.documentItem, { flexDirection: rowDirection }]}>
             <View style={[styles.documentIcon, { backgroundColor: colors.primaryLight }]}>
               <FileText size={14} color={colors.primary} />
             </View>
-            <Text style={[styles.documentText, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
+            <Text style={[styles.documentText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
               {doc}
             </Text>
           </View>
@@ -369,7 +382,7 @@ export default function TaqibDetailsScreen() {
           </Text>
         </View>
 
-        <View style={{ alignItems: isRTL ? "flex-start" : "flex-end" }}>
+        <View style={{ alignItems: getRTLEndAlign(isRTL) }}>
           <Text style={styles.budgetValue}>
             {requestData.budget} {isRTL ? "ر.س" : "SAR"}
           </Text>

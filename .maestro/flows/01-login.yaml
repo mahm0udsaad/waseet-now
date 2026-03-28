@@ -1,0 +1,45 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 01: Login with phone number + OTP
+# Tests the full authentication flow for the seller account
+
+- launchApp:
+    clearState: true
+
+# Wait for signin screen
+- waitForAnimationToEnd
+
+# Verify signin screen is visible
+- assertVisible:
+    id: "signin-phone-input"
+
+# Enter seller phone number (without country code — app prepends +966)
+- tapOn:
+    id: "signin-phone-input"
+- inputText: ${SELLER_PHONE}
+
+# Tap continue button
+- tapOn:
+    id: "signin-continue-btn"
+
+# Wait for OTP screen to load
+- waitForAnimationToEnd
+- assertVisible:
+    id: "otp-input"
+
+# Enter OTP code
+- tapOn:
+    id: "otp-input"
+- inputText: ${TEST_OTP}
+
+# Wait for home screen to load after successful login
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# Verify we're on the home screen by checking for tanazul service card
+- extendedWaitUntil:
+    visible:
+      id: "service-tanazul"
+    timeout: 15000

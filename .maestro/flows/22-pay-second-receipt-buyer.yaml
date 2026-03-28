@@ -1,0 +1,38 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 22: Buyer pays for the SECOND receipt via bank transfer
+# Requires: Second receipt accepted, new payment link available (flow 21)
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to chats tab
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+
+# Open the chat with seller
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Tap "Pay Now" on the NEW (second) payment link
+- tapOn:
+    id: "payment-pay-btn"
+- waitForAnimationToEnd
+
+# Select bank transfer payment method
+- tapOn:
+    id: "payment-bank-transfer"
+- waitForAnimationToEnd
+
+# Enter phone number for transfer reference
+- tapOn:
+    id: "payment-phone-input"
+- inputText: ${BUYER_PHONE}
+
+# Submit payment
+- tapOn:
+    id: "payment-submit-btn"
+- waitForAnimationToEnd

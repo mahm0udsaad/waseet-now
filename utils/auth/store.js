@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 
 const defaultProjectGroupId = 'create-anything';
-const projectGroupId =
+const rawProjectGroupId =
   typeof process.env.EXPO_PUBLIC_PROJECT_GROUP_ID === 'string' &&
   process.env.EXPO_PUBLIC_PROJECT_GROUP_ID.trim().length > 0
     ? process.env.EXPO_PUBLIC_PROJECT_GROUP_ID.trim()
     : defaultProjectGroupId;
+
+const projectGroupId = rawProjectGroupId.replace(/[^A-Za-z0-9._-]/g, '-');
 
 export const authKey = `${projectGroupId}-jwt`;
 
@@ -17,11 +19,16 @@ export const useAuthStore = create((set) => ({
   isReady: false,
   auth: null,
   setAuth: (auth) => {
-    if (auth) {
-      SecureStore.setItemAsync(authKey, JSON.stringify(auth));
-    } else {
-      SecureStore.deleteItemAsync(authKey);
-    }
+    const persist = auth
+      ? SecureStore.setItemAsync(authKey, JSON.stringify(auth))
+      : SecureStore.deleteItemAsync(authKey);
+
+    persist.catch((error) => {
+      if (__DEV__) {
+        console.warn('Failed to persist auth state.', error);
+      }
+    });
+
     set({ auth });
   },
 }));

@@ -1,0 +1,169 @@
+# Multi-Receipt Standalone Test
+# Tests creating a second receipt + payment link in an EXISTING chat conversation
+# Prerequisite: seller and buyer already have a chat with a completed first payment
+# Run: maestro test .maestro/suites/multi-receipt-standalone.yaml
+
+appId: com.mahm09d.kafel
+
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT_2: "500"
+
+---
+
+# === Step 1: Seller creates a SECOND receipt ===
+
+# Login as seller
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "signin-phone-input"
+- inputText: ${SELLER_PHONE}
+- tapOn:
+    id: "signin-continue-btn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "otp-input"
+- waitForAnimationToEnd
+- inputText: ${TEST_OTP}
+- waitForAnimationToEnd:
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "service-tanazul"
+    timeout: 15000
+
+# Navigate to chats
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Open first chat
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Create a new receipt
+- tapOn:
+    id: "chat-receipt-btn"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "receipt-desc-input"
+- inputText: "رسوم خدمة إضافية - تجديد اقامة"
+
+- tapOn:
+    id: "receipt-amount-input"
+- inputText: ${TEST_AMOUNT_2}
+
+- tapOn:
+    id: "receipt-create-btn"
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# Verify receipt appeared
+- extendedWaitUntil:
+    visible: "${TEST_AMOUNT_2}"
+    timeout: 10000
+
+# === Step 2: Buyer accepts the second receipt ===
+
+# Login as buyer
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "signin-phone-input"
+- inputText: ${BUYER_PHONE}
+- tapOn:
+    id: "signin-continue-btn"
+- waitForAnimationToEnd
+- tapOn:
+    id: "otp-input"
+- waitForAnimationToEnd
+- inputText: ${TEST_OTP}
+- waitForAnimationToEnd:
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "service-tanazul"
+    timeout: 15000
+
+# Navigate to chats
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Open first chat
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify the second receipt is visible
+- extendedWaitUntil:
+    visible: "${TEST_AMOUNT_2}"
+    timeout: 10000
+
+# Accept the second receipt (tap Accept & Sign button)
+- tapOn:
+    id: "receipt-accept-btn"
+- waitForAnimationToEnd
+
+# === Step 3: Verify NEW payment link appeared with "Pay Now" ===
+
+# A new payment link should appear -- verify Pay Now button is visible
+- extendedWaitUntil:
+    visible:
+      id: "payment-pay-btn"
+    timeout: 15000
+
+# === Step 4: Buyer pays via bank transfer for the second receipt ===
+
+# Tap Pay Now on the second payment link
+- tapOn:
+    id: "payment-pay-btn"
+- waitForAnimationToEnd
+
+# Select bank transfer payment method
+- tapOn:
+    id: "payment-bank-transfer"
+- waitForAnimationToEnd
+
+# Enter phone number for transfer reference
+- tapOn:
+    id: "payment-phone-input"
+- inputText: ${BUYER_PHONE}
+
+# Submit payment
+- tapOn:
+    id: "payment-submit-btn"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# === Step 5: Verify order was created for the second receipt ===
+
+# Navigate to orders tab to verify the new order exists
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# The most recent order should show the second receipt amount
+- extendedWaitUntil:
+    visible: "${TEST_AMOUNT_2}"
+    timeout: 10000
+
+# Open the order to verify details
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify order status is visible (should be awaiting admin approval for bank transfer)
+- assertVisible:
+    id: "order-status"

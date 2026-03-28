@@ -1,0 +1,36 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 03: Browse tanazul list (buyer)
+# Tests list loading, search, and pull-to-refresh
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to tanazul list
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Verify the list screen loaded
+- assertVisible:
+    id: "tanazul-search-input"
+
+# Search for a specific nationality to filter results
+- tapOn:
+    id: "tanazul-search-input"
+- inputText: "فلبينية"
+- waitForAnimationToEnd
+
+# Clear search
+- tapOn:
+    id: "tanazul-search-input"
+- eraseText: 20
+- waitForAnimationToEnd
+
+# Pull to refresh
+- scroll
+- waitForAnimationToEnd
+
+# Verify list items are visible (at least one ad should exist)
+- assertVisible: "${TEST_AMOUNT}"

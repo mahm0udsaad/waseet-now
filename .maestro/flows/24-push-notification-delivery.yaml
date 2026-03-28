@@ -1,0 +1,66 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 24: Push notification delivery on new message
+# Tests: seller sends a message, buyer receives an in-app notification toast
+# Verifies: in-app notification toast appears with message preview
+# Note: This tests in-app notifications, not OS-level push (which cannot be automated)
+
+# === Step 1: Seller sends a message ===
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to chats
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Open first chat conversation
+- tapOn:
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Send a distinctive test message that we can verify on the buyer side
+- tapOn:
+    id: "chat-text-input"
+- inputText: "رسالة اختبار الإشعارات - تم الإرسال"
+
+- tapOn:
+    id: "chat-send-btn"
+- waitForAnimationToEnd
+
+# Verify message was sent successfully
+- assertVisible: "رسالة اختبار الإشعارات - تم الإرسال"
+
+# === Step 2: Buyer logs in and checks for notification ===
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Wait for the home screen to fully load
+- extendedWaitUntil:
+    visible:
+      id: "service-tanazul"
+    timeout: 15000
+
+# Check for in-app notification toast (InAppToast component)
+# The toast should appear showing message preview from seller
+- extendedWaitUntil:
+    visible:
+      id: "in-app-toast"
+    timeout: 10000
+
+# Verify the toast contains the message text or sender info
+- assertVisible:
+    id: "in-app-toast-body"
+
+# Tap on the notification toast to navigate to the chat
+- tapOn:
+    id: "in-app-toast"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify we landed in the chat and can see the message
+- assertVisible: "رسالة اختبار الإشعارات - تم الإرسال"

@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>وسيط الآن | Modern Saudi Business Profile</title>
+  <style>
+    :root {
+      --saudi-green: #0f6b5a;
+      --saudi-green-2: #147a67;
+      --saudi-green-soft: #e6f2ef;
+      --deep-ink: #132238;
+      --ink: #1d2b3f;
+      --muted: #627086;
+      --sand: #f6f2e9;
+      --paper: #fbfaf7;
+      --white: #ffffff;
+      --line: rgba(19, 34, 56, 0.1);
+      --line-strong: rgba(19, 34, 56, 0.18);
+      --shadow: 0 20px 60px rgba(19, 34, 56, 0.1);
+      --radius-xl: 30px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(15, 107, 90, 0.08), transparent 28%),
+        linear-gradient(180deg, #f2f4f3 0%, #f7f7f5 100%);
+      font-family: "SF Arabic", "Geeza Pro", "Tahoma", sans-serif;
+    }
+
+    body {
+      padding: 24px 0 40px;
+    }
+
+    .document {
+      width: 210mm;
+      margin: 0 auto;
+    }
+
+    .page {
+      position: relative;
+      width: 210mm;
+      min-height: 297mm;
+      background: var(--white);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      page-break-after: always;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    .page-inner {
+      position: relative;
+      min-height: 297mm;
+      padding: 16mm;
+      z-index: 2;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(15, 107, 90, 0.03), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(19, 34, 56, 0.04), transparent 28%);
+      pointer-events: none;
+    }
+
+    .cover {
+      background:
+        linear-gradient(180deg, rgba(14, 28, 44, 0.98), rgba(18, 39, 57, 0.98)),
+        var(--deep-ink);
+      color: var(--white);
+    }
+
+    .cover::before {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(20, 122, 103, 0.22), transparent 20%),
+        radial-gradient(circle at 82% 85%, rgba(255, 255, 255, 0.06), transparent 18%);
+    }
+
+    .cover-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 26px 26px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.36), transparent 72%);
+      pointer-events: none;
+    }
+
+    .row,
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-box {
+      width: 60px;
+      height: 60px;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .brand h1,
+    .brand p,
+    .hero-copy h2,
+    .hero-copy p,
+    .section-head h3,
+    .section-head p,
+    h4,
+    p {
+      margin: 0;
+    }
+
+    .brand h1 {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .brand p {
+      margin-top: 6px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 12mm;
+      align-items: stretch;
+      margin-top: 16mm;
+    }
+
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 225mm;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(20, 122, 103, 0.16);
+      border: 1px solid rgba(20, 122, 103, 0.24);
+      color: #cce9e1;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .hero-copy h2 {
+      font-size: 56px;
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      font-weight: 900;
+      max-width: 95%;
+    }
+
+    .hero-copy p {
+      margin-top: 16px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 16px;
+      line-height: 1.95;
+      max-width: 94%;
+    }
+
+    .hero-panels {
+      display: grid;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .panel {
+      padding: 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+    }
+
+    .panel strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 6px;
+      color: var(--white);
+    }
+
+    .panel span {
+      display: block;
+      font-size: 13px;
+      line-height: 1.8;
+      color: rgba(255, 255, 255, 0.74);
+    }
+
+    .hero-visual {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+      min-height: 225mm;
+    }
+
+    .visual-main,
+    .visual-small,
+    .service-media,
+    .closing-visual {
+      position: relative;
+      overflow: hidden;
+      border-radius: 26px;
+    }
+
+    .visual-main {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+    }
+
+    .visual-main img,
+    .visual-small img,
+    .service-media img,
+    .closing-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .visual-main::after,
+    .visual-small::after,
+    .service-media::after,
+    .closing-visual::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.56));
+    }
+
+    .caption {
+      position: absolute;
+      right: 18px;
+      left: 18px;
+      bottom: 18px;
+      z-index: 2;
+      color: var(--white);
+    }
+
+    .caption strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .caption span {
+      display: block;
+      font-size: 13px;
+      line-height: 1.8;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .visual-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .visual-small {
+      min-height: 88mm;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .visual-small .caption strong {
+      font-size: 17px;
+    }
+
+    .visual-small .caption span {
+      font-size: 11px;
+    }
+
+    .footer {
+      position: absolute;
+      right: 16mm;
+      left: 16mm;
+      bottom: 12mm;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.66);
+      z-index: 2;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 10mm;
+    }
+
+    .section-head .kicker {
+      color: var(--saudi-green);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .section-head h3 {
+      font-size: 40px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      font-weight: 900;
+      color: var(--deep-ink);
+      max-width: 95mm;
+    }
+
+    .section-head p {
+      max-width: 70mm;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.9;
+    }
+
+    .about-layout {
+      display: grid;
+      grid-template-columns: 1fr 0.92fr;
+      gap: 8mm;
+      margin-bottom: 8mm;
+    }
+
+    .card,
+    .metric,
+    .service-card,
+    .cta-card,
+    .contact-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 12px 34px rgba(19, 34, 56, 0.04);
+    }
+
+    .about-card {
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(15, 107, 90, 0.06), rgba(15, 107, 90, 0.015)),
+        var(--white);
+    }
+
+    .about-card h4 {
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 900;
+      margin-bottom: 12px;
+      color: var(--deep-ink);
+    }
+
+    .about-card p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 2;
+    }
+
+    .contact-card {
+      padding: 24px;
+      background:
+        linear-gradient(180deg, rgba(15, 107, 90, 0.98), rgba(17, 88, 75, 0.98)),
+        var(--saudi-green);
+      color: var(--white);
+      border-color: rgba(15, 107, 90, 0.34);
+    }
+
+    .contact-row + .contact-row {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.72);
+      margin-bottom: 6px;
+    }
+
+    .value {
+      font-size: 18px;
+      line-height: 1.7;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7mm;
+    }
+
+    .metric {
+      padding: 18px 20px;
+      min-height: 48mm;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 900;
+      margin-bottom: 8px;
+      color: var(--deep-ink);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7mm;
+    }
+
+    .service-card {
+      overflow: hidden;
+    }
+
+    .service-media {
+      height: 72mm;
+    }
+
+    .service-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 2;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(19, 34, 56, 0.68);
+      color: var(--white);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .service-body {
+      padding: 18px;
+    }
+
+    .service-body h4 {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 10px;
+      color: var(--deep-ink);
+    }
+
+    .service-body p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.9;
+      margin-bottom: 14px;
+    }
+
+    .points {
+      display: grid;
+      gap: 8px;
+    }
+
+    .point {
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--paper);
+      border: 1px solid rgba(19, 34, 56, 0.06);
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .closing-layout {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 8mm;
+      align-items: stretch;
+    }
+
+    .closing-visual {
+      min-height: 208mm;
+      box-shadow: 0 18px 54px rgba(19, 34, 56, 0.08);
+      border: 1px solid var(--line);
+    }
+
+    .closing-side {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 7mm;
+    }
+
+    .cta-card {
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(15, 107, 90, 0.1), rgba(15, 107, 90, 0.03)),
+        var(--white);
+    }
+
+    .cta-card h4 {
+      font-size: 30px;
+      line-height: 1.08;
+      font-weight: 900;
+      margin-bottom: 10px;
+      color: var(--deep-ink);
+    }
+
+    .cta-card p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 2;
+    }
+
+    .cta-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+      min-width: 58mm;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: var(--saudi-green);
+      color: var(--white);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .mini-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .mini {
+      padding: 14px 12px;
+      text-align: center;
+      border-radius: 18px;
+      background: var(--white);
+      border: 1px solid var(--line);
+    }
+
+    .mini strong {
+      display: block;
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 4px;
+      color: var(--saudi-green);
+    }
+
+    .mini span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .contact-box {
+      padding: 22px;
+      border-radius: var(--radius-lg);
+      background: var(--deep-ink);
+      color: var(--white);
+      box-shadow: 0 18px 50px rgba(19, 34, 56, 0.14);
+    }
+
+    .contact-box h4 {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 14px;
+    }
+
+    .contact-box .row-item + .row-item {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .contact-box .label {
+      color: rgba(255, 255, 255, 0.68);
+    }
+
+    .contact-box .value {
+      color: var(--white);
+      font-size: 17px;
+    }
+
+    .page-foot {
+      position: absolute;
+      right: 16mm;
+      left: 16mm;
+      bottom: 12mm;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: rgba(29, 43, 63, 0.5);
+      font-size: 12px;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: transparent;
+      }
+
+      .document {
+        width: auto;
+      }
+
+      .page {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="document">
+    <section class="page cover">
+      <div class="cover-grid"></div>
+      <div class="page-inner">
+        <div class="row">
+          <div class="brand">
+            <div class="logo-box">
+              <img src="../assets/images/logo.png" alt="شعار وسيط الآن" />
+            </div>
+            <div>
+              <h1>وسيط الآن</h1>
+              <p>Modern Saudi Business Profile 2026</p>
+            </div>
+          </div>
+          <div class="pill">www.wasitalan.com</div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-copy">
+            <div>
+              <div class="eyebrow">منصة رقمية موثوقة للخدمات والوساطة المالية</div>
+              <h2>حلول عملية تحفظ الحقوق وتسهّل إنجاز الاتفاقات.</h2>
+              <p>
+                وسيط الآن منصة متخصصة في الوساطة المالية وخدمات التعقيب
+                والتنازل، صُممت لتقديم تجربة أكثر أمانًا ووضوحًا واحترافية
+                للأفراد ومقدمي الخدمات داخل السوق السعودي.
+              </p>
+
+              <div class="hero-panels">
+                <div class="panel">
+                  <strong>عرض ترويجي لفترة محدودة</strong>
+                  <span>
+                    يمكنك نشر الإعلانات مجانًا على التطبيق لفترة محدودة والوصول
+                    إلى جمهور موثوق داخل بيئة منظمة وآمنة.
+                  </span>
+                </div>
+                <div class="panel">
+                  <strong>الأمان أولًا، والإنجاز مضمون</strong>
+                  <span>
+                    آلية واضحة لحفظ الحقوق ورفع الجدية من بداية الطلب حتى اكتمال
+                    التنفيذ أو إغلاق الاتفاق.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="visual-main">
+              <img src="../assets/images/onboarding/onboarding-hero.jpg" alt="وسيط الآن" />
+              <div class="caption">
+                <strong>وسيطك المالي الموثوق</strong>
+                <span>تعامل بثقة عبر تجربة رقمية مبنية على الوضوح والتنظيم.</span>
+              </div>
+            </div>
+            <div class="visual-row">
+              <div class="visual-small">
+                <img src="../assets/images/onboarding/onboarding-taqib.jpg" alt="التعقيب" />
+                <div class="caption">
+                  <strong>التعقيب</strong>
+                  <span>خدمات سريعة ومنظمة.</span>
+                </div>
+              </div>
+              <div class="visual-small">
+                <img src="../assets/images/onboarding/onboarding-damin.jpg" alt="الضامن" />
+                <div class="caption">
+                  <strong>الضامن</strong>
+                  <span>وساطة مالية محايدة.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <span>الدعم: +966536300031</span>
+          <span>support@wasitalan.com</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="page-inner">
+        <div class="section-head">
+          <div>
+            <div class="kicker">ABOUT WASEET ALAN</div>
+            <h3>ملف تعريفي مختصر عن المنصة</h3>
+          </div>
+          <p>
+            هدفنا هو تقديم نموذج أكثر موثوقية ووضوحًا للتعاملات والخدمات، مع
+            تجربة حديثة تناسب احتياجات السوق السعودي.
+          </p>
+        </div>
+
+        <div class="about-layout">
+          <div class="card about-card">
+            <h4>منصة تجمع بين الأمان وسهولة الوصول</h4>
+            <p>
+              بعد أكثر من عامين من العمل والتطوير، انطلق وسيط الآن كمنصة موثوقة
+              للوساطة المالية وخدمات التعقيب والتنازل عن العمالة المنزلية. نربط
+              بين الأطراف باحترافية عالية ونوفر بيئة آمنة تحفظ الحقوق وتضمن
+              الجدية، مع تجربة رقمية واضحة تساعد على إنجاز الخدمة بثقة.
+            </p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-row">
+              <div class="label">الموقع الإلكتروني</div>
+              <div class="value">www.wasitalan.com</div>
+            </div>
+            <div class="contact-row">
+              <div class="label">رقم الدعم</div>
+              <div class="value">+966536300031</div>
+            </div>
+            <div class="contact-row">
+              <div class="label">البريد الإلكتروني</div>
+              <div class="value">support@wasitalan.com</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <strong>شفافية كاملة</strong>
+            <span>خطوات واضحة من بداية الطلب حتى اكتمال التنفيذ أو إنهاء الاتفاق.</span>
+          </div>
+          <div class="metric">
+            <strong>حماية الحقوق</strong>
+            <span>تقليل المخاطر المالية ورفع مستوى الطمأنينة لجميع الأطراف.</span>
+          </div>
+          <div class="metric">
+            <strong>تجربة موثوقة</strong>
+            <span>واجهة عملية حديثة تساعد على الوصول للخدمة بشكل أسهل وأسرع.</span>
+          </div>
+          <div class="metric">
+            <strong>حلول متعددة</strong>
+            <span>التنازل والتعقيب والضامن ضمن منصة واحدة بهوية واضحة ومنظمة.</span>
+          </div>
+        </div>
+
+        <div class="page-foot">
+          <span>وسيط الآن | Company Profile</span>
+          <span>منصة حديثة لخدمات السوق السعودي</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="page-inner">
+        <div class="section-head">
+          <div>
+            <div class="kicker">CORE SERVICES</div>
+            <h3>الخدمات الرئيسية</h3>
+          </div>
+          <p>
+            تم تطوير الخدمات لتخدم استخدامات عملية حقيقية مع تركيز مباشر على
+            الثقة والوضوح وضمان الجدية في التعامل.
+          </p>
+        </div>
+
+        <div class="services">
+          <article class="service-card">
+            <div class="service-media">
+              <img src="../assets/images/onboarding/onboarding-tanazul.jpg" alt="التنازل" />
+              <div class="service-badge">قسم التنازل</div>
+            </div>
+            <div class="service-body">
+              <h4>التنازل</h4>
+              <p>
+                يتيح عرض ونقل العقود المتبقية للعمالة المنزلية بأمان وشفافية،
+                مع وضوح أكبر في التفاصيل قبل إتمام الاتفاق.
+              </p>
+              <div class="points">
+                <div class="point">استعراض العروض المناسبة بسهولة.</div>
+                <div class="point">إمكانية نشر إعلانك داخل المنصة.</div>
+                <div class="point">حجز مبلغ الاتفاق حتى اكتمال الإجراءات.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-media">
+              <img src="../assets/images/onboarding/onboarding-taqib.jpg" alt="التعقيب" />
+              <div class="service-badge">قسم التعقيب</div>
+            </div>
+            <div class="service-body">
+              <h4>التعقيب</h4>
+              <p>
+                إنجاز المعاملات الحكومية والإدارية عبر مقدمي خدمات ومعقبين، ضمن
+                تجربة منظمة تساعد العميل على اختيار الخدمة المناسبة بثقة.
+              </p>
+              <div class="points">
+                <div class="point">تصفح الإعلانات واختيار مقدم الخدمة الأنسب.</div>
+                <div class="point">حجز المبلغ بأمان حتى اكتمال التنفيذ.</div>
+                <div class="point">الوصول إلى عملاء موثوقين لمقدمي الخدمات.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="service-card">
+            <div class="service-media">
+              <img src="../assets/images/onboarding/onboarding-damin.jpg" alt="الضامن" />
+              <div class="service-badge">قسم الضامن</div>
+            </div>
+            <div class="service-body">
+              <h4>الضامن</h4>
+              <p>
+                خدمة وساطة مالية تحمي أموال الأطراف في اتفاقات البيع والشراء أو
+                تقديم الخدمات حتى اكتمال الشروط المتفق عليها.
+              </p>
+              <div class="points">
+                <div class="point">إيداع المبلغ لدى وسيط محايد.</div>
+                <div class="point">عدم تحويل المبلغ إلا بعد اكتمال الاتفاق.</div>
+                <div class="point">رفع مستوى الحماية والجدية بين الأطراف.</div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="page-foot">
+          <span>الخدمات الرئيسية</span>
+          <span>التنازل | التعقيب | الضامن</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="page-inner">
+        <div class="section-head">
+          <div>
+            <div class="kicker">GET STARTED</div>
+            <h3>ابدأ الآن مع وسيط الآن</h3>
+          </div>
+          <p>
+            صفحة ختامية مختصرة للعرض والتواصل، ومناسبة لتكون نهاية نسخة PDF
+            الرسمية للشركة.
+          </p>
+        </div>
+
+        <div class="closing-layout">
+          <div class="closing-visual">
+            <img src="../assets/images/onboarding/onboarding-hero.jpg" alt="وسيط الآن" />
+            <div class="caption">
+              <strong>منصة خدماتك المتكاملة</strong>
+              <span>بيئة موثوقة، واضحة، وعملية تخدم احتياجات المستخدم ومقدم الخدمة.</span>
+            </div>
+          </div>
+
+          <div class="closing-side">
+            <div class="cta-card">
+              <h4>يمكنك نشر الإعلانات مجانًا على التطبيق لفترة محدودة</h4>
+              <p>
+                إذا كنت مقدم خدمة أو لديك إعلان في التنازل أو التعقيب، فهذه
+                فرصة للوصول إلى جمهور مهتم داخل منصة تعطي الأولوية للأمان
+                والتنظيم وسهولة الاستخدام.
+              </p>
+              <div class="cta-link">www.wasitalan.com</div>
+            </div>
+
+            <div class="mini-metrics">
+              <div class="mini">
+                <strong>01</strong>
+                <span>منصة موحدة</span>
+              </div>
+              <div class="mini">
+                <strong>02</strong>
+                <span>وساطة موثوقة</span>
+              </div>
+              <div class="mini">
+                <strong>03</strong>
+                <span>دعم مباشر</span>
+              </div>
+            </div>
+
+            <div class="contact-box">
+              <h4>بيانات التواصل</h4>
+              <div class="row-item">
+                <div class="label">الموقع الإلكتروني</div>
+                <div class="value">www.wasitalan.com</div>
+              </div>
+              <div class="row-item">
+                <div class="label">رقم الدعم</div>
+                <div class="value">+966536300031</div>
+              </div>
+              <div class="row-item">
+                <div class="label">البريد الإلكتروني</div>
+                <div class="value">support@wasitalan.com</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-foot">
+          <span>وسيط الآن</span>
+          <span>الأمان أولًا، والإنجاز مضمون</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,15 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Navigate from home screen to tanazul list
+# Assumes user is already logged in and on the home screen
+
+# Tap the tanazul card on the home screen
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Verify tanazul list loaded
+- assertVisible:
+    id: "tanazul-search-input"

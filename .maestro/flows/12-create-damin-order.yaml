@@ -1,0 +1,41 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 12: Create a Damin (ضامن) order
+# Tests: order creation with payer and beneficiary phone numbers
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to create damin screen
+- tapOn:
+    id: "service-dhamen"
+- waitForAnimationToEnd
+
+# Fill in service details
+- tapOn:
+    id: "damin-service-details"
+- inputText: "خدمة تطوير تطبيق موبايل"
+
+# Fill in service value
+- tapOn:
+    id: "damin-service-value"
+- inputText: ${TEST_AMOUNT}
+
+# Fill in payer phone
+- tapOn:
+    id: "damin-payer-phone"
+- inputText: ${SELLER_PHONE}
+
+# Fill in beneficiary phone
+- tapOn:
+    id: "damin-beneficiary-phone"
+- inputText: ${BUYER_PHONE}
+
+# Submit the order
+- tapOn:
+    id: "damin-submit-btn"
+- waitForAnimationToEnd
+
+# Verify order was created
+- assertVisible: "تم إنشاء الطلب"

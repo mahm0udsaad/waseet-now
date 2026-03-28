@@ -1,0 +1,28 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 05: Start a chat from a tanazul ad (buyer)
+# Tests the chat initiation flow
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to tanazul list
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Tap on the test ad
+- tapOn: "${TEST_AMOUNT}"
+- waitForAnimationToEnd
+
+# Tap the chat button to start a conversation
+- tapOn:
+    id: "tanazul-chat-btn"
+- waitForAnimationToEnd
+
+# Verify we're on the chat screen
+- assertVisible:
+    id: "chat-text-input"
+- assertVisible:
+    id: "chat-send-btn"

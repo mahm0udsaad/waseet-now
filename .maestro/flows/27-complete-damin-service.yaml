@@ -1,0 +1,86 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 27: Complete damin service and verify fund release
+# Tests: full damin completion lifecycle -- confirm delivery, release funds to seller
+# Verifies: order status changes to completed, wallet reflects released funds
+# Prerequisite: damin order exists with status = in_progress (payment already made)
+
+# === Step 1: Buyer confirms service delivery ===
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the damin order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify the order is in progress
+- assertVisible:
+    id: "order-status"
+
+# Tap confirm service received button
+- tapOn:
+    id: "damin-confirm-received-btn"
+- waitForAnimationToEnd
+
+# A confirmation dialog should appear (this releases escrowed funds)
+- assertVisible: "تأكيد استلام الخدمة"
+
+# Confirm the action
+- tapOn:
+    id: "confirm-dialog-yes-btn"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify order is now marked as completed
+- extendedWaitUntil:
+    visible: "مكتمل"
+    timeout: 10000
+
+# === Step 2: Seller verifies funds released to wallet ===
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to profile tab
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd
+
+# Tap on wallet
+- tapOn:
+    id: "profile-wallet-btn"
+- waitForAnimationToEnd
+
+# Verify wallet screen loaded with balance
+- assertVisible:
+    id: "wallet-available-balance"
+
+# Verify transaction history shows the fund release
+- assertVisible:
+    id: "wallet-transactions-list"
+
+# Also verify from orders -- the order should show completed status
+- back
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the damin order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Verify seller also sees completed status
+- assertVisible: "مكتمل"

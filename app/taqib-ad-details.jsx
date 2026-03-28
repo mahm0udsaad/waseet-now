@@ -1,37 +1,35 @@
-import React from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  FadeInDown,
-  SlideInRight,
-  ZoomIn,
-} from "react-native-reanimated";
-import {
-  ArrowLeft,
-  ArrowRight,
-  MessageCircle,
-  Building2,
-  Briefcase,
-  CreditCard,
-  Plane,
-  FileCheck,
-  Users,
-  Truck,
-  UserCheck,
-  FileSignature,
-  BadgeCheck,
-  Star,
-  MapPin,
-  Clock,
-} from "lucide-react-native";
+import { NativeIcon } from "@/components/native/NativeIcon";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
+import { Shadows, Spacing } from "@/constants/theme";
+import { useTranslation, getRTLRowDirection, getRTLInverseRowDirection, getRTLTextAlign, getRTLStartAlign } from "@/utils/i18n/store";
+import { buildListingSharePayload } from "@/utils/sharing/listings";
+import { fetchAdById } from "@/utils/supabase/ads";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation } from "@/utils/i18n/store";
+import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { ChevronRight } from "lucide-react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import Animated, {
+  FadeInDown,
+  SlideInDown,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const { width, height } = Dimensions.get('window');
+const IMAGE_HEIGHT = height * 0.4;
 
 export default function TaqibAdDetailsScreen() {
   const router = useRouter();
@@ -40,510 +38,629 @@ export default function TaqibAdDetailsScreen() {
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useTranslation();
 
-  // Animation values
-  const chatScale = useSharedValue(1);
+  const [adData, setAdData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeSlide, setActiveSlide] = useState(0);
 
-  // Mock data for service providers - in real app this would come from API
-  const serviceProviders = {
-    "ad_001": {
-      id: "ad_001",
-      title: isRTL ? "خدمات الجوازات" : "Passport Services",
-      providerName: isRTL ? "مكتب الريادة للخدمات" : "Al-Riyada Services Office",
-      icon: Plane,
-      rating: 4.8,
-      reviewCount: 156,
-      location: isRTL ? "الرياض، حي العليا" : "Riyadh, Olaya District",
-      isVerified: true,
-      responseTime: isRTL ? "يرد خلال ساعة" : "Responds within 1 hour",
-      services: [
-        { name: isRTL ? "نقل كفالة مهني" : "Professional Transfer", price: "300" },
-        { name: isRTL ? "نقل كفالة تابع" : "Dependent Transfer", price: "250" },
-        { name: isRTL ? "نقل من فردي إلى مهني" : "Transfer from Individual to Professional", price: "400" },
-        { name: isRTL ? "تعديل مهنة سائق شاحنة" : "Truck Driver Modification", price: "200" },
-        { name: isRTL ? "فصل تابع (غير سعودي)" : "Dependent Separation (Non-National)", price: "350" },
-        { name: isRTL ? "تمديد مع ختم السفارة" : "Extension with Embassy Stamp", price: "500" },
-        { name: isRTL ? "تجديد إقامة" : "Iqama Renewal", price: null },
-        { name: isRTL ? "إصدار تأشيرة خروج وعودة" : "Exit & Re-entry Visa Issuance", price: "150" },
-      ],
-    },
-    "ad_002": {
-      id: "ad_002",
-      title: isRTL ? "خدمات مكتب العمل" : "Labor Office Services",
-      providerName: isRTL ? "مكتب الإنجاز للتعقيب" : "Al-Injaz Follow-up Office",
-      icon: Briefcase,
-      rating: 4.6,
-      reviewCount: 98,
-      location: isRTL ? "جدة، حي الصفا" : "Jeddah, Al-Safa District",
-      isVerified: true,
-      responseTime: isRTL ? "يرد خلال 30 دقيقة" : "Responds within 30 minutes",
-      services: [
-        { name: isRTL ? "إصدار رخصة عمل" : "Work Permit Issuance", price: "400" },
-        { name: isRTL ? "تجديد رخصة عمل" : "Work Permit Renewal", price: "350" },
-        { name: isRTL ? "نقل خدمات عامل" : "Worker Service Transfer", price: null },
-        { name: isRTL ? "تعديل المهنة" : "Profession Modification", price: "200" },
-        { name: isRTL ? "إلغاء بلاغ هروب" : "Cancel Absconding Report", price: "500" },
-        { name: isRTL ? "استعلام عن موظف" : "Employee Inquiry", price: null },
-      ],
-    },
-    "ad_003": {
-      id: "ad_003",
-      title: isRTL ? "خدمات وزارة التجارة" : "Ministry of Commerce Services",
-      providerName: isRTL ? "مكتب التميز للخدمات" : "Excellence Services Office",
-      icon: Building2,
-      rating: 4.9,
-      reviewCount: 234,
-      location: isRTL ? "الدمام، حي الفيصلية" : "Dammam, Al-Faisaliya District",
-      isVerified: true,
-      responseTime: isRTL ? "يرد خلال ساعتين" : "Responds within 2 hours",
-      services: [
-        { name: isRTL ? "إصدار سجل تجاري" : "Commercial Registration Issuance", price: "800" },
-        { name: isRTL ? "تجديد سجل تجاري" : "Commercial Registration Renewal", price: "500" },
-        { name: isRTL ? "تعديل سجل تجاري" : "Commercial Registration Modification", price: "300" },
-        { name: isRTL ? "شطب سجل تجاري" : "Commercial Registration Cancellation", price: "250" },
-        { name: isRTL ? "إصدار شهادة الغرفة التجارية" : "Chamber of Commerce Certificate", price: null },
-        { name: isRTL ? "تصديق عقود" : "Contract Authentication", price: "150" },
-      ],
-    },
+  const adId = params.id;
+
+  const loadAdData = useCallback(async () => {
+    if (!adId) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const fetchedAd = await fetchAdById(adId);
+      setAdData(fetchedAd);
+    } catch (err) {
+      console.error("Error fetching ad:", err);
+      setError(err.message || "Failed to load ad");
+    } finally {
+      setLoading(false);
+    }
+  }, [adId]);
+
+  useEffect(() => {
+    loadAdData();
+  }, [loadAdData]);
+
+  const handleShare = async () => {
+    if (!adData) return;
+    try {
+      const payload = buildListingSharePayload(adData);
+      if (!payload) return;
+      await Share.share(payload);
+    } catch (error) {
+      console.log('Error sharing:', error);
+    }
   };
-
-  const adId = params.id || "ad_001";
-  const adData = serviceProviders[adId] || serviceProviders["ad_001"];
-  const AdIcon = adData.icon;
 
   const handleChat = () => {
-    chatScale.value = withSpring(0.95, {}, () => {
-      chatScale.value = withSpring(1);
-    });
+    if (!adData) return;
     router.push({
       pathname: "/chat",
-      params: { providerId: adData.id, providerName: adData.providerName },
+      params: { 
+        conversationId: null,
+        adId: adData.id,
+        ownerId: adData.owner_id, 
+        adTitle: adData.title,
+        price: 0, 
+      },
     });
   };
 
-  const chatAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: chatScale.value }],
-  }));
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (viewableItems.length > 0) {
+      setActiveSlide(viewableItems[0].index || 0);
+    }
+  }).current;
 
-  const gradientColors = isDark
-    ? [colors.background, colors.backgroundSecondary]
-    : [colors.background, colors.backgroundSecondary];
+  // --- Render Functions ---
 
-  const renderHeader = () => (
-    <Animated.View
-      entering={SlideInRight.delay(100)}
-      style={[styles.header, { flexDirection: isRTL ? "row-reverse" : "row" }]}
-    >
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      >
-        {isRTL ? (
-          <ArrowRight size={22} color={colors.text} />
-        ) : (
-          <ArrowLeft size={22} color={colors.text} />
-        )}
-      </Pressable>
-
-      <View style={styles.headerTitleContainer}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {isRTL ? "تفاصيل الخدمة" : "Service Details"}
-        </Text>
-      </View>
-
-      <View style={{ width: 44 }} />
-    </Animated.View>
-  );
-
-  const renderProviderCard = () => (
-    <Animated.View
-      entering={ZoomIn.delay(200)}
-      style={[styles.providerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-    >
-      {/* Provider Header */}
-      <View style={[styles.providerHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-        <View style={[styles.providerIconContainer, { backgroundColor: colors.primary }]}>
-          <AdIcon size={32} color="#fff" />
-        </View>
-        <View style={[styles.providerInfo, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-          <Text style={[styles.providerTitle, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
-            {adData.title}
-          </Text>
-          <Text style={[styles.providerName, { color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }]}>
-            {adData.providerName}
-          </Text>
-        </View>
-      </View>
-
-      {/* Verified Badge */}
-      {adData.isVerified && (
-        <View style={[styles.verifiedRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-          <BadgeCheck size={16} color={colors.primary} />
-          <Text style={[styles.verifiedText, { color: colors.primary }]}>
-            {isRTL ? "مكتب موثق" : "Verified Office"}
-          </Text>
-        </View>
-      )}
-
-      {/* Provider Stats */}
-      <View style={[styles.statsRow, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-        <View style={[styles.statItem, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-          <Star size={14} color={colors.warning} fill={colors.warning} />
-          <Text style={[styles.statText, { color: colors.text }]}>
-            {adData.rating} ({adData.reviewCount})
-          </Text>
-        </View>
-        <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-        <View style={[styles.statItem, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-          <MapPin size={14} color={colors.textMuted} />
-          <Text style={[styles.statText, { color: colors.textSecondary }]}>
-            {adData.location}
-          </Text>
-        </View>
-      </View>
-
-      {/* Response Time */}
-      <View style={[styles.responseTimeRow, { backgroundColor: colors.primaryLight, flexDirection: isRTL ? "row-reverse" : "row" }]}>
-        <Clock size={14} color={colors.primary} />
-        <Text style={[styles.responseTimeText, { color: colors.primary }]}>
-          {adData.responseTime}
-        </Text>
-      </View>
-    </Animated.View>
-  );
-
-  const renderServicesSection = () => (
-    <Animated.View
-      entering={FadeInDown.delay(300)}
-      style={[styles.servicesCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-    >
-      <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
-        {isRTL ? "الخدمات المتوفرة" : "Available Services"}
-      </Text>
-
-      <View style={styles.servicesList}>
-        {adData.services.map((service, index) => (
-          <Animated.View
-            key={index}
-            entering={FadeInDown.delay(400 + index * 50)}
+  const renderPagination = (images) => {
+    if (!images || images.length <= 1) return null;
+    return (
+      <View style={styles.paginationContainer}>
+        {images.map((_, i) => (
+          <View
+            key={i}
             style={[
-              styles.serviceItem,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                borderColor: colors.border,
-                flexDirection: isRTL ? "row-reverse" : "row",
-              },
+              styles.paginationDot,
+              { 
+                backgroundColor: i === activeSlide ? '#FFF' : 'rgba(255,255,255,0.4)',
+                width: i === activeSlide ? 20 : 6 
+              }
             ]}
-          >
-            <View style={[styles.serviceIconWrapper, { backgroundColor: colors.primaryLight }]}>
-              <FileCheck size={16} color={colors.primary} />
-            </View>
-            <View style={[styles.serviceContent, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-              <Text style={[styles.serviceName, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}>
-                {service.name}
-              </Text>
-              {service.price && (
-                <Text style={[styles.servicePrice, { color: colors.primary }]}>
-                  {service.price} {isRTL ? "ر.س" : "SAR"}
-                </Text>
-              )}
-            </View>
-          </Animated.View>
+          />
         ))}
       </View>
+    );
+  };
 
-      {/* Note */}
-      <View style={[styles.noteContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-        <Text style={[styles.noteText, { color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }]}>
-          {isRTL 
-            ? "* الأسعار تقريبية وقد تختلف حسب متطلبات الخدمة. تواصل مع مقدم الخدمة للحصول على عرض سعر دقيق."
-            : "* Prices are approximate and may vary based on service requirements. Contact the provider for an accurate quote."
-          }
-        </Text>
+  const renderLoadingSkeleton = () => (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen
+        options={{
+          title: isRTL ? "جاري التحميل..." : "Loading...",
+          headerBackVisible: false,
+          headerBackTitleVisible: false,
+          headerBackButtonDisplayMode: "minimal",
+          headerLeft: isRTL
+            ? () => (
+                <View style={styles.iconButton}>
+                  <NativeIcon name="share" size={20} color={colors.text} style={{ opacity: 0.35 }} />
+                </View>
+              )
+            : undefined,
+          headerRight: isRTL
+            ? () => (
+                <View style={styles.headerBackButton}>
+                  <ChevronRight size={22} color={colors.text} style={{ opacity: 0.35 }} />
+                </View>
+              )
+            : () => (
+                <View style={styles.iconButton}>
+                  <NativeIcon name="share" size={20} color={colors.text} style={{ opacity: 0.35 }} />
+                </View>
+              ),
+        }}
+      />
+      <StatusBar style="light" />
+
+      <View style={{ height: IMAGE_HEIGHT, width }}>
+        <Skeleton height={IMAGE_HEIGHT} radius={0} width="100%" />
+        <View style={styles.paginationContainer}>
+          <Skeleton height={6} radius={3} width={20} />
+          <Skeleton height={6} radius={3} width={6} />
+          <Skeleton height={6} radius={3} width={6} />
+        </View>
       </View>
-    </Animated.View>
-  );
 
-  const renderActionSection = () => (
-    <View style={[styles.actionSection, { backgroundColor: colors.primary, paddingBottom: insets.bottom + 20 }]}>
-      <View style={[styles.actionHeader, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-        <View style={[styles.providerMiniInfo, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-          <Text style={styles.actionProviderName}>{adData.providerName}</Text>
-          <View style={[styles.actionRating, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-            <Star size={12} color="#FFD700" fill="#FFD700" />
-            <Text style={styles.actionRatingText}>{adData.rating}</Text>
+      <View
+        style={[
+          styles.contentContainer,
+          {
+            backgroundColor: colors.background,
+            minHeight: height - IMAGE_HEIGHT,
+          },
+        ]}
+      >
+        <SkeletonGroup>
+          <View style={[styles.section, styles.loadingTitleRow]}>
+            <View style={{ flex: 1 }}>
+              <Skeleton height={28} radius={8} width="82%" style={{ marginBottom: 10 }} />
+              <Skeleton height={14} radius={6} width="42%" />
+            </View>
+            <Skeleton height={36} radius={8} width={88} />
           </View>
-        </View>
-        <View style={styles.servicesCountBadge}>
-          <Text style={styles.servicesCountText}>
-            {adData.services.length} {isRTL ? "خدمة" : "services"}
-          </Text>
-        </View>
+
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+
+          <View style={styles.section}>
+            <View style={[styles.grid, { flexDirection: getRTLInverseRowDirection(isRTL) }]}>
+              {[0, 1].map((item) => (
+                <View
+                  key={item}
+                  style={[styles.gridItem, { flexDirection: getRTLInverseRowDirection(isRTL) }]}
+                >
+                  <Skeleton height={44} radius={12} width={44} />
+                  <View style={{ flex: 1 }}>
+                    <Skeleton height={12} radius={6} width="48%" style={{ marginBottom: 8 }} />
+                    <Skeleton height={16} radius={6} width="68%" />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+
+          <View style={styles.section}>
+            <Skeleton height={20} radius={8} width="32%" style={{ marginBottom: 14 }} />
+            <Skeleton height={16} radius={6} width="100%" style={{ marginBottom: 10 }} />
+            <Skeleton height={16} radius={6} width="94%" style={{ marginBottom: 10 }} />
+            <Skeleton height={16} radius={6} width="76%" />
+          </View>
+        </SkeletonGroup>
       </View>
 
-      <Animated.View style={chatAnimatedStyle}>
-        <Pressable
-          onPress={handleChat}
-          style={({ pressed }) => [
-            styles.messageButton,
-            { transform: [{ scale: pressed ? 0.98 : 1 }] },
+      <View style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: colors.surface,
+              borderTopWidth: 1,
+              borderColor: colors.border,
+            },
           ]}
         >
-          <MessageCircle size={20} color={colors.primary} />
-          <Text style={[styles.messageButtonText, { color: colors.primary }]}>
-            {isRTL ? "رسالة" : "Message"}
-          </Text>
-        </Pressable>
-      </Animated.View>
+          <View style={[styles.bottomContent, { flexDirection: getRTLInverseRowDirection(isRTL) }]}>
+            <View style={{ flex: 1 }}>
+              <Skeleton height={12} radius={6} width={72} style={{ marginBottom: 8 }} />
+              <Skeleton height={16} radius={6} width={132} />
+            </View>
+            <Skeleton height={52} radius={16} width={140} />
+          </View>
+        </View>
+      </View>
     </View>
   );
 
-  return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
-      <StatusBar style={colors.statusBar} />
+  if (loading) {
+    return renderLoadingSkeleton();
+  }
 
-      <View style={[styles.content, { paddingTop: insets.top }]}>
-        {renderHeader()}
-
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {renderProviderCard()}
-          {renderServicesSection()}
-          <View style={{ height: 160 }} />
-        </ScrollView>
-
-        {/* Sticky Action Section */}
-        <View style={styles.stickyActionContainer}>
-          {renderActionSection()}
-        </View>
+  if (error || !adData) {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <NativeIcon name="alert-circle" size={48} color={colors.textMuted} />
+        <Text style={[styles.errorText, { color: colors.text }]}>
+          {isRTL ? "حدث خطأ أثناء تحميل الإعلان" : "Error loading details"}
+        </Text>
+        <Pressable onPress={loadAdData} style={[styles.retryButton, { backgroundColor: colors.primary }]}>
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{isRTL ? "إعادة المحاولة" : "Retry"}</Text>
+        </Pressable>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 20 }}>
+           <Text style={{ color: colors.textSecondary }}>{isRTL ? "العودة" : "Go Back"}</Text>
+        </Pressable>
       </View>
-    </LinearGradient>
+    );
+  }
+
+  const images = adData.images && adData.images.length > 0 ? adData.images : null;
+  const BottomBar = Platform.OS === "ios" ? BlurView : View;
+  const bottomBarProps = Platform.OS === "ios" 
+    ? { intensity: 90, tint: isDark ? "dark" : "light" } 
+    : { style: { backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border } };
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen
+        options={{
+          title: isRTL ? "تفاصيل الإعلان" : "Ad Details",
+          headerBackVisible: !isRTL,
+          headerBackTitleVisible: false,
+          headerBackButtonDisplayMode: "minimal",
+          headerLeft: isRTL
+            ? () => (
+                <Pressable onPress={handleShare} style={styles.iconButton}>
+                  <NativeIcon name="share" size={20} color={colors.text} />
+                </Pressable>
+              )
+            : undefined,
+          headerRight: isRTL
+            ? () => (
+                <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
+                  <ChevronRight size={22} color={colors.text} />
+                </Pressable>
+              )
+            : () => (
+            <Pressable onPress={handleShare} style={styles.iconButton}>
+              <NativeIcon name="share" size={20} color={colors.text} />
+            </Pressable>
+          ),
+        }}
+      />
+      <StatusBar style="light" />
+
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        bounces={false} // Cleaner feel for header image
+      >
+        {/* Image Gallery */}
+        <View style={{ height: IMAGE_HEIGHT, width }}>
+          {images ? (
+            <>
+              <FlatList
+                data={images}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => (
+                  <ImageWithFallback
+                    uri={item.publicUrl}
+                    width={width}
+                    height={IMAGE_HEIGHT}
+                    colors={colors}
+                    isRTL={isRTL}
+                  />
+                )}
+              />
+              {renderPagination(images)}
+            </>
+          ) : (
+            <LinearGradient
+              colors={isDark
+                ? [colors.primary + '30', colors.surfaceHighlight, colors.background]
+                : [colors.primary + '20', colors.surfaceHighlight, colors.background]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.placeholderImage}
+            >
+              {/* Decorative circles */}
+              <View style={[styles.decoCircle, styles.decoCircle1, { backgroundColor: colors.primary + '10' }]} />
+              <View style={[styles.decoCircle, styles.decoCircle2, { backgroundColor: colors.primary + '08' }]} />
+              <View style={[styles.placeholderIconWrap, { backgroundColor: '#FFFFFF' }]}>
+              <Image
+  source={require('./../assets/images/logo.png')}
+  style={{ width: 40, height: 40, borderRadius: 20 }}
+  resizeMode="contain"
+/>
+              </View>
+            </LinearGradient>
+          )}
+        </View>
+
+        {/* Content Body */}
+        <View style={[styles.contentContainer, { backgroundColor: colors.background, minHeight: height - IMAGE_HEIGHT }]}>
+          
+          {/* Header Info */}
+          <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.section}>
+             <View style={{ flexDirection: getRTLRowDirection(isRTL), justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.title, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {adData.title}
+                  </Text>
+                  <Text style={[styles.date, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {new Date(adData.created_at).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+                      year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                  </Text>
+                </View>
+                {/* Price Tag if exists */}
+                {adData.price && (
+                   <View style={[styles.priceTag, { backgroundColor: colors.primary + '15' }]}>
+                      <Text style={[styles.priceText, { color: colors.primary }]}>
+                        {adData.price.toLocaleString()} SAR
+                      </Text>
+                   </View>
+                )}
+             </View>
+          </Animated.View>
+
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+
+          {/* Details Grid */}
+          <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.section}>
+             <View style={[styles.grid, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                {/* Location */}
+                <View style={[styles.gridItem, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                   <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
+                      <NativeIcon name="pin-outline" size={20} color={colors.text} />
+                   </View>
+                   <View>
+                      <Text style={[styles.gridLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                        {isRTL ? "الموقع" : "Location"}
+                      </Text>
+                      <Text style={[styles.gridValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                        {adData.location || (isRTL ? "غير محدد" : "N/A")}
+                      </Text>
+                   </View>
+                </View>
+
+                {/* Type/Category */}
+                <View style={[styles.gridItem, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                   <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
+                      <NativeIcon name="tag" size={20} color={colors.text} />
+                   </View>
+                   <View>
+                      <Text style={[styles.gridLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                        {isRTL ? "النوع" : "Type"}
+                      </Text>
+                      <Text style={[styles.gridValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                        {t.home?.[adData.type] || adData.type}
+                      </Text>
+                   </View>
+                </View>
+             </View>
+          </Animated.View>
+
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+
+          {/* Description */}
+          <Animated.View entering={FadeInDown.delay(200).duration(600).springify()} style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              {isRTL ? "الوصف" : "Description"}
+            </Text>
+            <Text style={[styles.description, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+              {adData.description || (isRTL ? "لا يوجد وصف إضافي." : "No description provided.")}
+            </Text>
+          </Animated.View>
+          
+        </View>
+      </Animated.ScrollView>
+
+      {/* Bottom Action Bar */}
+      <Animated.View entering={SlideInDown.delay(300)} style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
+        <BottomBar {...bottomBarProps} style={styles.bottomBar}>
+           <View style={[styles.bottomContent, { flexDirection: getRTLRowDirection(isRTL) }]}>
+              <View style={{ flex: 1, alignItems: getRTLStartAlign(isRTL) }}>
+                 <Text style={[styles.providerLabel, { color: colors.textSecondary }]}>
+                    {isRTL ? "مقدم الخدمة" : "Provider"}
+                 </Text>
+                 <Text style={[styles.providerName, { color: colors.text }]}>
+                    {/* Placeholder name until we join users table */}
+                    {isRTL ? "مستخدم وسيط الان" : "Waseet Alan User"} 
+                 </Text>
+              </View>
+
+              <Pressable
+                testID="taqib-contact-btn"
+                onPress={handleChat}
+                style={({pressed}) => [
+                  styles.primaryButton,
+                  { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+                  Shadows.medium
+                ]}
+              >
+                <NativeIcon name="message-circle" size={20} color="#FFF" />
+                <Text style={styles.primaryButtonText}>
+                  {isRTL ? "تواصل الآن" : "Chat Now"}
+                </Text>
+              </Pressable>
+           </View>
+        </BottomBar>
+      </Animated.View>
+    </View>
   );
 }
 
+const ImageWithFallback = ({ uri, width: w, height: h, colors }) => {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <LinearGradient
+        colors={[colors.primary + '20', colors.surfaceHighlight, colors.background]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ width: w, height: h, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+      >
+        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={require('./../assets/images/logo.png')}
+          style={{ width: 40, height: 40, borderRadius: 20 }}
+          contentFit="contain"
+        />
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: w, height: h }}
+      contentFit="cover"
+      transition={300}
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-
-  // Header
-  header: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerButton: {
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-
-  // Scroll
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 0,
-  },
-
-  // Provider Card
-  providerCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  providerHeader: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  providerIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  providerInfo: {
-    flex: 1,
-    marginHorizontal: 16,
-  },
-  providerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  providerName: {
-    fontSize: 14,
-  },
-  verifiedRow: {
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 6,
-  },
-  verifiedText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  statsRow: {
-    alignItems: "center",
-    marginBottom: 12,
+  container: { flex: 1 },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingHeader: { width: '100%', paddingHorizontal: 20, justifyContent: 'center' },
+  loadingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  statItem: {
-    alignItems: "center",
-    gap: 4,
-  },
-  statText: {
-    fontSize: 13,
-  },
-  statDivider: {
-    width: 1,
-    height: 16,
-  },
-  responseTimeRow: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 6,
-  },
-  responseTimeText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  // Services Section
-  servicesCard: {
+  errorText: { fontSize: 16, marginTop: 12, marginBottom: 20 },
+  retryButton: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  iconButton: {
+    width: 40, height: 40,
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  servicesList: {
-    gap: 10,
-  },
-  serviceItem: {
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 12,
-  },
-  serviceIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  headerBackButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
-  serviceContent: {
-    flex: 1,
-  },
-  serviceName: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  servicePrice: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  noteContainer: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  noteText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
 
-  // Action Section
-  stickyActionContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0, right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
   },
-  actionSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+  paginationDot: {
+    height: 6,
+    borderRadius: 3,
   },
-  actionHeader: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
+  placeholderImage: {
+    width: width,
+    height: IMAGE_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  providerMiniInfo: {
-    flex: 1,
+  placeholderIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionProviderName: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 4,
+  decoCircle: {
+    position: 'absolute',
+    borderRadius: 9999,
   },
-  actionRating: {
-    alignItems: "center",
-    gap: 4,
+  decoCircle1: {
+    width: 200,
+    height: 200,
+    top: -40,
+    right: -60,
   },
-  actionRatingText: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 13,
+  decoCircle2: {
+    width: 160,
+    height: 160,
+    bottom: -20,
+    left: -40,
   },
-  servicesCountBadge: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+  
+  contentContainer: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -32, // Overlap image slightly
+    paddingTop: 32,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: 40,
+  },
+  section: {
+    marginBottom: Spacing.l,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    lineHeight: 32,
+  },
+  date: {
+    fontSize: 14,
+  },
+  priceTag: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 8,
+    marginLeft: 16,
   },
-  servicesCountText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  messageButton: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  messageButtonText: {
+  priceText: {
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: "bold",
+  },
+  separator: {
+    height: 1,
+    width: '100%',
+    marginBottom: Spacing.l,
+  },
+  
+  grid: {
+    flexWrap: 'wrap',
+    gap: 24,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: '40%',
+    alignItems: 'center',
+    gap: 12,
+  },
+  gridIcon: {
+    width: 44, height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  gridValue: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
+
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+  },
+  bottomBar: {
+    paddingHorizontal: Spacing.l,
+    paddingTop: Spacing.m,
+    paddingBottom: Spacing.s, // Handled by safe area padding on container
+  },
+  bottomContent: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 60,
+  },
+  providerLabel: {
+    fontSize: 12,
+  },
+  providerName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
-

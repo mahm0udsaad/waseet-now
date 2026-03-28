@@ -17,7 +17,7 @@ export const useAuth = () => {
   const { isOpen, close, open } = useAuthModal();
 
   const initiate = useCallback(() => {
-    SecureStore.getItemAsync(authKey)
+    return SecureStore.getItemAsync(authKey)
       .then((stored) => {
         let parsedAuth = null;
         if (stored) {

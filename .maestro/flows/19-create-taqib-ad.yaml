@@ -1,0 +1,41 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 19: Create taqib ad (seller)
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to taqib list
+- tapOn:
+    id: "service-taqib"
+- waitForAnimationToEnd
+
+# Open create screen
+- tapOn:
+    id: "taqib-add-btn"
+- waitForAnimationToEnd
+
+# Fill form
+- tapOn:
+    id: "taqib-city-selector"
+- waitForAnimationToEnd
+- tapOn: "الرياض"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "taqib-title-input"
+- inputText: "خدمات تعقيب تجريبية"
+
+- tapOn:
+    id: "taqib-description-input"
+- inputText: "متابعة معاملات حكومية واستخراج تصاريح."
+
+# Submit
+- tapOn:
+    id: "taqib-submit-btn"
+- waitForAnimationToEnd
+
+# Back on list
+- assertVisible:
+    id: "taqib-search-input"

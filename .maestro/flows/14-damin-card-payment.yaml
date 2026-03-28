@@ -1,0 +1,39 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 14: Damin order card payment
+# Tests: card payment via Paymob for damin order
+# Requires: both parties confirmed (status = both_confirmed)
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to orders
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Open the damin order
+- tapOn:
+    id: "order-card-0"
+- waitForAnimationToEnd
+
+# Tap pay button
+- tapOn:
+    id: "damin-pay-btn"
+- waitForAnimationToEnd
+
+# Select card payment method
+- tapOn:
+    id: "payment-card"
+- waitForAnimationToEnd
+
+# Wait for Paymob checkout to load (WebView)
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Note: Actual card entry in Paymob WebView is hard to automate
+# In test mode, Paymob may auto-succeed with test card numbers
+# Verify we reach the checkout screen
+- assertVisible:
+    id: "paymob-webview"

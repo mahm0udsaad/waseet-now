@@ -1,0 +1,25 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 18: Browse taqib list (buyer)
+# Tests list screen visibility and search interaction
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to taqib list
+- tapOn:
+    id: "service-taqib"
+- waitForAnimationToEnd
+
+# Verify list loaded
+- assertVisible:
+    id: "taqib-search-input"
+
+# Search and clear
+- tapOn:
+    id: "taqib-search-input"
+- inputText: "تعقيب"
+- waitForAnimationToEnd
+- clearText
+- waitForAnimationToEnd

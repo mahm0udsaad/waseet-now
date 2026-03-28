@@ -1,0 +1,69 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 02: Create a tanazul ad (seller)
+# Requires: Seller logged in
+
+- runFlow: ../helpers/login-seller.yaml
+
+# Navigate to tanazul list
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Tap the FAB (+) button to create new ad
+- tapOn:
+    id: "tanazul-add-btn"
+- waitForAnimationToEnd
+
+# === Step 1: Fill the form ===
+
+# Select city (Riyadh)
+- tapOn:
+    id: "form-city-selector"
+- waitForAnimationToEnd
+- tapOn: "الرياض"
+- waitForAnimationToEnd
+
+# Select nationality (Filipino)
+- tapOn:
+    id: "form-nationality-selector"
+- waitForAnimationToEnd
+- tapOn: "فلبينية"
+- waitForAnimationToEnd
+
+# Select gender: Male
+- tapOn:
+    id: "form-gender-male"
+
+# Select profession: Domestic Worker (first card)
+- tapOn: "عامل منزلي"
+
+# Enter age
+- tapOn:
+    id: "form-age-input"
+- inputText: "30"
+
+# Enter transfer amount (unique value for test identification)
+- tapOn:
+    id: "form-amount-input"
+- inputText: ${TEST_AMOUNT}
+
+# Tap continue to go to step 2
+- tapOn:
+    id: "form-continue-btn"
+- waitForAnimationToEnd
+
+# === Step 2: Review and confirm ===
+
+# Accept the pledge checkbox
+- tapOn:
+    id: "form-pledge-checkbox"
+
+# Tap confirm to submit
+- tapOn:
+    id: "form-confirm-btn"
+
+# Wait for ad to be created and navigate back
+- waitForAnimationToEnd

@@ -1,0 +1,11 @@
+# Maestro E2E Test Configuration
+# Run: maestro test .maestro/flows/<flow>.yaml
+
+appId: com.mahm09d.kafel
+
+# Test accounts (must be configured in Supabase Dashboard > Auth > Phone Testing)
+env:
+  SELLER_PHONE: "500000001"
+  BUYER_PHONE: "500000002"
+  TEST_OTP: "123456"
+  TEST_AMOUNT: "4999"

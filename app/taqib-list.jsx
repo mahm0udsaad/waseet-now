@@ -1,138 +1,145 @@
-import BottomTabBar from "@/components/BottomTabBar";
+import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { useTranslation } from "@/utils/i18n/store";
+import { fetchAdsByType } from "@/utils/supabase/ads";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
-  ArrowLeft,
-  ArrowRight,
-  BadgeCheck,
-  Briefcase,
   Building2,
   ChevronLeft,
   ChevronRight,
   Filter,
-  Plane,
-  Search,
-  Star,
+  Plus,
+  Search
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown, SlideInRight } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useEffect, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 export default function TaqibListScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { isRTL, rowDirection, textAlign } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Service Provider Ads (Offices/Individuals offering services)
-  const serviceProviderAds = [
-    {
-      id: "ad_001",
-      title: isRTL ? "خدمات الجوازات" : "Passport Services",
-      providerName: isRTL ? "مكتب الريادة للخدمات" : "Al-Riyada Services Office",
-      icon: Plane,
-      rating: 4.8,
-      reviewCount: 156,
-      servicesCount: 8,
-      isVerified: true,
-    },
-    {
-      id: "ad_002",
-      title: isRTL ? "خدمات مكتب العمل" : "Labor Office Services",
-      providerName: isRTL ? "مكتب الإنجاز للتعقيب" : "Al-Injaz Follow-up Office",
-      icon: Briefcase,
-      rating: 4.6,
-      reviewCount: 98,
-      servicesCount: 6,
-      isVerified: true,
-    },
-    {
-      id: "ad_003",
-      title: isRTL ? "خدمات وزارة التجارة" : "Ministry of Commerce Services",
-      providerName: isRTL ? "مكتب التميز للخدمات" : "Excellence Services Office",
-      icon: Building2,
-      rating: 4.9,
-      reviewCount: 234,
-      servicesCount: 6,
-      isVerified: true,
-    },
-    {
-      id: "ad_004",
-      title: isRTL ? "خدمات المرور" : "Traffic Police Services",
-      providerName: isRTL ? "مكتب السرعة للتعقيب" : "Speed Follow-up Office",
-      icon: Briefcase,
-      rating: 4.5,
-      reviewCount: 76,
-      servicesCount: 4,
-      isVerified: false,
-    },
-    {
-      id: "ad_005",
-      title: isRTL ? "تجديد الإقامات" : "Residency Renewal",
-      providerName: isRTL ? "مكتب الأمانة" : "Al-Amanah Office",
-      icon: Plane,
-      rating: 4.7,
-      reviewCount: 112,
-      servicesCount: 3,
-      isVerified: true,
-    },
-    {
-      id: "ad_006",
-      title: isRTL ? "تأشيرات خروج وعودة" : "Exit Re-entry Visas",
-      providerName: isRTL ? "مكتب السفر السريع" : "Quick Travel Office",
-      icon: Plane,
-      rating: 4.4,
-      reviewCount: 45,
-      servicesCount: 2,
-      isVerified: false,
-    },
-    {
-      id: "ad_007",
-      title: isRTL ? "خدمات البلدية" : "Municipality Services",
-      providerName: isRTL ? "مكتب العمران" : "Al-Omran Office",
-      icon: Building2,
-      rating: 4.8,
-      reviewCount: 189,
-      servicesCount: 5,
-      isVerified: true,
-    },
-  ];
+  useEffect(() => {
+    loadAds();
+  }, []);
+
+  const loadAds = async ({ isRefresh = false } = {}) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const result = await fetchAdsByType("taqib");
+      setAds(result);
+      setError(null);
+    } catch (err) {
+      setError(err?.message || "Failed to load ads");
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
+    }
+  };
+
+  const filteredAds = ads.filter((ad) => {
+    const target = `${ad.title || ""} ${ad.description || ""}`.toLowerCase();
+    return target.includes(searchQuery.toLowerCase());
+  });
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
 
+  const renderListSkeleton = () => (
+    <SkeletonGroup style={{ paddingTop: 6, paddingBottom: 10 }}>
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <View
+          key={`sk-${idx}`}
+          style={[
+            styles.adCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={[styles.adContent, { flexDirection: rowDirection }]}>
+            <Skeleton width={36} height={36} radius={12} />
+            <View style={styles.adTextContainer}>
+              <Skeleton height={16} radius={8} width="70%" />
+              <Skeleton height={12} radius={8} width="92%" style={{ marginTop: 10 }} />
+            </View>
+            <Skeleton width={56} height={56} radius={16} />
+          </View>
+        </View>
+      ))}
+    </SkeletonGroup>
+  );
+
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerLargeTitle: false,
+          headerTitleAlign: "center",
+          title: isRTL ? "إعلانات التعقيب" : "Taqib Ads",
+          headerBackButtonDisplayMode: "minimal",
+          headerBackVisible: !isRTL,
+          headerBackTitleVisible: false,
+          headerBackTitle: "",
+          headerLeftContainerStyle: styles.headerSideContainer,
+          headerRightContainerStyle: styles.headerSideContainer,
+          headerLeft: isRTL
+            ? () => (
+                <Pressable
+                  testID="taqib-add-btn"
+                  onPress={() => router.push("/create-taqib")}
+                  style={({ pressed }) => [
+                    styles.headerAddButton,
+                    { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+                  ]}
+                >
+                  <Plus size={18} color="#fff" />
+                  <Text style={styles.headerAddButtonText}>
+                    {isRTL ? "إضافة إعلان" : "Add Ad"}
+                  </Text>
+                </Pressable>
+              )
+            : undefined,
+          headerRight: isRTL
+            ? () => (
+                <Pressable
+                  onPress={() => router.back()}
+                  style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+                >
+                  <ChevronRight size={22} color={colors.text} />
+                </Pressable>
+              )
+            : () => (
+            <Pressable
+              testID="taqib-add-btn"
+              onPress={() => router.push("/create-taqib")}
+              style={({ pressed }) => [
+                styles.headerAddButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+              ]}
+            >
+              <Plus size={18} color="#fff" />
+              <Text style={styles.headerAddButtonText}>
+                {isRTL ? "إضافة إعلان" : "Add Ad"}
+              </Text>
+            </Pressable>
+          ),
+        }}
+      />
       <StatusBar style={colors.statusBar} />
-      <View style={[styles.content, { paddingTop: insets.top }]}>
-        {/* Header */}
-        <Animated.View
-          entering={SlideInRight.delay(100)}
-          style={[styles.header, { flexDirection: isRTL ? "row-reverse" : "row" }]}
-        >
-          <Pressable
-            onPress={() => router.back()}
-            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          >
-            {isRTL ? (
-              <ArrowRight size={22} color={colors.text} />
-            ) : (
-              <ArrowLeft size={22} color={colors.text} />
-            )}
-          </Pressable>
-
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {isRTL ? "خدمات التعقيب" : "Follow-up Services"}
-          </Text>
-
-          <View style={{ width: 44 }} />
-        </Animated.View>
+      <View style={styles.content}>
 
         {/* Search Bar */}
         <Animated.View entering={FadeInDown.delay(200)} style={styles.searchContainer}>
@@ -142,15 +149,16 @@ export default function TaqibListScreen() {
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                flexDirection: isRTL ? "row-reverse" : "row",
+                flexDirection: rowDirection,
               },
             ]}
           >
             <Search size={20} color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
+              testID="taqib-search-input"
               placeholder={isRTL ? "بحث عن مكتب أو خدمة..." : "Search office or service..."}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, textAlign: isRTL ? "right" : "left" }]}
+              style={[styles.searchInput, { color: colors.text, textAlign }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -163,13 +171,33 @@ export default function TaqibListScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadAds({ isRefresh: true })}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
-          {/* Service Provider Ads */}
-          {serviceProviderAds.map((ad, index) => {
-            const AdIcon = ad.icon;
+          {loading && !refreshing && renderListSkeleton()}
+
+          {error && (
+            <Text style={{ color: colors.error, textAlign, marginBottom: 12 }}>{error}</Text>
+          )}
+
+          {!loading && filteredAds.length === 0 && !error && (
+            <Text style={{ color: colors.textMuted, textAlign }}>
+              {isRTL ? "لا توجد إعلانات" : "No ads yet"}
+            </Text>
+          )}
+
+          {filteredAds.map((ad, index) => {
+            const AdIcon = Building2;
             return (
               <Animated.View key={ad.id} entering={FadeInDown.delay(250 + index * 80)}>
                 <Pressable
+                  testID={`taqib-card-${index}`}
                   onPress={() => router.push({ pathname: "/taqib-ad-details", params: { id: ad.id } })}
                   style={({ pressed }) => [
                     styles.adCard,
@@ -181,7 +209,7 @@ export default function TaqibListScreen() {
                   ]}
                 >
                   {/* Ad Content */}
-                  <View style={[styles.adContent, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
+                  <View style={[styles.adContent, { flexDirection: rowDirection }]}>
                     {/* Arrow Icon */}
                     <Pressable style={[styles.adArrow, { backgroundColor: colors.surfaceSecondary }]}>
                       {isRTL ? (
@@ -193,59 +221,30 @@ export default function TaqibListScreen() {
 
                     {/* Text Content */}
                     <View style={styles.adTextContainer}>
-                      <Text 
+                      <Text
                         style={[
-                          styles.adTitle, 
-                          { 
-                            color: colors.text, 
-                            textAlign: isRTL ? "right" : "left",
-                          }
+                          styles.adTitle,
+                          {
+                            color: colors.text,
+                            textAlign,
+                          },
                         ]}
                       >
                         {ad.title}
                       </Text>
-                      <Text 
+                      <Text
                         style={[
-                          styles.adProviderName, 
-                          { 
-                            color: colors.textSecondary, 
-                            textAlign: isRTL ? "right" : "left",
-                          }
+                          styles.adDescription,
+                          {
+                            color: colors.textSecondary,
+                            textAlign,
+                          },
                         ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
-                        {ad.providerName}
+                        {ad.description || (isRTL ? "لا يوجد وصف" : "No description")}
                       </Text>
-                      
-                      {/* Rating & Services - single line */}
-                      <View style={[styles.adMetaRow, { justifyContent: isRTL ? "flex-end" : "flex-start" }]}>
-                        {/* Rating */}
-                        <View style={[styles.adRating, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-                          <Star size={12} color={colors.warning} fill={colors.warning} />
-                          <Text style={[styles.adRatingText, { color: colors.text }]}>
-                            {ad.rating} ({ad.reviewCount})
-                          </Text>
-                        </View>
-                        
-                        <View style={[styles.adDot, { backgroundColor: colors.textMuted }]} />
-                        
-                        {/* Services count */}
-                        <Text style={[styles.adServicesCount, { color: colors.textSecondary }]}>
-                          {ad.servicesCount} {isRTL ? "خدمة" : "services"}
-                        </Text>
-                        
-                        {/* Verified badge */}
-                        {ad.isVerified && (
-                          <>
-                            <View style={[styles.adDot, { backgroundColor: colors.textMuted }]} />
-                            <View style={[styles.adVerified, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
-                              <BadgeCheck size={12} color={colors.primary} />
-                              <Text style={[styles.adVerifiedText, { color: colors.primary }]}>
-                                {isRTL ? "موثق" : "Verified"}
-                              </Text>
-                            </View>
-                          </>
-                        )}
-                      </View>
                     </View>
 
                     {/* Service Icon */}
@@ -258,12 +257,6 @@ export default function TaqibListScreen() {
             );
           })}
         </ScrollView>
-
-        {/* Bottom Tab Bar */}
-        <BottomTabBar 
-          activeTab="home"
-          onNewRequest={() => router.push("/create-taqib")}
-        />
       </View>
     </LinearGradient>
   );
@@ -277,26 +270,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header
-  header: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  headerButton: {
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-
   // Search
   searchContainer: {
     paddingHorizontal: 20,
+    paddingTop: 16,
     marginBottom: 16,
   },
   searchBar: {
@@ -323,6 +300,37 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
+  headerAddButton: {
+    height: 34,
+    minWidth: 124,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  headerAddButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 6,
+  },
+  headerRightContainer: {
+    paddingHorizontal: 4,
+  },
+  headerSideContainer: {
+    paddingHorizontal: 8,
+  },
+  headerBackButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   // Ad Card
   adCard: {
     borderRadius: 18,
@@ -347,41 +355,11 @@ const styles = StyleSheet.create({
   adTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  adProviderName: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  adMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  adRating: {
-    alignItems: "center",
-    gap: 4,
-  },
-  adRatingText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  adDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  adServicesCount: {
-    fontSize: 12,
-  },
-  adVerified: {
-    alignItems: "center",
-    gap: 4,
-  },
-  adVerifiedText: {
-    fontSize: 12,
-    fontWeight: "600",
+  adDescription: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   adArrow: {
     width: 36,

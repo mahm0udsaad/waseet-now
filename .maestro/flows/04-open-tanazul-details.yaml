@@ -1,0 +1,25 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 04: Open tanazul ad details (buyer)
+# Tests navigating to the detail screen and verifying info
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to tanazul list
+- tapOn:
+    id: "service-tanazul"
+- waitForAnimationToEnd
+
+# Tap on an ad card (find by the unique test amount)
+- tapOn: "${TEST_AMOUNT}"
+- waitForAnimationToEnd
+
+# Verify we're on the details screen
+- assertVisible:
+    id: "tanazul-chat-btn"
+
+# Verify ad details are displayed
+- assertVisible: "فلبينية"
+- assertVisible: "${TEST_AMOUNT}"

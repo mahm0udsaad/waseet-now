@@ -1,0 +1,64 @@
+# Production Deploy Workflow
+# Runs lint + type check, then builds iOS and Android in parallel
+# Triggered on push to main or manual dispatch
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: string
+        default: all
+        description: "Platform to build (ios, android, all)"
+
+jobs:
+  # Step 1: Lint and type check
+  lint:
+    name: Lint & Type Check
+    runs_on: linux-medium
+    steps:
+      - uses: eas/checkout
+      - uses: eas/install_node_modules
+      - run:
+          name: Run ESLint
+          command: npx expo lint
+      - run:
+          name: TypeScript check
+          command: npx tsc --noEmit --skipLibCheck
+
+  # Step 2: Build iOS (after lint passes)
+  build_ios:
+    name: Build iOS Production
+    needs: [lint]
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  # Step 3: Build Android (after lint passes, parallel with iOS)
+  build_android:
+    name: Build Android Production
+    needs: [lint]
+    type: build
+    params:
+      platform: android
+      profile: production
+
+  # Step 4: Submit iOS to App Store
+  submit_ios:
+    name: Submit to App Store
+    needs: [build_ios]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+
+  # Step 5: Submit Android to Play Store
+  submit_android:
+    name: Submit to Play Store
+    needs: [build_android]
+    type: submit
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}

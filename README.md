@@ -1,4 +1,4 @@
-# Kafel (كافل) 📱
+# Kafel (وسيط الان) 📱
 
 [![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev)
@@ -143,6 +143,18 @@ EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 - **iOS 15.1+** - Native iOS app
 - **Android API 23+** - Native Android app
 - **Web** - Progressive Web App (PWA)
+
+## ✅ Testing
+
+- `npm run e2e:smoke` - basic auth + tanazul smoke
+- `npm run e2e:taqib` - taqib list/create flow
+- `npm run e2e:tanazul` - full tanazul lifecycle
+- `npm run e2e:damin` - damin + wallet flow
+- `npm run qa:critical` - runs all critical e2e suites
+- `npm run qa:production` - lint + all critical e2e
+
+Production release criteria and manual high-risk checks are defined in:
+- [TESTING_PRODUCTION_GATE.md](./TESTING_PRODUCTION_GATE.md)
 
 ## 🤝 Contributing
 

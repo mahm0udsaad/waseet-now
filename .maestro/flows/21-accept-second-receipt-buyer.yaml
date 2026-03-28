@@ -1,0 +1,40 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 21: Buyer accepts the SECOND receipt and verifies a new payment link appears
+# Requires: Second receipt created by seller (flow 20)
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to chats tab
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+
+# Open the chat with seller
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify the second receipt is visible with the new amount
+- assertVisible: "${TEST_AMOUNT_2}"
+
+# Verify first payment link shows "Payment Complete" (already paid)
+- assertVisible: "✅"
+
+# Tap "Accept & Sign" button on the SECOND receipt
+# (The first receipt should NOT show this button since it was already accepted)
+- tapOn:
+    id: "receipt-accept-btn"
+- waitForAnimationToEnd
+
+# Confirm the accept dialog
+- tapOn: "Accept & Sign"
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Verify a NEW payment link appeared for the second receipt
+# The new payment link should show "Pay Now" (not "Payment Complete")
+- assertVisible:
+    id: "payment-pay-btn"

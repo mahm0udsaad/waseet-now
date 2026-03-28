@@ -1,0 +1,22 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 11: Validate buyer can open order status
+# Note: service completion is currently confirmed by backend/admin workflow.
+
+- runFlow: ../helpers/login-buyer.yaml
+
+# Navigate to orders tab
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+
+# Tap on the first order
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+
+# Verify order details are visible with status badge
+- assertVisible:
+    id: "order-status"
