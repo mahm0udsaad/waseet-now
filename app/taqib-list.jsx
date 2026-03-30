@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "700",
-    marginLeft: 6,
+    marginStart: 6,
   },
   headerRightContainer: {
     paddingHorizontal: 4,

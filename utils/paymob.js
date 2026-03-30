@@ -1,6 +1,11 @@
 import { ensureSupabaseSession } from "@/utils/supabase/client";
 
-const API_URL = (process.env.EXPO_PUBLIC_API_URL || "").replace(/\/+$/, "");
+const DEFAULT_API_URL = "https://www.wasitalan.com";
+const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  process.env.EXPO_PUBLIC_BASE_URL ||
+  DEFAULT_API_URL
+).replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.EXPO_PUBLIC_PAYMOB_PUBLIC_KEY || "";
 
 /**

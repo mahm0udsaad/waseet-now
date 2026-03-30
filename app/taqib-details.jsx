@@ -135,7 +135,7 @@ export default function TaqibDetailsScreen() {
 
       <Pressable
         onPress={handleShare}
-        style={[styles.headerButton, { backgroundColor: colors.surface, marginLeft: 8 }]}
+        style={[styles.headerButton, { backgroundColor: colors.surface, marginStart: 8 }]}
       >
         <Share2 size={20} color={colors.textSecondary} />
       </Pressable>
@@ -328,7 +328,7 @@ export default function TaqibDetailsScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtonsRow}>
-        <ScalePressable onPress={handleChat} style={{ flex: 1, marginLeft: 12 }}>
+        <ScalePressable onPress={handleChat} style={{ flex: 1, marginStart: 12 }}>
           <View style={styles.secondaryButton}>
             <MessageCircle size={18} color="#fff" />
             <Text style={styles.secondaryButtonText}>
@@ -338,7 +338,7 @@ export default function TaqibDetailsScreen() {
         </ScalePressable>
 
         {requestData.status === "pending" && (
-          <ScalePressable onPress={handleSubmitOffer} style={{ flex: 1, marginLeft: 12 }}>
+          <ScalePressable onPress={handleSubmitOffer} style={{ flex: 1, marginStart: 12 }}>
             <View style={styles.primaryButton}>
               <DollarSign size={18} color="#fff" />
               <Text style={styles.primaryButtonText}>

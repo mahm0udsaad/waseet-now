@@ -17,6 +17,8 @@ import {
 } from '@/utils/notifications/push';
 import { getNotificationRoute } from '@/utils/notifications/routing';
 import { useInAppNotificationsListener } from '@/utils/notifications/useInAppNotificationsListener';
+import { usePendingDaminOrder } from '@/hooks/usePendingDaminOrder';
+import { usePendingDaminStore } from '@/utils/damin/pendingDaminStore';
 import { getMyProfile } from '@/utils/supabase/profile';
 import { getSupabaseSession, supabase } from '@/utils/supabase/client';
 import { upsertMyPushToken } from '@/utils/supabase/pushTokens';
@@ -160,7 +162,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -177,6 +179,10 @@ function withTimeout(task, timeoutMs, label) {
       reject(new Error(`${label} timed out after ${timeoutMs}ms`));
     }, timeoutMs);
   });
+
+  // Attach a no-op .catch to the original task so that if it rejects AFTER
+  // the timeout wins the race, the rejection doesn't become unhandled.
+  Promise.resolve(task).catch(() => {});
 
   return Promise.race([task, timeoutPromise]).finally(() => {
     clearTimeout(timeoutId);
@@ -269,16 +275,21 @@ function useProtectedRoute(canNavigate) {
 
     let mounted = true;
 
-    // Get initial session
+    // Get initial session — with a hard timeout so a hanging getSession()
+    // can never block startup forever (e.g. AsyncStorage lock contention).
     const getInitialSession = async () => {
       try {
-        const currentSession = await getSupabaseSession();
+        const currentSession = await withTimeout(
+          getSupabaseSession(),
+          8000,
+          'getSupabaseSession',
+        );
         if (!mounted) return;
         await resolveRoute(currentSession);
       } catch (error) {
-        console.error('[RootLayout] Initial route resolution failed:', error);
+        console.warn('[RootLayout] Initial route resolution failed:', error?.message || error);
         if (mounted) {
-          routerRef.current.replace('/signin');
+          try { routerRef.current.replace('/signin'); } catch (_) { /* router not ready */ }
         }
       } finally {
         if (mounted) {
@@ -338,8 +349,36 @@ export default function RootLayout() {
   const responseListener = useRef();
   const pendingNotificationRouteRef = useRef(null);
   const handledNotificationIdsRef = useRef(new Set());
+  const splashHiddenRef = useRef(false);
+  const splashHideInFlightRef = useRef(false);
   const startupReady = isReady && appReady && isAuthChecked;
   useInAppNotificationsListener(startupReady);
+  const {
+    pendingOrder: pendingDaminOrder,
+    onConfirm: onDaminConfirm,
+    onReject: onDaminReject,
+    refreshPending: refreshDaminPending,
+  } = usePendingDaminOrder(startupReady);
+
+  // When a pending Damin order is detected, populate the store and open the modal
+  const daminModalShownRef = useRef(null);
+  useEffect(() => {
+    if (!pendingDaminOrder) {
+      daminModalShownRef.current = null;
+      return;
+    }
+    // Avoid re-opening for the same order
+    if (daminModalShownRef.current === pendingDaminOrder.id) return;
+    daminModalShownRef.current = pendingDaminOrder.id;
+
+    usePendingDaminStore.getState().openPendingDamin({
+      order: pendingDaminOrder,
+      onConfirm: onDaminConfirm,
+      onReject: onDaminReject,
+      refreshPending: refreshDaminPending,
+    });
+    router.push('/damin-pending-modal');
+  }, [pendingDaminOrder, onDaminConfirm, onDaminReject, refreshDaminPending, router]);
 
   // Diagnose navigation readiness — log once when it changes
   useEffect(() => {
@@ -479,10 +518,14 @@ export default function RootLayout() {
     if (startupReady) return; // Already started — no failsafe needed
 
     const failsafe = setTimeout(() => {
+      const flags = { isReady, appReady, isAuthChecked, navigationReady };
       console.error('[RootLayout] Startup timed out after 15s — forcing splash hide');
-      console.error('[RootLayout] Flags:', JSON.stringify({ isReady, appReady, isAuthChecked, navigationReady }));
+      console.error('[RootLayout] Flags:', JSON.stringify(flags));
+
       setStartupTimedOut(true);
-      SplashScreen.hideAsync().catch(() => {});
+
+      // Navigate to a safe fallback route so the user doesn't see a blank screen
+      try { router.replace('/signin'); } catch (_e) { /* ignore */ }
     }, 15000);
 
     return () => clearTimeout(failsafe);
@@ -514,9 +557,31 @@ export default function RootLayout() {
   }, [initiate, initTheme, initLanguage]);
 
   useEffect(() => {
-    if (fatalError || startupReady || startupTimedOut) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
+    if (!(fatalError || startupReady || startupTimedOut)) return;
+    if (splashHiddenRef.current || splashHideInFlightRef.current) return;
+
+    splashHideInFlightRef.current = true;
+
+    SplashScreen.hideAsync()
+      .then(() => {
+        splashHiddenRef.current = true;
+      })
+      .catch((error) => {
+        const message = String(error?.message || '');
+        if (message.includes('No native splash screen registered')) {
+          // iOS can report this after presenting another view controller (sheet/browser).
+          // At that point there is nothing left to hide, so treat it as already handled.
+          splashHiddenRef.current = true;
+          return;
+        }
+
+        if (__DEV__) {
+          console.warn('[RootLayout] SplashScreen.hideAsync failed:', error);
+        }
+      })
+      .finally(() => {
+        splashHideInFlightRef.current = false;
+      });
   }, [fatalError, startupReady, startupTimedOut]);
 
   useEffect(() => {
@@ -572,6 +637,7 @@ export default function RootLayout() {
               },
             })}
           >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="signin" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -743,6 +809,18 @@ export default function RootLayout() {
                 presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
                 headerShown: false,
                 title: isRTL ? 'الدفع' : 'Payment',
+              }}
+            />
+            <Stack.Screen
+              name="damin-pending-modal"
+              options={{
+                presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+                headerShown: false,
+                title: isRTL ? 'طلب ضمان' : 'Damin Request',
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 24,
+                sheetAllowedDetents: [0.65, 0.85],
+                sheetExpandsWhenScrolledToEdge: true,
               }}
             />
           </Stack>

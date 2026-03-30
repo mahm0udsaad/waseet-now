@@ -1,4 +1,5 @@
 import { AppScrollView } from "@/components/layout";
+import HomeFixedHeader, { FIXED_HEADER_HEIGHT } from "@/components/HomeFixedHeader";
 import { NativeIcon } from "@/components/native/NativeIcon";
 import PromotionalBanners from "@/components/PromotionalBanners";
 import { BorderRadius, Shadows, Spacing } from "@/constants/theme";
@@ -6,8 +7,6 @@ import { getRTLStartAlign, getRTLTextAlign, pickRTLValue, useLanguage } from "@/
 import { showToast, useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { fetchMyNotifications } from "@/utils/supabase/notifications";
 import { useTheme } from "@/utils/theme/store";
-import { BlurView } from "expo-blur";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
@@ -20,8 +19,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const FIXED_HEADER_HEIGHT = 68;
-
 export default function HomeScreen() {
   const router = useRouter();
   const [isHeaderBlurred, setIsHeaderBlurred] = useState(false);
@@ -32,9 +29,6 @@ export default function HomeScreen() {
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
   const [refreshing, setRefreshing] = useState(false);
   const [bannersRefreshKey, setBannersRefreshKey] = useState(0);
-  const headerRowDirection = isRTL ? "row" : rowDirection;
-  const homeGreeting = isRTL ? "مرحباً بك" : "Welcome to";
-  const homeBrand = isRTL ? "وسيط الان" : "Waseet";
 
   const handleRefresh = async () => {
     if (refreshing) return;
@@ -95,176 +89,26 @@ export default function HomeScreen() {
       <StatusBar style={isDark ? "light" : "dark"} />
 
       <View style={styles.fixedHeaderWrap}>
-        {isHeaderBlurred ? (
-          <BlurView
-            intensity={55}
-            tint={isDark ? "dark" : "light"}
-            style={[
-              styles.fixedHeader,
-              {
-                borderBottomColor: colors.border,
-                paddingTop: insets.top + 6,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.heroCard,
-                {
-                  flexDirection: headerRowDirection,
-                },
-              ]}
-            >
-              <View style={[styles.actionsSection, { flexDirection: rowDirection }]}>
-                <Pressable
-                  accessibilityLabel={isRTL ? "تغيير اللغة" : "Change language"}
-                  onPress={toggleLanguage}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>
-                    {language === 'ar' ? 'EN' : 'ع'}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityLabel={isDark ? (isRTL ? "تفعيل الوضع الفاتح" : "Switch to light mode") : (isRTL ? "تفعيل الوضع الداكن" : "Switch to dark mode")}
-                  onPress={toggleTheme}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <NativeIcon name={isDark ? "sun" : "moon"} size={20} color={isDark ? colors.warning : colors.primary} />
-                </Pressable>
-
-                <Pressable
-                  accessibilityLabel={isRTL ? "الإشعارات" : "Notifications"}
-                  onPress={() => router.push("/notifications")}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <NativeIcon name="notification" size={20} color={colors.text} />
-                  {unreadCount > 0 && (
-                    <View style={[styles.badge, { backgroundColor: colors.error }]}>
-                      <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-
-              <View style={[styles.brandSection, { flexDirection: rowDirection }]}>
-              <View style={[styles.logoWrapper, Shadows.small]}>
-                  <Image
-                    source={require("@/assets/images/logo.png")}
-                    style={styles.logo}
-                    contentFit="contain"
-                  />
-                </View>
-                <View style={{ flexShrink: 1 }}>
-                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {homeGreeting}
-                  </Text>
-                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {homeBrand}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </BlurView>
-        ) : (
-          <View
-            style={[
-              styles.fixedHeader,
-              styles.fixedHeaderClear,
-              {
-                paddingTop: insets.top + 6,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.heroCard,
-                {
-                  flexDirection: headerRowDirection,
-                },
-              ]}
-            >
-              <View style={[styles.actionsSection, { flexDirection: rowDirection }]}>
-                <Pressable
-                  accessibilityLabel={isRTL ? "تغيير اللغة" : "Change language"}
-                  onPress={toggleLanguage}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>
-                    {language === 'ar' ? 'EN' : 'ع'}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityLabel={isDark ? (isRTL ? "تفعيل الوضع الفاتح" : "Switch to light mode") : (isRTL ? "تفعيل الوضع الداكن" : "Switch to dark mode")}
-                  onPress={toggleTheme}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <NativeIcon name={isDark ? "sun" : "moon"} size={20} color={isDark ? colors.warning : colors.primary} />
-                </Pressable>
-
-                <Pressable
-                  accessibilityLabel={isRTL ? "الإشعارات" : "Notifications"}
-                  onPress={() => router.push("/notifications")}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    { backgroundColor: colors.surfaceHighlight, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                >
-                  <NativeIcon name="notification" size={20} color={colors.text} />
-                  {unreadCount > 0 && (
-                    <View style={[styles.badge, { backgroundColor: colors.error }]}>
-                      <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-
-              <View style={[styles.brandSection, { flexDirection: rowDirection }]}>
-                <View style={[styles.logoWrapper, Shadows.small]}>
-                  <Image
-                    source={require("@/assets/images/logo.png")}
-                    style={styles.logo}
-                    contentFit="contain"
-                  />
-                </View>
-                <View style={{ flexShrink: 1 }}>
-                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {homeGreeting}
-                  </Text>
-                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {homeBrand}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
+        <HomeFixedHeader
+          isBlurred={isHeaderBlurred}
+          isDark={isDark}
+          isRTL={isRTL}
+          language={language}
+          unreadCount={unreadCount}
+          onToggleLanguage={toggleLanguage}
+          onToggleTheme={toggleTheme}
+          onOpenNotifications={() => router.push("/notifications")}
+        />
       </View>
 
       <AppScrollView
         alwaysBounceVertical
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        topPadding={0}
         contentContainerStyle={{
           gap: Spacing.xl,
-          paddingTop: Math.max(FIXED_HEADER_HEIGHT + 44, insets.top + 56) + 4,
+          paddingTop: Math.max(FIXED_HEADER_HEIGHT + 18, insets.top),
           paddingBottom: insets.bottom + 96,
         }}
         refreshControl={
@@ -358,74 +202,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-  },
-  fixedHeader: {
-    paddingHorizontal: Spacing.m,
-    paddingBottom: 2,
-    borderBottomWidth: 1,
-    minHeight: FIXED_HEADER_HEIGHT + 44,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(10, 26, 47, 0.28)',
-  },
-  fixedHeaderClear: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 0,
-  },
-  heroCard: {
-    paddingVertical: 0,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.m,
-  },
-  brandSection: {
-    alignItems: 'center',
-    gap: Spacing.m,
-  },
-  logoWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  logo: {
-    width: 48,
-    height: 48,
-  },
-  greeting: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  brandName: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  actionsSection: {
-    gap: Spacing.s,
-    alignItems: 'center',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: 0,
-    end: 0,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   section: {
     marginBottom: Spacing.xl,

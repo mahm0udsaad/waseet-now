@@ -37,6 +37,18 @@ async function hydrateAttachments(attachments = []) {
   return hydrated;
 }
 
+// 10 MB limit for chat attachments
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_EXTENSIONS = new Set([
+  // Images
+  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif",
+  // Documents
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt",
+  // Archives
+  "zip", "rar",
+]);
+
 async function uploadChatAttachment(userId, attachment) {
   if (!attachment?.uri || (attachment.type !== "image" && attachment.type !== "file")) {
     // passthrough non-file attachments (e.g., location)
@@ -44,6 +56,18 @@ async function uploadChatAttachment(userId, attachment) {
   }
 
   const extension = (attachment.name || attachment.uri)?.split(".").pop()?.toLowerCase() || "bin";
+
+  // Validate file extension to prevent arbitrary file uploads
+  if (!ALLOWED_EXTENSIONS.has(extension)) {
+    throw new Error(`File type .${extension} is not allowed`);
+  }
+
+  // Check file size before uploading
+  const fileInfo = await FileSystem.getInfoAsync(attachment.uri, { size: true });
+  if (fileInfo.size && fileInfo.size > MAX_UPLOAD_BYTES) {
+    throw new Error(`File exceeds ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB limit`);
+  }
+
   const objectPath = `${userId}/chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
   // Read file as base64 using expo-file-system (works on React Native)

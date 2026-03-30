@@ -139,7 +139,7 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
             {coordinateText}
           </Text>
         )}
-        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginTop: 6, gap: 2 }}>
+        <View style={{ flexDirection: getRTLRowDirection(isRTL), alignItems: 'center', marginTop: 6, gap: 2 }}>
           <Text style={[styles.locationAction, { color: isMe ? "#FFFFFF" : colors.primary, marginTop: 0 }]}>
             {isRTL ? "فتح في Google Maps" : "Open in Google Maps"}
           </Text>

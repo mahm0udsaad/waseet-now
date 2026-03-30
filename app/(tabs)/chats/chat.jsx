@@ -512,9 +512,24 @@ export default function ChatScreen() {
     transform: [{ scale: sendButtonScale }],
   };
 
-  // A1: Ref for dedupedMessages so renderMessage callback stays stable
+  // Refs for renderMessage so the callback stays stable and doesn't
+  // recreate on every state change (which would force FlashList to
+  // re-render every visible message).
   const dedupedMessagesRef = useRef(dedupedMessages);
   dedupedMessagesRef.current = dedupedMessages;
+  const colorsRef = useRef(colors);
+  colorsRef.current = colors;
+  const otherUserProfileRef = useRef(otherUserProfile);
+  otherUserProfileRef.current = otherUserProfile;
+  // acceptingReceiptRef already declared above (line ~411)
+  const paidOrderIdsRef = useRef(paidOrderIds);
+  paidOrderIdsRef.current = paidOrderIds;
+  const acceptedReceiptIdsRef = useRef(acceptedReceiptIds);
+  acceptedReceiptIdsRef.current = acceptedReceiptIds;
+  const daminPayerUserIdRef = useRef(daminOrder?.payer_user_id);
+  daminPayerUserIdRef.current = daminOrder?.payer_user_id;
+  const highlightedMessageIdRef = useRef(highlightedMessageId);
+  highlightedMessageIdRef.current = highlightedMessageId;
 
   // Message map for reply lookups (id -> message)
   const messageMapRef = useRef(new Map());
@@ -542,7 +557,8 @@ export default function ChatScreen() {
     highlightTimeoutRef.current = setTimeout(() => setHighlightedMessageId(null), 1500);
   }, []);
 
-  // A1: Render message — uses ref for grouping so callback is stable
+  // A1: Render message — reads volatile values from refs so the callback
+  // is stable and doesn't force FlashList to re-render all visible items.
   const renderMessage = useCallback(({ item, index }) => {
     const isMe = item.sender === "me" || (item.sender_id && item.sender_id === currentUserId);
 
@@ -564,29 +580,33 @@ export default function ChatScreen() {
        return <SystemMessageCard content={item.content} />;
     }
 
+    // Read current values from refs
+    const _colors = colorsRef.current;
+    const _otherUserProfile = otherUserProfileRef.current;
+
     // Resolve replied-to message
     const repliedMsg = item.reply_to_id ? messageMapRef.current.get(item.reply_to_id) : null;
     const repliedMessage = repliedMsg
-      ? { ...repliedMsg, _currentUserId: currentUserId, _otherName: otherUserProfile?.displayName }
+      ? { ...repliedMsg, _currentUserId: currentUserId, _otherName: _otherUserProfile?.displayName }
       : null;
 
-    const isHighlighted = item.id === highlightedMessageId;
+    const isHighlighted = item.id === highlightedMessageIdRef.current;
 
     return (
       <SwipeableMessage onReply={() => handleReply(item)} isMe={isMe} isRTL={isRTL}>
         <View style={[
           styles.messageRow,
           { flexDirection: isMe ? getRTLRowDirection(isRTL) : getRTLInverseRowDirection(isRTL), marginBottom: isLastInGroup ? 8 : 2 },
-          isHighlighted && { backgroundColor: colors.primaryLight + "50", borderRadius: 12 },
+          isHighlighted && { backgroundColor: _colors.primaryLight + "50", borderRadius: 12 },
         ]}>
-          {!isMe && otherUserProfile && isLastInGroup && (
+          {!isMe && _otherUserProfile && isLastInGroup && (
             <View style={styles.messageAvatarContainer}>
-              {otherUserProfile.avatarUrl ? (
-                <Image source={{ uri: otherUserProfile.avatarUrl }} style={styles.messageAvatar} />
+              {_otherUserProfile.avatarUrl ? (
+                <Image source={{ uri: _otherUserProfile.avatarUrl }} style={styles.messageAvatar} />
               ) : (
-                <View style={[styles.messageAvatar, { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>
-                    {(otherUserProfile.displayName || "U")[0].toUpperCase()}
+                <View style={[styles.messageAvatar, { backgroundColor: _colors.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ color: _colors.primary, fontSize: 12, fontWeight: 'bold' }}>
+                    {(_otherUserProfile.displayName || "U")[0].toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -604,13 +624,13 @@ export default function ChatScreen() {
              onFilePress={openFile}
              onReceiptPress={openReceiptPreview}
              onAcceptReceipt={handleAcceptReceipt}
-             isAcceptingReceipt={acceptingReceipt}
+             isAcceptingReceipt={acceptingReceiptRef.current}
              onPaymentPress={handlePaymentPress}
              onSubmitDispute={handleOpenOrderDispute}
-             paidOrderIds={paidOrderIds}
+             paidOrderIds={paidOrderIdsRef.current}
              currentUserId={currentUserId}
-             daminPayerUserId={daminOrder?.payer_user_id}
-             acceptedReceiptIds={acceptedReceiptIds}
+             daminPayerUserId={daminPayerUserIdRef.current}
+             acceptedReceiptIds={acceptedReceiptIdsRef.current}
              orderPaidOverride={false}
              repliedMessage={repliedMessage}
              onReplyPress={handleReplyPress}
@@ -618,7 +638,7 @@ export default function ChatScreen() {
         </View>
       </SwipeableMessage>
     );
-  }, [currentUserId, isRTL, otherUserProfile, colors, acceptingReceipt, handleAcceptReceipt, openFile, openReceiptPreview, handlePaymentPress, handleOpenOrderDispute, paidOrderIds, daminOrder?.payer_user_id, acceptedReceiptIds, handleReply, handleReplyPress, highlightedMessageId]);
+  }, [currentUserId, isRTL, handleAcceptReceipt, openFile, openReceiptPreview, handlePaymentPress, handleOpenOrderDispute, handleReply, handleReplyPress]);
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]

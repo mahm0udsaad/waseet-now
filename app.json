@@ -138,7 +138,8 @@
         }
       },
       "updates": {
-        "enabled": false
+        "enabled": true,
+        "url": "https://u.expo.dev/87a25a41-7179-401e-92ed-78c92d0192cc"
       }
     }
   }

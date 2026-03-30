@@ -49,14 +49,16 @@ export const useThemeStore = create((set, get) => ({
   },
 }));
 
+// Individual selectors — components subscribe only to what they need,
+// preventing unnecessary re-renders when unrelated store fields change.
+export const useThemeColors = () => useThemeStore((s) => s.colors);
+export const useIsDark = () => useThemeStore((s) => s.theme === 'dark');
+
 export const useTheme = () => {
-  const { themePreference, theme, colors, setTheme, toggleTheme } = useThemeStore();
-  return {
-    theme,
-    themePreference,
-    colors,
-    setTheme,
-    toggleTheme,
-    isDark: theme === 'dark',
-  };
+  const themePreference = useThemeStore((s) => s.themePreference);
+  const theme = useThemeStore((s) => s.theme);
+  const colors = useThemeStore((s) => s.colors);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  return { theme, themePreference, colors, setTheme, toggleTheme, isDark: theme === 'dark' };
 };

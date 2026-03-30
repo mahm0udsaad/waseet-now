@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    marginLeft: 16,
+    marginStart: 16,
   },
   priceText: {
     fontWeight: '700',
