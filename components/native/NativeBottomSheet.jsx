@@ -1,118 +1,113 @@
-import React, { forwardRef, useCallback, useMemo } from 'react';
-import { StyleSheet, Platform, View } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react';
+import { StyleSheet, Platform, Modal, View, Pressable, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/utils/theme/store';
 import { hapticFeedback } from '@/utils/native/haptics';
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 /**
- * NativeBottomSheet - Enhanced bottom sheet with blur (iOS) and haptics
- * 
- * @param {Object} props
- * @param {React.ReactNode} props.children - Content to render inside the bottom sheet
- * @param {string[]} [props.snapPoints=['50%']] - Snap points for the bottom sheet
- * @param {Function} [props.onChange] - Callback when sheet position changes
- * @param {boolean} [props.enablePanDownToClose=true] - Whether to enable pan down to close
- * @param {boolean} [props.enableDynamicSizing=false] - Enable dynamic sizing based on content
- * @param {boolean} [props.keyboardBehavior='interactive'] - Keyboard handling behavior
- * @param {Object} [props.backgroundStyle] - Custom background style
- * @param {boolean} [props.enableBlur=true] - Enable blur backdrop on iOS
+ * NativeBottomSheet - Modal-based bottom sheet replacement for @gorhom/bottom-sheet
+ * Exposes .present() and .dismiss() to match the gorhom API.
  */
-const NativeBottomSheet = forwardRef(({ 
-  children, 
-  snapPoints = ['50%'], 
+const NativeBottomSheet = forwardRef(({
+  children,
+  snapPoints = ['50%'],
   onChange,
   enablePanDownToClose = true,
-  enableDynamicSizing = false,
-  keyboardBehavior = 'interactive',
-  backgroundStyle,
   enableBlur = Platform.OS === 'ios',
-  ...props 
+  backgroundStyle,
+  ...props
 }, ref) => {
   const { colors, isDark } = useTheme();
-  
-  // Render backdrop with blur on iOS
-  const renderBackdrop = useCallback(
-    (props) => {
-      if (enableBlur && Platform.OS === 'ios') {
-        return (
-          <BottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            opacity={0.3}
-            pressBehavior="close"
-          >
+  const [visible, setVisible] = useState(false);
+
+  const present = useCallback(() => {
+    setVisible(true);
+    hapticFeedback.selection();
+    onChange?.(0);
+  }, [onChange]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    hapticFeedback.tap();
+    onChange?.(-1);
+  }, [onChange]);
+
+  useImperativeHandle(ref, () => ({
+    present,
+    dismiss,
+  }), [present, dismiss]);
+
+  // Parse first snap point for height
+  const snapHeight = snapPoints[0];
+  const sheetHeight = typeof snapHeight === 'string' && snapHeight.endsWith('%')
+    ? (parseInt(snapHeight) / 100) * SCREEN_HEIGHT
+    : typeof snapHeight === 'number' ? snapHeight : SCREEN_HEIGHT * 0.5;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={enablePanDownToClose ? dismiss : undefined}
+    >
+      <View style={styles.overlay}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={enablePanDownToClose ? dismiss : undefined}
+        >
+          {enableBlur && Platform.OS === 'ios' ? (
             <BlurView
               intensity={20}
               tint={isDark ? 'dark' : 'light'}
               style={StyleSheet.absoluteFill}
             />
-          </BottomSheetBackdrop>
-        );
-      }
-      
-      return (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.5}
-          pressBehavior="close"
-        />
-      );
-    },
-    [enableBlur, isDark]
-  );
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+          )}
+        </Pressable>
 
-  const _snapPoints = useMemo(() => snapPoints, [snapPoints]);
-
-  const handleSheetChanges = useCallback((index) => {
-    // Haptic feedback on sheet changes
-    if (index === -1) {
-      hapticFeedback.tap();
-    } else if (index >= 0) {
-      hapticFeedback.selection();
-    }
-    
-    if (onChange) {
-      onChange(index);
-    }
-  }, [onChange]);
-
-  return (
-    <BottomSheetModal
-      ref={ref}
-      index={0}
-      snapPoints={_snapPoints}
-      onChange={handleSheetChanges}
-      enablePanDownToClose={enablePanDownToClose}
-      enableDynamicSizing={enableDynamicSizing}
-      backdropComponent={renderBackdrop}
-      backgroundStyle={[
-        { backgroundColor: colors.surface },
-        backgroundStyle,
-      ]}
-      handleIndicatorStyle={{ 
-        backgroundColor: colors.textSecondary,
-        width: 40,
-        height: 4,
-      }}
-      keyboardBehavior={keyboardBehavior}
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      {...props}
-    >
-      <BottomSheetView style={styles.contentContainer}>
-        {children}
-      </BottomSheetView>
-    </BottomSheetModal>
+        <View
+          style={[
+            styles.sheet,
+            { backgroundColor: colors.surface, height: sheetHeight },
+            backgroundStyle,
+          ]}
+        >
+          <View style={[styles.handle, { backgroundColor: colors.textSecondary }]} />
+          <View style={styles.contentContainer}>
+            {children}
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 });
 
 NativeBottomSheet.displayName = 'NativeBottomSheet';
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    overflow: 'hidden',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
   contentContainer: {
     flex: 1,
   },

@@ -4,7 +4,7 @@ import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronDown, ChevronRight } from "lucide-react-native";
 
@@ -102,8 +102,7 @@ export default function CreateDhamenScreen() {
 
   // Calculator card component
   const renderCalculatorCard = useCallback(() => (
-    <Animated.View
-      entering={FadeInDown}
+    <FadeInView
       style={[styles.calculatorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={[styles.calculatorHeader, { borderBottomColor: colors.border }]}>
@@ -153,7 +152,7 @@ export default function CreateDhamenScreen() {
           </Text>
         </View>
       </View>
-    </Animated.View>
+    </FadeInView>
   ), [calculations, colors, isRTL, t, formatNumber]);
 
   return (
@@ -185,7 +184,7 @@ export default function CreateDhamenScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View entering={FadeInDown}>
+          <FadeInView>
             <NativeFormSection
               title={t?.dhamen?.contactInfo || (isRTL ? "معلومات الاتصال" : "CONTACT INFO")}
             >
@@ -378,7 +377,7 @@ export default function CreateDhamenScreen() {
                 testID="damin-submit-btn"
               />
             </View>
-          </Animated.View>
+          </FadeInView>
         </ScrollView>
       </KeyboardAvoidingAnimatedView>
     </View>

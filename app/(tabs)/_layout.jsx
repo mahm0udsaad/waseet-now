@@ -47,7 +47,9 @@ export default function TabsLayout() {
         headerTintColor: colors.text,
         headerTitleStyle: {
           color: colors.text,
+          writingDirection: isRTL ? 'rtl' : 'ltr',
         },
+        headerTitleAlign: 'center',
         headerRightContainerStyle: isRTL ? { paddingHorizontal: 8 } : undefined,
         headerRight:
           isRTL && navigation.canGoBack()
@@ -83,6 +85,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="my-orders"
         options={{
+          headerShown: true,
+          headerLargeTitle: false,
           title: isRTL ? 'طلباتي' : 'Orders',
           href: null,
         }}
@@ -107,6 +111,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          headerShown: true,
+          headerLargeTitle: false,
           title: isRTL ? 'حسابي' : 'Profile',
           href: null,
         }}

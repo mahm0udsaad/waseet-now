@@ -138,7 +138,7 @@ export default function BottomTabBar({ activeTab }) {
         />
       );
     },
-    [colors, handleTabPress, isTabActive, notificationsUnread]
+    [colors, handleTabPress, isTabActive, chatUnread]
   );
 
   // Sync Android navigation bar color with theme

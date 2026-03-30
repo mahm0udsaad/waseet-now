@@ -1,20 +1,35 @@
-import * as Notifications from "expo-notifications";
+// expo-notifications is loaded lazily to avoid TurboModule init at bundle time.
+// On iOS 26 the TurboModule throws an ObjC exception when touched too early.
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+
+let _Notifications = null;
+
+async function getNotifications() {
+  if (!_Notifications) {
+    _Notifications = await import("expo-notifications");
+  }
+  return _Notifications;
+}
 
 /**
  * Configure notification handler to suppress system alerts when app is in foreground.
  * Background/closed notifications will still show as system banners.
  */
-export function configureNotificationHandler() {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: false, // Suppress system alert in foreground (use in-app toast instead)
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
+export async function configureNotificationHandler() {
+  try {
+    const Notifications = await getNotifications();
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: false, // Suppress system alert in foreground (use in-app toast instead)
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (e) {
+    console.warn('[push] setNotificationHandler failed:', e);
+  }
 }
 
 /**
@@ -22,6 +37,7 @@ export function configureNotificationHandler() {
  */
 export async function setupAndroidNotificationChannel() {
   if (Platform.OS === "android") {
+    const Notifications = await getNotifications();
     await Notifications.setNotificationChannelAsync("default", {
       name: "رسائل جديدة", // "New messages" in Arabic
       importance: Notifications.AndroidImportance.HIGH,
@@ -38,6 +54,7 @@ export async function requestPushPermissions() {
     return null;
   }
 
+  const Notifications = await getNotifications();
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -65,6 +82,7 @@ export async function getExpoPushToken() {
       return null;
     }
 
+    const Notifications = await getNotifications();
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
     return token.data;
   } catch (error) {
@@ -74,9 +92,9 @@ export async function getExpoPushToken() {
 }
 
 export async function scheduleLocalNotification(title, body) {
+  const Notifications = await getNotifications();
   return Notifications.scheduleNotificationAsync({
     content: { title, body },
-    trigger: null,
+    trigger: { type: 'timeInterval', seconds: 1 },
   });
 }
-

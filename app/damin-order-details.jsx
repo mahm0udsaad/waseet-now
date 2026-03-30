@@ -21,18 +21,15 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Shield,
   Banknote,
-  Circle,
   MessageCircle,
-  CreditCard,
   FileText,
   UserCheck,
   Briefcase,
   AlertTriangle,
   ChevronRight,
 } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 
 import { useTheme } from '@/utils/theme/store';
 import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
@@ -963,7 +960,7 @@ export default function DaminOrderDetailsScreen() {
     switch (actionContext.type) {
       case 'confirm_participation':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
             <AlertCircle size={24} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: colors.primary }, textAlignment]}>
@@ -975,12 +972,12 @@ export default function DaminOrderDetailsScreen() {
                   : 'Please review the details and confirm or reject your participation in this order.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'pay_now':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B' }]}>
             <Banknote size={24} color="#F59E0B" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: '#F59E0B' }, textAlignment]}>
@@ -992,12 +989,12 @@ export default function DaminOrderDetailsScreen() {
                   : `Service provider confirmed. Please pay the total of ${order.total_amount.toFixed(2)} SAR to begin service execution.`}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'waiting_for_provider_confirmation':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: colors.textMuted + '10', borderColor: colors.textMuted + '40' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: colors.textMuted + '10', borderColor: colors.textMuted + '40' }]}>
             <Clock size={24} color={colors.textMuted} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: colors.textSecondary }, textAlignment]}>
@@ -1009,12 +1006,12 @@ export default function DaminOrderDetailsScreen() {
                   : 'You will be notified when the service provider confirms participation.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'waiting_for_payment':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: colors.textMuted + '10', borderColor: colors.textMuted + '40' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: colors.textMuted + '10', borderColor: colors.textMuted + '40' }]}>
             <Clock size={24} color={colors.textMuted} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: colors.textSecondary }, textAlignment]}>
@@ -1026,12 +1023,12 @@ export default function DaminOrderDetailsScreen() {
                   : 'Waiting for the order owner to complete payment.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'waiting_for_admin_verification':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: '#8B5CF615', borderColor: '#8B5CF6' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: '#8B5CF615', borderColor: '#8B5CF6' }]}>
             <Clock size={24} color="#8B5CF6" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: '#8B5CF6' }, textAlignment]}>
@@ -1043,12 +1040,12 @@ export default function DaminOrderDetailsScreen() {
                   : 'Payment received. The order is under admin review. Funds will be transferred after service completion.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'can_end_service':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: '#10B98115', borderColor: '#10B981' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: '#10B98115', borderColor: '#10B981' }]}>
             <CheckCircle2 size={24} color="#10B981" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: '#10B981' }, textAlignment]}>
@@ -1060,12 +1057,12 @@ export default function DaminOrderDetailsScreen() {
                   : 'Funds are securely held. When the service is complete, tap "End Service" to release funds.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       case 'completion_pending_approval':
         return (
-          <Animated.View entering={FadeInDown.delay(150)} style={[alertCardStyle, { backgroundColor: '#F9731615', borderColor: '#F97316' }]}>
+          <FadeInView delay={150} style={[alertCardStyle, { backgroundColor: '#F9731615', borderColor: '#F97316' }]}>
             <Clock size={24} color="#F97316" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.alertTitle, { color: '#F97316' }, textAlignment]}>
@@ -1077,7 +1074,7 @@ export default function DaminOrderDetailsScreen() {
                   : 'Your service completion and fund release request has been submitted. Admin will review and respond shortly.'}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         );
 
       default:
@@ -1287,8 +1284,8 @@ export default function DaminOrderDetailsScreen() {
         }
       >
         {/* Order ID & Status Card */}
-        <Animated.View
-          entering={FadeInDown.delay(100)}
+        <FadeInView
+          delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <View style={[styles.cardHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
@@ -1302,24 +1299,24 @@ export default function DaminOrderDetailsScreen() {
             </View>
             <StatusBadge status={order.status} colors={colors} isRTL={isRTL} />
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Progress Stepper */}
         {order.status !== 'cancelled' && order.status !== 'disputed' && (
-          <Animated.View
-            entering={FadeInDown.delay(120)}
+          <FadeInView
+            delay={120}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <ProgressStepper status={order.status} colors={colors} isRTL={isRTL} />
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Contextual Alert Card */}
         {renderAlertCard()}
 
         {/* Service Details */}
-        <Animated.View
-          entering={FadeInDown.delay(200)}
+        <FadeInView
+          delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -1334,11 +1331,11 @@ export default function DaminOrderDetailsScreen() {
           {order.completion_days && (
             <InfoRow icon={Clock} label={isRTL ? 'مدة الإنجاز' : 'Completion Days'} value={`${order.completion_days} ${isRTL ? 'يوم' : 'days'}`} colors={colors} isRTL={isRTL} />
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Parties Information */}
-        <Animated.View
-          entering={FadeInDown.delay(300)}
+        <FadeInView
+          delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -1366,11 +1363,11 @@ export default function DaminOrderDetailsScreen() {
               </Text>
             </View>
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Financial Details */}
-        <Animated.View
-          entering={FadeInDown.delay(400)}
+        <FadeInView
+          delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -1397,18 +1394,18 @@ export default function DaminOrderDetailsScreen() {
               {order.total_amount.toFixed(2)} SAR
             </Text>
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Timeline */}
-        <Animated.View
-          entering={FadeInDown.delay(500)}
+        <FadeInView
+          delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
             {isRTL ? 'التاريخ' : 'Timeline'}
           </Text>
           <InfoRow icon={Calendar} label={isRTL ? 'تاريخ الإنشاء' : 'Created'} value={formattedDate} colors={colors} isRTL={isRTL} />
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
 
       {/* Bottom Action Buttons */}

@@ -1,4 +1,3 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { Stack, useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
@@ -9,10 +8,7 @@ import {
   TextInput,
   View
 } from "react-native";
-import Animated, {
-  FadeInDown,
-  SlideInRight,
-} from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Native Components
@@ -192,7 +188,7 @@ export default function CreateTanazulScreen() {
     const isFemale = formData.gender === "female";
     
     return (
-      <Animated.View entering={FadeInDown} style={styles.inputContainer}>
+      <FadeInView style={styles.inputContainer}>
         <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
           {isRTL ? "المهنة" : "Profession"}
         </Text>
@@ -204,7 +200,7 @@ export default function CreateTanazulScreen() {
                 ar: isFemale ? (prof.ar_female || prof.ar) : prof.ar,
                 en: isFemale ? (prof.en_female || prof.en) : prof.en,
               };
-              
+
               return (
                 <ProfessionCard
                   key={prof.key}
@@ -221,13 +217,13 @@ export default function CreateTanazulScreen() {
             })}
           </View>
         </ScrollView>
-      </Animated.View>
+      </FadeInView>
     );
   }, [formData.profession, formData.gender, professions, colors, isRTL, updateFormData]);
 
   // Render gender selector
   const renderGenderSelector = useCallback(() => (
-    <Animated.View entering={FadeInDown} style={styles.inputContainer}>
+    <FadeInView style={styles.inputContainer}>
       <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
         {isRTL ? "الجنس" : "Gender"}
       </Text>
@@ -285,12 +281,12 @@ export default function CreateTanazulScreen() {
           </Text>
         </NativePressable>
       </View>
-    </Animated.View>
+    </FadeInView>
   ), [formData.gender, colors, isRTL, updateFormData]);
 
   // Form Step (Data Entry)
   const renderFormStep = useCallback(() => (
-    <Animated.View entering={FadeInDown}>
+    <FadeInView>
       <NativeFormSection
         title={isRTL ? "بيانات التنازل" : "TRANSFER DATA"}
       >
@@ -386,7 +382,7 @@ export default function CreateTanazulScreen() {
           size="lg"
         />
       </View>
-    </Animated.View>
+    </FadeInView>
   ), [
     formData,
     isRTL,
@@ -400,7 +396,7 @@ export default function CreateTanazulScreen() {
 
   // Preview Step
   const renderPreviewStep = useCallback(() => (
-    <Animated.View entering={SlideInRight}>
+    <FadeInView direction="right">
       <View style={[styles.previewCard, { backgroundColor: colors.surface }]}>
         <Text style={[styles.previewTitle, { color: colors.text }]}>
           {isRTL ? "مراجعة الطلب" : "Review Request"}
@@ -543,7 +539,7 @@ export default function CreateTanazulScreen() {
           />
         </View>
       </View>
-    </Animated.View>
+    </FadeInView>
   ), [
     formData,
     professions,
@@ -617,7 +613,7 @@ export default function CreateTanazulScreen() {
             />
           </View>
 
-          <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false}>
             {filteredNationalities.map((item, index) => (
               <NationalityItem
                 key={index}
@@ -627,7 +623,7 @@ export default function CreateTanazulScreen() {
                 isRTL={isRTL}
               />
             ))}
-          </BottomSheetScrollView>
+          </ScrollView>
         </View>
       </NativeBottomSheet>
 
@@ -662,7 +658,7 @@ export default function CreateTanazulScreen() {
             />
           </View>
 
-          <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false}>
             {filteredCities.map((item, index) => (
               <NationalityItem
                 key={index}
@@ -672,7 +668,7 @@ export default function CreateTanazulScreen() {
             isRTL={isRTL}
           />
             ))}
-          </BottomSheetScrollView>
+          </ScrollView>
         </View>
       </NativeBottomSheet>
     </View>

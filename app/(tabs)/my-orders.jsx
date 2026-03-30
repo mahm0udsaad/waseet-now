@@ -9,9 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
   ChevronRight,
   ChevronLeft,
@@ -21,8 +19,8 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation, getRTLRowDirection, getRTLStartAlign, getRTLTextAlign } from '@/utils/i18n/store';
+import FadeInView from "@/components/ui/FadeInView";
 import { useOrders } from '@/hooks/useOrders';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { NativeButton } from '@/components/native';
@@ -104,9 +102,9 @@ const OrderIcon = ({ type, colors }) => {
 
 export default function MyOrdersScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const navigation = useNavigation();
+  const { colors } = useTheme();
   const { isRTL, rowDirection } = useTranslation();
-  const insets = useSafeAreaInsets();
   const [activeFilter, setActiveFilter] = useState('all');
   const { orders, loading, refreshing, error, refetch } = useOrders();
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -212,7 +210,7 @@ export default function MyOrdersScreen() {
     }
 
     return (
-      <Animated.View entering={FadeInDown.delay(index * 100)}>
+      <FadeInView delay={index * 100}>
         <Pressable
           testID={`order-card-${index}`}
           onPress={() => {
@@ -290,23 +288,34 @@ export default function MyOrdersScreen() {
             </Pressable>
           )}
         </Pressable>
-      </Animated.View>
+      </FadeInView>
     );
   };
 
-  const gradientColors = isDark
-    ? [colors.background, colors.backgroundSecondary]
-    : [colors.background, colors.backgroundSecondary];
-
   return (
-    <LinearGradient colors={gradientColors} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerLargeTitle: false,
+          headerTitleAlign: 'center',
+          title: isRTL ? 'طلباتي' : 'Orders',
+          headerBackVisible: false,
+          headerRightContainerStyle: styles.headerSideContainer,
+          headerRight: () =>
+            navigation.canGoBack() ? (
+              <Pressable
+                onPress={() => router.back()}
+                style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+              >
+                <ChevronRight size={20} color={colors.text} />
+              </Pressable>
+            ) : null,
+        }}
+      />
       <StatusBar style={colors.statusBar} />
-      
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={[styles.headerTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-            {isRTL ? 'طلباتي' : 'My Orders'}
-        </Text>
-        
+
+      <View style={styles.header}>
         <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -424,7 +433,7 @@ export default function MyOrdersScreen() {
           }
         />
       )}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -433,16 +442,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    paddingHorizontal: 20,
-    marginBottom: 15,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   filtersContainer: {
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   filterChip: {
     paddingHorizontal: 16,
@@ -453,6 +457,16 @@ const styles = StyleSheet.create({
   filterText: {
     fontWeight: '600',
     fontSize: 14,
+  },
+  headerSideContainer: {
+    paddingHorizontal: 8,
+  },
+  headerBackButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContent: {
     padding: 20,

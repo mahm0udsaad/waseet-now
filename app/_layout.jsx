@@ -1,9 +1,13 @@
-import 'react-native-gesture-handler';
 import CustomSplashScreen from '@/components/CustomSplashScreen';
 import InAppToast from '@/components/InAppToast';
 import { loadCommissionSettings } from '@/constants/commissionConfig';
 import { getPreferredFontFamily } from '@/constants/theme';
 import { useAuth } from '@/utils/auth/useAuth';
+import {
+  clearFatalError,
+  getFatalError,
+  subscribeToFatalError,
+} from '@/utils/debug/fatalErrorStore';
 import { useLanguageStore } from '@/utils/i18n/store';
 import { hasCompletedOnboarding } from '@/utils/onboarding/store';
 import {
@@ -18,17 +22,14 @@ import { getSupabaseSession, supabase } from '@/utils/supabase/client';
 import { upsertMyPushToken } from '@/utils/supabase/pushTokens';
 import { setGlobalFontFamily } from '@/utils/theme/applyGlobalFont';
 import { useThemeStore } from '@/utils/theme/store';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { ChevronRight } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, Text, View, StyleSheet } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { AppState, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -81,6 +82,80 @@ const errorStyles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
 
+function FatalErrorOverlay({ fatalError }) {
+  return (
+    <View style={fatalErrorStyles.container}>
+      <Text style={fatalErrorStyles.title}>Startup JS Fatal Error</Text>
+      <Text style={fatalErrorStyles.meta}>
+        {fatalError.name} | {fatalError.jsEngine} | {fatalError.platform} {fatalError.platformVersion}
+      </Text>
+      <Text style={fatalErrorStyles.message}>{fatalError.message}</Text>
+      <ScrollView style={fatalErrorStyles.stackBox} contentContainerStyle={fatalErrorStyles.stackContent}>
+        <Text style={fatalErrorStyles.stack}>{fatalError.stack || 'No stack available.'}</Text>
+      </ScrollView>
+      <Pressable onPress={clearFatalError} style={fatalErrorStyles.button}>
+        <Text style={fatalErrorStyles.buttonText}>Dismiss</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const fatalErrorStyles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    backgroundColor: '#08111F',
+    paddingTop: 72,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+  },
+  title: {
+    color: '#F8FAFC',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  meta: {
+    color: '#94A3B8',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  message: {
+    color: '#FEE2E2',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  stackBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.24)',
+    borderRadius: 14,
+    backgroundColor: '#020617',
+  },
+  stackContent: {
+    padding: 14,
+  },
+  stack: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  button: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    backgroundColor: '#D83A3A',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -92,18 +167,39 @@ const queryClient = new QueryClient({
   },
 });
 
-function useProtectedRoute() {
+const STARTUP_PROFILE_TIMEOUT_MS = 8000;
+
+function withTimeout(task, timeoutMs, label) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([task, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+function useProtectedRoute(canNavigate) {
   const segments = useSegments();
   const segmentsRef = useRef(segments);
   const router = useRouter();
+  const routerRef = useRef(router);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const isResolvingRef = useRef(false);
 
-  // Keep ref in sync so resolveRoute always reads current segments
-  // without needing segments as a dependency (which caused routing loops)
+  // Keep refs in sync so callbacks always read current values
+  // without needing them as dependencies (which caused routing loops / re-fires)
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
 
   const resolveRoute = useCallback(async (currentSession) => {
     // Prevent concurrent calls — onAuthStateChange fires INITIAL_SESSION
@@ -123,43 +219,54 @@ function useProtectedRoute() {
       const onboardingCompleted = await hasCompletedOnboarding();
       if (!onboardingCompleted) {
         if (!isOnboarding) {
-          router.replace('/onboarding');
+          routerRef.current.replace('/onboarding');
         }
         return;
       }
 
       if (!currentSession) {
         if (!isPublicRoute) {
-          router.replace('/signin');
+          routerRef.current.replace('/signin');
         }
         return;
       }
 
-      let isProfileComplete = false;
+      let profileResult;
       try {
-        const { profile } = await getMyProfile();
-        isProfileComplete = profile?.is_profile_complete === true;
+        profileResult = await withTimeout(
+          getMyProfile(),
+          STARTUP_PROFILE_TIMEOUT_MS,
+          'getMyProfile'
+        );
       } catch (error) {
         console.warn('[RootLayout] Failed to load profile completeness:', error);
+        // Network/transient error — don't misroute to complete-profile.
+        // If already on a public route or complete-profile, stay put; otherwise
+        // let the user through to the main app (profile will be re-checked later).
+        if (isPublicRoute || isCompleteProfile) return;
+        routerRef.current.replace('/(tabs)');
+        return;
       }
 
-      if (!isProfileComplete) {
+      if (!profileResult?.profile?.is_profile_complete) {
         if (!isCompleteProfile) {
-          router.replace('/complete-profile');
+          routerRef.current.replace('/complete-profile');
         }
         return;
       }
 
       if (isPublicRoute || isCompleteProfile) {
-        router.replace('/(tabs)');
+        routerRef.current.replace('/(tabs)');
       }
     } finally {
       isResolvingRef.current = false;
     }
-  }, [router]);
+  }, []);
 
   // Listen for auth state changes
   useEffect(() => {
+    if (!canNavigate) return;
+
     let mounted = true;
 
     // Get initial session
@@ -171,7 +278,7 @@ function useProtectedRoute() {
       } catch (error) {
         console.error('[RootLayout] Initial route resolution failed:', error);
         if (mounted) {
-          router.replace('/signin');
+          routerRef.current.replace('/signin');
         }
       } finally {
         if (mounted) {
@@ -182,7 +289,7 @@ function useProtectedRoute() {
 
     getInitialSession();
 
-    // Listen for auth changes (important for Google sign-in).
+    // Listen for auth changes.
     // Skip INITIAL_SESSION — getInitialSession() handles it; processing
     // it here too causes a double-navigate flash on every cold start.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -190,7 +297,7 @@ function useProtectedRoute() {
         if (!mounted || event === 'INITIAL_SESSION') return;
 
         if (event === 'SIGNED_OUT') {
-          router.replace('/signin');
+          routerRef.current.replace('/signin');
           return;
         }
 
@@ -202,7 +309,7 @@ function useProtectedRoute() {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, [resolveRoute, router]);
+  }, [canNavigate, resolveRoute]);
 
   return isAuthChecked;
 }
@@ -214,150 +321,216 @@ export default function RootLayout() {
   const isRTL = useLanguageStore((state) => state.isRTL);
   const colors = useThemeStore((state) => state.colors);
   const [appReady, setAppReady] = useState(false);
-  const isAuthChecked = useProtectedRoute();
+  const [startupTimedOut, setStartupTimedOut] = useState(false);
+  const rootNavigationState = useRootNavigationState();
+  // In Expo Router v6 / React Navigation v7, the root state object may
+  // exist without a `key` property.  Accept any truthy state that contains
+  // at least one route as "ready".
+  const navigationReady = !!(rootNavigationState?.key || rootNavigationState?.routes?.length);
+  const isAuthChecked = useProtectedRoute(navigationReady);
   const router = useRouter();
+  const fatalError = useSyncExternalStore(
+    subscribeToFatalError,
+    getFatalError,
+    getFatalError
+  );
   const notificationListener = useRef();
   const responseListener = useRef();
   const pendingNotificationRouteRef = useRef(null);
   const handledNotificationIdsRef = useRef(new Set());
-  useInAppNotificationsListener();
   const startupReady = isReady && appReady && isAuthChecked;
+  useInAppNotificationsListener(startupReady);
+
+  // Diagnose navigation readiness — log once when it changes
+  useEffect(() => {
+    console.log('[RootLayout] navigationReady:', navigationReady,
+      'rootState keys:', rootNavigationState ? Object.keys(rootNavigationState) : 'null');
+  }, [navigationReady]);
 
   // Apply a better Arabic UI font globally (best-effort).
   useEffect(() => {
     setGlobalFontFamily(getPreferredFontFamily(isRTL));
   }, [isRTL]);
 
-  // Configure notification handler and setup Android channel
+  // Defer ALL notification setup until the app is fully ready.
+  // expo-notifications TurboModule throws ObjC exceptions on iOS 26 during early startup,
+  // crashing Hermes before JS error handlers can catch them.
+  // The module is loaded lazily via dynamic import() to avoid TurboModule init at bundle time.
   useEffect(() => {
-    configureNotificationHandler();
-    setupAndroidNotificationChannel();
-  }, []);
+    if (!startupReady) return;
 
-  // Register push token when authenticated
-  useEffect(() => {
     let mounted = true;
 
-    const registerPushToken = async () => {
+    const setup = async () => {
+      let Notif;
       try {
-        const session = await getSupabaseSession();
-        if (!session || !mounted) return;
-
-        const token = await getExpoPushToken();
-        if (token && mounted) {
-          await upsertMyPushToken(token);
-        }
-      } catch (error) {
-        console.error("[RootLayout] Failed to register push token:", error);
-      }
-    };
-
-    registerPushToken();
-    return () => {
-      mounted = false;
-    };
-  }, [isReady]);
-
-  // Handle notification taps (when app is closed/background)
-  useEffect(() => {
-    const handleNotificationResponse = async (response) => {
-      if (!response) return;
-
-      const notificationId = response.notification?.request?.identifier;
-      if (notificationId && handledNotificationIdsRef.current.has(notificationId)) {
+        Notif = await import('expo-notifications');
+      } catch (e) {
+        console.warn('[RootLayout] Failed to load expo-notifications:', e);
         return;
       }
 
-      const data = response.notification?.request?.content?.data;
-      const route = getNotificationRoute(data);
-      console.log('[Notification tapped]', data);
+      if (!mounted) return;
 
-      if (notificationId) {
-        handledNotificationIdsRef.current.add(notificationId);
-      }
+      // Configure handler + Android channel
+      try { configureNotificationHandler(); } catch (e) { console.warn('[RootLayout] configureNotificationHandler failed:', e); }
+      setupAndroidNotificationChannel();
 
-      if (!route) return;
-
-      if (startupReady) {
-        router.push(route);
-      } else {
-        pendingNotificationRouteRef.current = route;
-      }
-
-      try {
-        await Notifications.clearLastNotificationResponseAsync();
-      } catch (error) {
-        console.warn('[RootLayout] Failed to clear last notification response:', error);
-      }
-    };
-
-    // Listen for notifications received while app is in foreground
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log("[Notification received]", notification);
-      // In-app toast is already handled by useInAppNotificationsListener
-    });
-
-    // Listen for user tapping on a notification
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-
-    Notifications.getLastNotificationResponseAsync()
-      .then(handleNotificationResponse)
-      .catch((error) => {
-        console.warn('[RootLayout] Failed to get last notification response:', error);
+      // Clear badge
+      const clearBadge = () => {
+        try { Notif.setBadgeCountAsync(0).catch(() => {}); } catch (_error) { /* ignore */ }
+      };
+      clearBadge();
+      const appStateSub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') clearBadge();
       });
 
-    return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
+      // Register push token
+      const registerPushToken = async (session) => {
+        if (!session || !mounted) return;
+        try {
+          const token = await getExpoPushToken();
+          if (token && mounted) {
+            await upsertMyPushToken(token);
+          }
+        } catch (error) {
+          console.error("[RootLayout] Failed to register push token:", error);
+        }
+      };
+
+      getSupabaseSession().then((s) => registerPushToken(s)).catch(() => {});
+
+      const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            registerPushToken(session);
+          }
+        }
+      );
+
+      // Notification tap handling
+      const handleNotificationResponse = async (response) => {
+        if (!response) return;
+
+        const notificationId = response.notification?.request?.identifier;
+        if (notificationId && handledNotificationIdsRef.current.has(notificationId)) {
+          return;
+        }
+
+        const data = response.notification?.request?.content?.data;
+        const route = getNotificationRoute(data);
+        console.log('[Notification tapped]', data);
+
+        if (notificationId) {
+          handledNotificationIdsRef.current.add(notificationId);
+        }
+
+        if (!route) return;
+
+        if (!navigationReady) {
+          pendingNotificationRouteRef.current = route;
+        } else {
+          router.push(route);
+        }
+
+        try {
+          await Notif.clearLastNotificationResponseAsync();
+        } catch (error) {
+          console.warn('[RootLayout] Failed to clear last notification response:', error);
+        }
+      };
+
+      try {
+        notificationListener.current = Notif.addNotificationReceivedListener((notification) => {
+          console.log("[Notification received]", notification);
+        });
+
+        responseListener.current = Notif.addNotificationResponseReceivedListener(handleNotificationResponse);
+
+        Notif.getLastNotificationResponseAsync()
+          .then(handleNotificationResponse)
+          .catch((error) => {
+            console.warn('[RootLayout] Failed to get last notification response:', error);
+          });
+      } catch (e) {
+        console.warn('[RootLayout] Notification listeners setup failed:', e);
       }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
+
+      // Store cleanup refs for teardown
+      cleanupRef.current = () => {
+        appStateSub.remove();
+        authSub?.unsubscribe();
+        notificationListener.current?.remove();
+        responseListener.current?.remove();
+      };
     };
-  }, [router, startupReady]);
+
+    const cleanupRef = { current: null };
+    setup();
+
+    return () => {
+      mounted = false;
+      cleanupRef.current?.();
+    };
+  }, [navigationReady, startupReady, router]);
+
+  // Hard timeout to prevent infinite splash screen if any initializer hangs
+  useEffect(() => {
+    if (startupReady) return; // Already started — no failsafe needed
+
+    const failsafe = setTimeout(() => {
+      console.error('[RootLayout] Startup timed out after 15s — forcing splash hide');
+      console.error('[RootLayout] Flags:', JSON.stringify({ isReady, appReady, isAuthChecked, navigationReady }));
+      setStartupTimedOut(true);
+      SplashScreen.hideAsync().catch(() => {});
+    }, 15000);
+
+    return () => clearTimeout(failsafe);
+  }, [startupReady]);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await Promise.all([
-          initiate(),
-          initTheme(),
-          initLanguage(),
-          loadCommissionSettings(),
+        const results = await Promise.allSettled([
+          initiate().then(() => console.log('[Init] initiate done')),
+          initTheme().then(() => console.log('[Init] initTheme done')),
+          initLanguage().then(() => console.log('[Init] initLanguage done')),
         ]);
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            console.error(`[Init] Task ${i} failed:`, r.reason);
+          }
+        });
       } catch (error) {
         console.error('[RootLayout] App initialization failed:', error);
       } finally {
         setAppReady(true);
       }
     };
-    
+
     initializeApp();
+    // Commission settings have safe defaults — load in background without blocking startup
+    loadCommissionSettings().catch(() => {});
   }, [initiate, initTheme, initLanguage]);
 
   useEffect(() => {
-    if (startupReady) {
+    if (fatalError || startupReady || startupTimedOut) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [startupReady]);
+  }, [fatalError, startupReady, startupTimedOut]);
 
   useEffect(() => {
-    if (!startupReady || !pendingNotificationRouteRef.current) return;
+    if (!navigationReady || !startupReady || !pendingNotificationRouteRef.current) return;
 
     const route = pendingNotificationRouteRef.current;
     pendingNotificationRouteRef.current = null;
     router.push(route);
-  }, [router, startupReady]);
-
-  if (!startupReady) {
-    return <CustomSplashScreen />;
-  }
+  }, [navigationReady, router, startupReady]);
 
   return (
     <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
+      <View style={{ flex: 1 }}>
           <InAppToast />
           <Stack
             screenOptions={({ navigation }) => ({
@@ -372,7 +545,9 @@ export default function RootLayout() {
               },
               headerTitleStyle: {
                 color: colors.text,
+                writingDirection: isRTL ? 'rtl' : 'ltr',
               },
+              headerTitleAlign: isRTL ? 'right' : 'left',
               headerRightContainerStyle: isRTL ? { paddingHorizontal: 8 } : undefined,
               headerRight:
                 isRTL && navigation.canGoBack()
@@ -571,8 +746,13 @@ export default function RootLayout() {
               }}
             />
           </Stack>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
+          {!(startupReady || startupTimedOut) ? (
+            <View style={StyleSheet.absoluteFill} pointerEvents="auto">
+              <CustomSplashScreen />
+            </View>
+          ) : null}
+          {fatalError ? <FatalErrorOverlay fatalError={fatalError} /> : null}
+      </View>
     </QueryClientProvider>
     </ErrorBoundary>
   );

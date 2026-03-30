@@ -20,7 +20,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 import { Skeleton, SkeletonGroup } from '@/components/ui/Skeleton';
 import { getWalletTransactions, getWalletSummary } from '@/utils/supabase/wallet';
 
@@ -125,7 +125,7 @@ export default function WalletTransactionsScreen() {
     const amountValue = item.type === 'incoming' ? item.amount : -item.amount;
 
     return (
-      <Animated.View entering={FadeInDown.delay(100 + index * 50)}>
+      <FadeInView delay={100 + index * 50}>
         <Pressable
           style={({ pressed }) => [
             styles.transactionCard,
@@ -166,7 +166,7 @@ export default function WalletTransactionsScreen() {
             {formatCurrency(amountValue)}
           </Text>
         </Pressable>
-      </Animated.View>
+      </FadeInView>
     );
   };
 
@@ -195,8 +195,8 @@ export default function WalletTransactionsScreen() {
       <StatusBar style={colors.statusBar} />
 
       {/* Summary Banner */}
-      <Animated.View
-        entering={FadeInDown.delay(50)}
+      <FadeInView
+        delay={50}
         style={[styles.summaryBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
         <View style={styles.summaryItem}>
@@ -226,7 +226,7 @@ export default function WalletTransactionsScreen() {
             </Text>
           </View>
         </View>
-      </Animated.View>
+      </FadeInView>
 
       {/* Transactions List */}
       <AppFlatList

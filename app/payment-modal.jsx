@@ -6,12 +6,14 @@ import React, { useEffect } from 'react';
 export default function PaymentModalRoute() {
   const onCardPayment = usePaymentFlowStore((state) => state.onCardPayment);
   const onPaymentSubmitted = usePaymentFlowStore((state) => state.onPaymentSubmitted);
+  const hasCallbacks = React.useRef(!!(onCardPayment || onPaymentSubmitted));
 
   useEffect(() => {
-    if (!onCardPayment && !onPaymentSubmitted) {
+    // Only auto-dismiss if we never had callbacks (navigated here by mistake)
+    if (!hasCallbacks.current && !onCardPayment && !onPaymentSubmitted) {
       router.back();
     }
-  }, [onCardPayment, onPaymentSubmitted]);
+  }, []);
 
   return (
     <>

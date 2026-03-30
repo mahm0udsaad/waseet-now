@@ -10,13 +10,8 @@ import { BlurView } from "expo-blur";
 import { ChevronRight } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, Share } from "react-native";
-import Animated, {
-  FadeInDown,
-  SlideInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
+import ScalePressable from "@/components/ui/ScalePressable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { NativeIcon } from "@/components/native/NativeIcon";
@@ -40,8 +35,6 @@ export default function TanazulDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  const chatScale = useSharedValue(1);
-
   useEffect(() => {
     const loadAd = async () => {
       if (!params.id) {
@@ -64,7 +57,6 @@ export default function TanazulDetailsScreen() {
 
   const handleChat = async () => {
     if (!adData) return;
-    chatScale.value = withSpring(0.95, {}, () => chatScale.value = withSpring(1));
 
     if (currentUserId && adData.owner_id === currentUserId) {
       Alert.alert(isRTL ? "تنبيه" : "Notice", isRTL ? "لا يمكنك مراسلة نفسك" : "You cannot message yourself");
@@ -91,8 +83,6 @@ export default function TanazulDetailsScreen() {
       console.error(error);
     }
   };
-
-  const chatAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: chatScale.value }] }));
 
   if (loading) {
     return (
@@ -178,8 +168,9 @@ export default function TanazulDetailsScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 168 }]}
       >
         {/* Hero Card */}
-        <Animated.View
-          entering={FadeInDown.delay(100).springify()}
+        <FadeInView
+          delay={100}
+          spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.medium]}
         >
           <View style={[styles.heroRow, { flexDirection: rowDirection }]}>
@@ -213,11 +204,12 @@ export default function TanazulDetailsScreen() {
             </View>
             <Text style={[styles.priceValue, { color: colors.primary }]}>{priceFormatted}</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Worker Details */}
-        <Animated.View
-          entering={FadeInDown.delay(200).springify()}
+        <FadeInView
+          delay={200}
+          spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
         >
           <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
@@ -253,11 +245,12 @@ export default function TanazulDetailsScreen() {
               rowDirection={rowDirection}
             />
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Contract Info */}
-        <Animated.View
-          entering={FadeInDown.delay(300).springify()}
+        <FadeInView
+          delay={300}
+          spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
         >
           <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
@@ -286,12 +279,13 @@ export default function TanazulDetailsScreen() {
               highlight={parseInt(meta.previousTransfers) > 2 ? "warning" : null}
             />
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Description */}
         {adData.description ? (
-          <Animated.View
-            entering={FadeInDown.delay(400).springify()}
+          <FadeInView
+            delay={400}
+            spring
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
           >
             <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
@@ -303,13 +297,13 @@ export default function TanazulDetailsScreen() {
             <Text style={[styles.descriptionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
               {adData.description}
             </Text>
-          </Animated.View>
+          </FadeInView>
         ) : null}
       </ScrollView>
 
       {/* Floating Action Bar */}
-      <Animated.View
-        entering={SlideInDown.delay(400)}
+      <FadeInView
+        delay={400}
         style={[styles.floatingBarWrapper, { bottom: insets.bottom + Spacing.m }]}
       >
         <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={styles.floatingBar}>
@@ -323,25 +317,23 @@ export default function TanazulDetailsScreen() {
               </Text>
             </View>
 
-            <Animated.View style={chatAnimatedStyle}>
-              <Pressable
-                testID="tanazul-chat-btn"
-                onPress={handleChat}
-                style={({ pressed }) => [
-                  styles.chatButton,
-                  { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
-                  Shadows.small
-                ]}
-              >
-                <NativeIcon name="message" size={20} color="#FFF" />
-                <Text style={styles.chatButtonText}>
-                  {isRTL ? "تواصل" : "Chat"}
-                </Text>
-              </Pressable>
-            </Animated.View>
+            <ScalePressable
+              testID="tanazul-chat-btn"
+              onPress={handleChat}
+              style={[
+                styles.chatButton,
+                { backgroundColor: colors.primary },
+                Shadows.small
+              ]}
+            >
+              <NativeIcon name="message" size={20} color="#FFF" />
+              <Text style={styles.chatButtonText}>
+                {isRTL ? "تواصل" : "Chat"}
+              </Text>
+            </ScalePressable>
           </View>
         </BlurView>
-      </Animated.View>
+      </FadeInView>
     </View>
   );
 }

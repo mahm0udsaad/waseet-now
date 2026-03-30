@@ -1,14 +1,23 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, Linking, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Linking, Alert, Animated } from "react-native";
 import { Image } from "expo-image";
 import * as Location from "expo-location";
-import { MapPin, FileText, Receipt } from "lucide-react-native";
+import { MapPin, FileText, ChevronRight, ChevronLeft } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
 import { BorderRadius } from "@/constants/theme";
 import PaymentReceiptCard from "./PaymentReceiptCard";
+import ReceiptCard from "./ReceiptCard";
+import PaymentLinkCard from "./PaymentLinkCard";
 
 const locationLabelCache = new Map();
+
+function formatFileSize(bytes) {
+  if (!bytes || bytes <= 0) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function formatLocationLabel(placemark, isRTL) {
   if (!placemark) return null;
@@ -130,10 +139,72 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
             {coordinateText}
           </Text>
         )}
-        <Text style={[styles.locationAction, { color: isMe ? "#FFFFFF" : colors.primary }]}>
-          {isRTL ? "فتح في Google Maps" : "Open in Google Maps"}
-        </Text>
+        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', marginTop: 6, gap: 2 }}>
+          <Text style={[styles.locationAction, { color: isMe ? "#FFFFFF" : colors.primary, marginTop: 0 }]}>
+            {isRTL ? "فتح في Google Maps" : "Open in Google Maps"}
+          </Text>
+          {isRTL ? (
+            <ChevronLeft size={14} color={isMe ? "#FFFFFF" : colors.primary} />
+          ) : (
+            <ChevronRight size={14} color={isMe ? "#FFFFFF" : colors.primary} />
+          )}
+        </View>
       </View>
+    </Pressable>
+  );
+}
+
+function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
+  if (!repliedMessage) return null;
+
+  const isMyReply = repliedMessage.sender_id === repliedMessage._currentUserId;
+  const senderName = isMyReply
+    ? (isRTL ? "أنت" : "You")
+    : (repliedMessage._otherName || (isRTL ? "المستخدم" : "User"));
+
+  const previewText = repliedMessage.content
+    ? repliedMessage.content.substring(0, 80) + (repliedMessage.content.length > 80 ? "…" : "")
+    : repliedMessage.attachments?.length > 0
+      ? (repliedMessage.attachments[0].type === "image" ? "📷" : "📎")
+      : "";
+
+  return (
+    <Pressable
+      onPress={() => onPress?.(repliedMessage.id)}
+      style={({ pressed }) => ({
+        borderLeftWidth: isRTL ? 0 : 3,
+        borderRightWidth: isRTL ? 3 : 0,
+        borderColor: isMe ? "rgba(255,255,255,0.5)" : colors.primary,
+        backgroundColor: isMe ? "rgba(255,255,255,0.15)" : colors.primaryLight + "40",
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        marginBottom: 4,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: "700",
+          color: isMe ? "rgba(255,255,255,0.9)" : colors.primary,
+          marginBottom: 1,
+          textAlign: isRTL ? "right" : "left",
+        }}
+        numberOfLines={1}
+      >
+        {senderName}
+      </Text>
+      <Text
+        style={{
+          fontSize: 13,
+          color: isMe ? "rgba(255,255,255,0.7)" : colors.textSecondary,
+          textAlign: isRTL ? "right" : "left",
+        }}
+        numberOfLines={2}
+      >
+        {previewText}
+      </Text>
     </Pressable>
   );
 }
@@ -155,6 +226,8 @@ function MessageBubble({
   daminPayerUserId,
   acceptedReceiptIds,
   orderPaidOverride,
+  repliedMessage,
+  onReplyPress,
 }) {
   const { colors } = useTheme();
   const { isRTL } = useTranslation();
@@ -171,7 +244,6 @@ function MessageBubble({
 
   const textColor = isMe ? "#FFFFFF" : colors.text;
   const timeColor = isMe ? "rgba(255,255,255,0.7)" : colors.textMuted;
-  const subTextColor = isMe ? "rgba(255,255,255,0.9)" : colors.textSecondary;
 
   // Render attachments
   const renderAttachment = (attachment, index) => {
@@ -191,9 +263,15 @@ function MessageBubble({
     }
 
     if (attachment.type === "image") {
+      const hasSize = attachment.width > 0 && attachment.height > 0;
+      const aspectRatio = hasSize ? attachment.width / attachment.height : 4 / 3;
       return (
         <Pressable key={key} onPress={() => onImagePress(attachment.signedUrl || attachment.uri)} style={styles.imageContainer}>
-          <Image source={{ uri: attachment.signedUrl || attachment.uri }} style={styles.image} contentFit="cover" />
+          <Image
+            source={{ uri: attachment.signedUrl || attachment.uri }}
+            style={[styles.image, { aspectRatio, width: 220, height: undefined, maxHeight: 280 }]}
+            contentFit="cover"
+          />
         </Pressable>
       );
     }
@@ -212,16 +290,26 @@ function MessageBubble({
     }
 
     if (attachment.type === "file") {
+      const ext = attachment.mimeType?.split('/')[1]?.toUpperCase() || 'FILE';
+      const isPdf = ext === 'PDF';
+      const isDoc = ['DOC', 'DOCX', 'MSWORD'].includes(ext);
+      const iconBg = isPdf ? '#EF444420' : isDoc ? '#3B82F620' : (isMe ? 'rgba(255,255,255,0.18)' : colors.primaryLight);
+      const iconColor = isPdf ? '#EF4444' : isDoc ? '#3B82F6' : (isMe ? '#FFF' : colors.primary);
+      const fileSize = attachment.size ? formatFileSize(attachment.size) : null;
       return (
-        <Pressable 
-          key={key} 
+        <Pressable
+          key={key}
           onPress={() => onFilePress(attachment)}
           style={[styles.fileContainer, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : colors.background }]}
         >
-          <FileText size={20} color={isMe ? "#FFF" : colors.text} />
+          <View style={[styles.fileIconWrap, { backgroundColor: iconBg }]}>
+            <FileText size={18} color={iconColor} />
+          </View>
           <View style={styles.fileInfo}>
              <Text style={[styles.fileName, { color: textColor }]} numberOfLines={1}>{attachment.name}</Text>
-             <Text style={[styles.fileType, { color: timeColor }]}>{attachment.mimeType?.split('/')[1] || 'FILE'}</Text>
+             <Text style={[styles.fileType, { color: timeColor }]}>
+               {ext}{fileSize ? ` · ${fileSize}` : ''}
+             </Text>
           </View>
         </Pressable>
       );
@@ -229,49 +317,15 @@ function MessageBubble({
     
     if (attachment.type === "receipt") {
       return (
-        <View key={key} style={[styles.receiptCard, { backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : colors.background, borderColor: isMe ? 'rgba(255,255,255,0.3)' : colors.border }]}>
-          <View style={[styles.receiptHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <Receipt size={18} color={isMe ? "#FFF" : colors.primary} />
-            <Text style={[styles.receiptTitle, { color: textColor }]}>
-              {isRTL ? "إيصال" : "Receipt"}
-            </Text>
-          </View>
-          <View style={styles.receiptBody}>
-            {attachment.description && (
-              <Text style={[styles.receiptDescription, { color: subTextColor }]}>
-                {attachment.description}
-              </Text>
-            )}
-            <Text style={[styles.receiptAmount, { color: textColor }]}>
-              {Number(attachment.amount || 0).toLocaleString()} {isRTL ? "ر.س" : "SAR"}
-            </Text>
-            <Text style={[styles.receiptStatus, { color: timeColor }]}>
-              {attachment.status === "seller_signed" && (isRTL ? "موقع من البائع" : "Signed by Seller")}
-              {attachment.status === "final" && (isRTL ? "نهائي" : "Final")}
-            </Text>
-          </View>
-          <View style={[styles.receiptActions, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <Pressable
-              onPress={() => onReceiptPress && onReceiptPress(attachment)}
-              style={[styles.receiptButton, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : colors.primaryLight }]}
-            >
-              <Text style={[styles.receiptButtonText, { color: isMe ? "#FFF" : colors.primary }]}>
-                {isRTL ? "عرض PDF" : "View PDF"}
-              </Text>
-            </Pressable>
-            {attachment.status === "seller_signed" && !isMe && !(acceptedReceiptIds && acceptedReceiptIds.has(attachment.receipt_id)) && (
-              <Pressable
-                testID="receipt-accept-btn"
-                onPress={() => onAcceptReceipt && onAcceptReceipt(attachment.receipt_id)}
-                disabled={isAcceptingReceipt}
-                style={[styles.receiptButton, { backgroundColor: colors.primary }]}
-              >
-                <Text style={[styles.receiptButtonText, { color: "#fff" }]}>
-                  {isAcceptingReceipt ? (isRTL ? "جاري..." : "Loading...") : (isRTL ? "قبول وتوقيع" : "Accept & Sign")}
-                </Text>
-              </Pressable>
-            )}
-          </View>
+        <View key={key} style={{ marginBottom: 4 }}>
+          <ReceiptCard
+            data={attachment}
+            isMe={isMe}
+            onReceiptPress={onReceiptPress}
+            onAcceptReceipt={onAcceptReceipt}
+            isAcceptingReceipt={isAcceptingReceipt}
+            accepted={acceptedReceiptIds && acceptedReceiptIds.has(attachment.receipt_id)}
+          />
         </View>
       );
     }
@@ -290,39 +344,16 @@ function MessageBubble({
         (currentUserId && String(currentUserId) === String(expectedPayerId));
       const canPay = canPayDamin && canPayRegular;
       return (
-        <View key={key} style={[styles.paymentCard, { backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : colors.background, borderColor: isMe ? 'rgba(255,255,255,0.3)' : colors.border }]}>
-          <View style={[styles.paymentHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <Text style={[styles.paymentTitle, { color: textColor }]}>
-              {alreadyPaid ? "✅" : "💳"} {isRTL ? (alreadyPaid ? "تم الدفع" : "رابط الدفع") : (alreadyPaid ? "Payment Complete" : "Payment Link")}
-            </Text>
-          </View>
-          {attachment.amount && (
-            <Text style={[styles.paymentAmount, { color: textColor }]}>
-              {Number(attachment.amount).toLocaleString()} {isRTL ? "ر.س" : "SAR"}
-            </Text>
-          )}
-          {!alreadyPaid && canPay && (
-            <Pressable
-              testID="payment-pay-btn"
-              onPress={() => onPaymentPress && onPaymentPress({ amount: attachment.amount, orderId: attachment.order_id, isDamin: attachment.isDamin })}
-              style={[styles.paymentButton, { backgroundColor: isMe ? '#FFF' : colors.primary }]}
-            >
-              <Text style={[styles.paymentButtonText, { color: isMe ? colors.primary : "#fff" }]}>
-                {isRTL ? "ادفع الآن" : "Pay Now"}
-              </Text>
-            </Pressable>
-          )}
-          {alreadyPaid && !attachment.isDamin && canPayRegular && (
-            <Pressable
-              testID="payment-dispute-btn"
-              onPress={() => onSubmitDispute && onSubmitDispute(attachment.order_id)}
-              style={[styles.paymentDisputeButton, { borderColor: colors.error }]}
-            >
-              <Text style={[styles.paymentDisputeButtonText, { color: colors.error }]}>
-                {isRTL ? "رفع نزاع" : "Submit Dispute"}
-              </Text>
-            </Pressable>
-          )}
+        <View key={key} style={{ marginBottom: 4 }}>
+          <PaymentLinkCard
+            data={attachment}
+            isMe={isMe}
+            alreadyPaid={alreadyPaid}
+            canPay={canPay}
+            canPayRegular={canPayRegular}
+            onPaymentPress={onPaymentPress}
+            onSubmitDispute={onSubmitDispute}
+          />
         </View>
       );
     }
@@ -330,23 +361,40 @@ function MessageBubble({
     return null;
   };
 
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(8)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 100, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   return (
-    <View style={[
-      styles.container, 
-      { 
-        alignSelf: isMe ? (isRTL ? "flex-start" : "flex-end") : (isRTL ? "flex-end" : "flex-start"),
-        flexDirection: getRTLRowDirection(isRTL),
-      }
-    ]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+          alignSelf: isMe ? (isRTL ? "flex-start" : "flex-end") : (isRTL ? "flex-end" : "flex-start"),
+          flexDirection: getRTLRowDirection(isRTL),
+        }
+      ]}
+    >
       <View style={[styles.bubble, bubbleStyle]}>
+        {repliedMessage && (
+          <ReplyPreview repliedMessage={repliedMessage} isMe={isMe} colors={colors} isRTL={isRTL} onPress={onReplyPress} />
+        )}
         {item.attachments?.map((att, idx) => renderAttachment(att, idx))}
-        
+
         {!!item.content && (
           <Text style={[styles.text, { color: textColor, textAlign: getRTLTextAlign(isRTL) }]}>
             {item.content}
           </Text>
         )}
-        
+
         {/* Timestamp */}
         <View style={styles.footer}>
            <Text style={[styles.time, { color: timeColor }]}>
@@ -354,7 +402,7 @@ function MessageBubble({
            </Text>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -368,7 +416,8 @@ export default React.memo(MessageBubble, (prev, next) => {
     prev.paidOrderIds === next.paidOrderIds &&
     prev.currentUserId === next.currentUserId &&
     prev.daminPayerUserId === next.daminPayerUserId &&
-    prev.acceptedReceiptIds === next.acceptedReceiptIds
+    prev.acceptedReceiptIds === next.acceptedReceiptIds &&
+    prev.repliedMessage?.id === next.repliedMessage?.id
   );
 });
 
@@ -412,6 +461,13 @@ const styles = StyleSheet.create({
     gap: 10,
     width: 200,
   },
+  fileIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fileInfo: {
     flex: 1,
   },
@@ -431,7 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 4,
     gap: 10,
-    minWidth: 220,
+    minWidth: 240,
   },
   locationIconWrap: {
     width: 32,
@@ -458,97 +514,4 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   
-  // Receipt
-  receiptCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
-    minWidth: 200,
-    marginBottom: 4,
-  },
-  receiptHeader: {
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  receiptTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  receiptBody: {
-    marginBottom: 10,
-  },
-  receiptDescription: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  receiptAmount: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  receiptStatus: {
-    fontSize: 11,
-    fontStyle: "italic",
-  },
-  receiptActions: {
-    gap: 6,
-  },
-  receiptButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  receiptButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  
-  // Payment Link
-  paymentCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    minWidth: 200,
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  paymentHeader: {
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  paymentTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  paymentAmount: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  paymentButton: {
-    width: "100%",
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  paymentButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  paymentDisputeButton: {
-    marginTop: 8,
-    width: "100%",
-    paddingVertical: 9,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  paymentDisputeButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
 });

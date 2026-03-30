@@ -306,7 +306,7 @@ export function useChatConversation(params, t, isRTL) {
   }, [conversationId, hasMore, messages]);
 
   // Send message handler
-  const handleSendMessage = async (content, attachments) => {
+  const handleSendMessage = async (content, attachments, { replyToId } = {}) => {
     if (!conversationId) {
       Alert.alert(
         t.common.error,
@@ -323,7 +323,8 @@ export function useChatConversation(params, t, isRTL) {
       const newMessage = await supabaseSendMessage(
         conversationId,
         content.trim(),
-        attachments
+        attachments,
+        { replyToId }
       );
       // Dedup: realtime subscription may have already delivered this message
       setMessages((prev) => {

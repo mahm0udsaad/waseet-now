@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Platform, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { hapticFeedback } from '@/utils/native/haptics';
 import { getHitSlop } from '@/utils/native/layout';
 

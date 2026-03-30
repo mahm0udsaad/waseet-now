@@ -22,7 +22,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getWalletSummary, submitWithdrawalRequest } from '@/utils/supabase/wallet';
 
@@ -231,8 +231,8 @@ export default function WalletWithdrawScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Available Balance */}
-        <Animated.View
-          entering={FadeInDown.delay(100)}
+        <FadeInView
+          delay={100}
           style={[styles.balanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <View style={[styles.balanceHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
@@ -244,10 +244,10 @@ export default function WalletWithdrawScreen() {
           <Text style={[styles.balanceAmount, { color: colors.text }]}>
             {balanceLoading ? '...' : formatCurrency(availableBalance)}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Amount Input */}
-        <Animated.View entering={FadeInDown.delay(150)} style={styles.section}>
+        <FadeInView delay={150} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
             {isRTL ? 'المبلغ' : 'Amount'}
           </Text>
@@ -293,10 +293,10 @@ export default function WalletWithdrawScreen() {
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Withdrawal Method */}
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
+        <FadeInView delay={200} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
             {isRTL ? 'طريقة الدفع' : 'Withdrawal Method'}
           </Text>
@@ -308,10 +308,10 @@ export default function WalletWithdrawScreen() {
               onSelect={() => setSelectedMethod(method.id)}
             />
           ))}
-        </Animated.View>
+        </FadeInView>
 
         {/* Bank Details */}
-        <Animated.View entering={FadeInDown.delay(250)} style={styles.section}>
+        <FadeInView delay={250} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
             {isRTL ? 'بيانات الحساب البنكي' : 'Bank Account Details'}
           </Text>
@@ -346,12 +346,12 @@ export default function WalletWithdrawScreen() {
               onChangeText={setAccountHolderName}
             />
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Summary */}
         {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-          <Animated.View
-            entering={FadeInDown.delay(250)}
+          <FadeInView
+            delay={250}
             style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <Text style={[styles.summaryTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -384,12 +384,12 @@ export default function WalletWithdrawScreen() {
                 {formatCurrency(calculateTotal())}
               </Text>
             </View>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Info Banner */}
-        <Animated.View
-          entering={FadeInDown.delay(300)}
+        <FadeInView
+          delay={300}
           style={[styles.infoBanner, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}
         >
           <Info size={20} color={colors.primary} />
@@ -398,10 +398,10 @@ export default function WalletWithdrawScreen() {
               ? 'ستتم معالجة طلب السحب الخاص بك وفقًا لطريقة الدفع المحددة.'
               : 'Your withdrawal request will be processed according to the selected payment method.'}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Confirm Button */}
-        <Animated.View entering={FadeInDown.delay(350)}>
+        <FadeInView delay={350}>
           <Pressable
             testID="withdraw-submit-btn"
             onPress={handleWithdraw}
@@ -422,7 +422,7 @@ export default function WalletWithdrawScreen() {
               </Text>
             )}
           </Pressable>
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
     </LinearGradient>
   );

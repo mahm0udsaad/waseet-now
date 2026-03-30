@@ -30,7 +30,7 @@ import { useOrder } from '@/hooks/useOrders';
 import { confirmOrderCompletion } from '@/utils/supabase/orders';
 import { getSupabaseSession } from '@/utils/supabase/client';
 import { showToast } from '@/utils/notifications/inAppStore';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 
 const InfoRow = ({ icon: Icon, label, value, colors, isRTL, onPress }) => (
@@ -291,8 +291,8 @@ export default function OrderDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Order ID & Status Card */}
-        <Animated.View
-          entering={FadeInDown.delay(100)}
+        <FadeInView
+          delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <View style={[styles.cardHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
@@ -306,11 +306,11 @@ export default function OrderDetailsScreen() {
             </View>
             <StatusBadge status={order.status} colors={colors} isRTL={isRTL} testID="order-status" />
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Ad Details Card */}
-        <Animated.View
-          entering={FadeInDown.delay(200)}
+        <FadeInView
+          delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -333,11 +333,11 @@ export default function OrderDetailsScreen() {
               </Text>
             </View>
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Financial Details Card */}
-        <Animated.View
-          entering={FadeInDown.delay(300)}
+        <FadeInView
+          delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -363,12 +363,12 @@ export default function OrderDetailsScreen() {
               }}
             />
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Payment & Escrow Status Card (Seller View) */}
         {userRole === 'seller' && (
-          <Animated.View
-            entering={FadeInDown.delay(350)}
+          <FadeInView
+            delay={350}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -437,12 +437,12 @@ export default function OrderDetailsScreen() {
                 </Text>
               </View>
             )}
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Participants Card */}
-        <Animated.View
-          entering={FadeInDown.delay(400)}
+        <FadeInView
+          delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -462,11 +462,11 @@ export default function OrderDetailsScreen() {
             colors={colors}
             isRTL={isRTL}
           />
-        </Animated.View>
+        </FadeInView>
 
         {/* Timeline Card */}
-        <Animated.View
-          entering={FadeInDown.delay(500)}
+        <FadeInView
+          delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -479,12 +479,12 @@ export default function OrderDetailsScreen() {
             colors={colors}
             isRTL={isRTL}
           />
-        </Animated.View>
+        </FadeInView>
 
         {/* Service Completion Confirmation Card */}
         {canConfirm && (
-          <Animated.View
-            entering={FadeInDown.delay(550)}
+          <FadeInView
+            delay={550}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -552,13 +552,13 @@ export default function OrderDetailsScreen() {
                 </Text>
               </View>
             )}
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Completed confirmation */}
         {order.status === 'completed' && (
-          <Animated.View
-            entering={FadeInDown.delay(550)}
+          <FadeInView
+            delay={550}
             style={[styles.completedBanner, { backgroundColor: '#10B98115', borderColor: '#10B98130' }]}
           >
             <CheckCircle size={20} color="#10B981" />
@@ -567,12 +567,12 @@ export default function OrderDetailsScreen() {
                 ? 'تم اكتمال الطلب وإطلاق الأموال بنجاح'
                 : 'Order completed and funds released successfully'}
             </Text>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Receipt Link */}
         {order.receipt && (
-          <Animated.View entering={FadeInDown.delay(600)}>
+          <FadeInView delay={600}>
             <Pressable
               style={[styles.receiptButton, { backgroundColor: colors.primary }]}
               onPress={() => {
@@ -585,7 +585,7 @@ export default function OrderDetailsScreen() {
                 {isRTL ? 'عرض الإيصال' : 'View Receipt'}
               </Text>
             </Pressable>
-          </Animated.View>
+          </FadeInView>
         )}
       </ScrollView>
     </LinearGradient>

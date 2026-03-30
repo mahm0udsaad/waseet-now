@@ -11,21 +11,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ChevronRight } from "lucide-react-native";
+import FadeInView from "@/components/ui/FadeInView";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
   Platform,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
   View
 } from "react-native";
-import Animated, {
-  FadeInDown,
-  SlideInDown,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get('window');
@@ -288,7 +286,7 @@ export default function TaqibAdDetailsScreen() {
       />
       <StatusBar style="light" />
 
-      <Animated.ScrollView
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         bounces={false} // Cleaner feel for header image
@@ -345,7 +343,7 @@ export default function TaqibAdDetailsScreen() {
         <View style={[styles.contentContainer, { backgroundColor: colors.background, minHeight: height - IMAGE_HEIGHT }]}>
           
           {/* Header Info */}
-          <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.section}>
+          <FadeInView spring style={styles.section}>
              <View style={{ flexDirection: getRTLRowDirection(isRTL), justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.title, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -366,12 +364,12 @@ export default function TaqibAdDetailsScreen() {
                    </View>
                 )}
              </View>
-          </Animated.View>
+          </FadeInView>
 
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
           {/* Details Grid */}
-          <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.section}>
+          <FadeInView delay={100} spring style={styles.section}>
              <View style={[styles.grid, { flexDirection: getRTLRowDirection(isRTL) }]}>
                 {/* Location */}
                 <View style={[styles.gridItem, { flexDirection: getRTLRowDirection(isRTL) }]}>
@@ -403,25 +401,25 @@ export default function TaqibAdDetailsScreen() {
                    </View>
                 </View>
              </View>
-          </Animated.View>
+          </FadeInView>
 
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
           {/* Description */}
-          <Animated.View entering={FadeInDown.delay(200).duration(600).springify()} style={styles.section}>
+          <FadeInView delay={200} spring style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
               {isRTL ? "الوصف" : "Description"}
             </Text>
             <Text style={[styles.description, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
               {adData.description || (isRTL ? "لا يوجد وصف إضافي." : "No description provided.")}
             </Text>
-          </Animated.View>
-          
+          </FadeInView>
+
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
 
       {/* Bottom Action Bar */}
-      <Animated.View entering={SlideInDown.delay(300)} style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
+      <FadeInView delay={300} style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
         <BottomBar {...bottomBarProps} style={styles.bottomBar}>
            <View style={[styles.bottomContent, { flexDirection: getRTLRowDirection(isRTL) }]}>
               <View style={{ flex: 1, alignItems: getRTLStartAlign(isRTL) }}>
@@ -450,7 +448,7 @@ export default function TaqibAdDetailsScreen() {
               </Pressable>
            </View>
         </BottomBar>
-      </Animated.View>
+      </FadeInView>
     </View>
   );
 }

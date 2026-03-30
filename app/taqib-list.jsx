@@ -14,8 +14,8 @@ import {
   Search
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import FadeInView from "@/components/ui/FadeInView";
 
 export default function TaqibListScreen() {
   const router = useRouter();
@@ -142,7 +142,7 @@ export default function TaqibListScreen() {
       <View style={styles.content}>
 
         {/* Search Bar */}
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.searchContainer}>
+        <FadeInView delay={200} style={styles.searchContainer}>
           <View
             style={[
               styles.searchBar,
@@ -166,36 +166,35 @@ export default function TaqibListScreen() {
               <Filter size={18} color={colors.text} />
             </Pressable>
           </View>
-        </Animated.View>
+        </FadeInView>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadAds({ isRefresh: true })}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          {loading && !refreshing && renderListSkeleton()}
-
-          {error && (
-            <Text style={{ color: colors.error, textAlign, marginBottom: 12 }}>{error}</Text>
-          )}
-
-          {!loading && filteredAds.length === 0 && !error && (
-            <Text style={{ color: colors.textMuted, textAlign }}>
-              {isRTL ? "لا توجد إعلانات" : "No ads yet"}
-            </Text>
-          )}
-
-          {filteredAds.map((ad, index) => {
-            const AdIcon = Building2;
-            return (
-              <Animated.View key={ad.id} entering={FadeInDown.delay(250 + index * 80)}>
+        {loading && !refreshing ? (
+          renderListSkeleton()
+        ) : (
+          <FlatList
+            data={filteredAds}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => loadAds({ isRefresh: true })}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+            ListEmptyComponent={
+              error ? (
+                <Text style={{ color: colors.error, textAlign, marginBottom: 12 }}>{error}</Text>
+              ) : (
+                <Text style={{ color: colors.textMuted, textAlign }}>
+                  {isRTL ? "لا توجد إعلانات" : "No ads yet"}
+                </Text>
+              )
+            }
+            renderItem={({ item: ad, index }) => (
+              <FadeInView delay={Math.min(250 + index * 80, 650)}>
                 <Pressable
                   testID={`taqib-card-${index}`}
                   onPress={() => router.push({ pathname: "/taqib-ad-details", params: { id: ad.id } })}
@@ -208,9 +207,7 @@ export default function TaqibListScreen() {
                     },
                   ]}
                 >
-                  {/* Ad Content */}
                   <View style={[styles.adContent, { flexDirection: rowDirection }]}>
-                    {/* Arrow Icon */}
                     <Pressable style={[styles.adArrow, { backgroundColor: colors.surfaceSecondary }]}>
                       {isRTL ? (
                         <ChevronLeft size={20} color={colors.primary} />
@@ -218,45 +215,27 @@ export default function TaqibListScreen() {
                         <ChevronRight size={20} color={colors.primary} />
                       )}
                     </Pressable>
-
-                    {/* Text Content */}
                     <View style={styles.adTextContainer}>
-                      <Text
-                        style={[
-                          styles.adTitle,
-                          {
-                            color: colors.text,
-                            textAlign,
-                          },
-                        ]}
-                      >
+                      <Text style={[styles.adTitle, { color: colors.text, textAlign }]}>
                         {ad.title}
                       </Text>
                       <Text
-                        style={[
-                          styles.adDescription,
-                          {
-                            color: colors.textSecondary,
-                            textAlign,
-                          },
-                        ]}
+                        style={[styles.adDescription, { color: colors.textSecondary, textAlign }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
                         {ad.description || (isRTL ? "لا يوجد وصف" : "No description")}
                       </Text>
                     </View>
-
-                    {/* Service Icon */}
                     <View style={[styles.adIconBox, { backgroundColor: colors.primary }]}>
-                      <AdIcon size={28} color="#fff" />
+                      <Building2 size={28} color="#fff" />
                     </View>
                   </View>
                 </Pressable>
-              </Animated.View>
-            );
-          })}
-        </ScrollView>
+              </FadeInView>
+            )}
+          />
+        )}
       </View>
     </LinearGradient>
   );

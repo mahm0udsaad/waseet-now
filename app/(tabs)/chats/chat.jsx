@@ -1,33 +1,24 @@
 import MessageBubble from "@/components/chat/MessageBubble";
+import SwipeableMessage from "@/components/chat/SwipeableMessage";
 import SystemMessageCard from "@/components/chat/SystemMessageCard";
+import TypingIndicator from "@/components/chat/TypingIndicator";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { useChatAttachments } from "@/hooks/useChatAttachments";
 import { useChatConversation } from "@/hooks/useChatConversation";
+import { useChatTyping } from "@/hooks/useChatTyping";
 import { useChatReceipt } from "@/hooks/useChatReceipt";
+import { useChatOrders } from "@/hooks/useChatOrders";
+import { useChatPayments } from "@/hooks/useChatPayments";
 import { getRTLInverseRowDirection, getRTLRowDirection, getRTLStartAlign, getRTLTextAlign, useTranslation } from "@/utils/i18n/store";
-import { showToast } from "@/utils/notifications/inAppStore";
-import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
-import { checkPaymobStatus } from "@/utils/paymob";
-import { sendMessage as sendChatMessage } from "@/utils/supabase/chat";
-import {
-  completeDaminService,
-  confirmDaminCardPayment,
-  confirmDaminOrderParticipation,
-  submitDaminDispute,
-  submitDaminPayment,
-  updateDaminOrderMetadata,
-  uploadTransferReceipt as uploadDaminTransferReceipt,
-} from "@/utils/supabase/daminOrders";
-import { confirmOrderCompletion } from "@/utils/supabase/orders";
 import { acceptReceipt, fetchReceiptById } from "@/utils/supabase/receipts";
-import { getDaminOrderForChat } from "@/utils/supabase/wallet";
+import { hapticFeedback } from "@/utils/native/haptics";
 import { useTheme } from "@/utils/theme/store";
-import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView, BottomSheetTextInput, BottomSheetView } from "@gorhom/bottom-sheet";
+// gorhom bottom-sheet removed — using native Modal instead
 import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
@@ -40,9 +31,11 @@ import {
   CreditCard,
   FileText,
   Image as ImageIcon,
+  Info,
   MapPin,
   Plus,
   Receipt,
+  Reply,
   Send,
   Shield,
   X,
@@ -51,16 +44,23 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   ActivityIndicator,
-  Alert, FlatList, Keyboard,
+  Alert, FlatList, Keyboard, KeyboardAvoidingView, LayoutAnimation,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FlashList } from "@shopify/flash-list";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -84,7 +84,6 @@ export default function ChatScreen() {
     hasMore,
     loadingMore,
     loadOlderMessages,
-    refreshMessages,
   } = useChatConversation(params, t, isRTL);
 
   const resolvedAdId = adContext?.adId || (Array.isArray(params.adId) ? params.adId[0] : params.adId) || null;
@@ -118,14 +117,26 @@ export default function ChatScreen() {
     creating: creatingReceipt,
   } = useChatReceipt();
 
+  const { isOtherTyping, notifyTyping } = useChatTyping(conversationId, currentUserId);
+
   // Local UI state
   const [inputText, setInputText] = useState("");
+  const [replyToMessage, setReplyToMessage] = useState(null);
   const [acceptingReceipt, setAcceptingReceipt] = useState(false);
   const [localAcceptedReceiptIds, setLocalAcceptedReceiptIds] = useState(new Set());
 
-  // Regular order context (tanazul/taqib) — supports multiple orders per conversation
-  const [ordersForChat, setOrdersForChat] = useState([]);
-  const [orderConfirmLoading, setOrderConfirmLoading] = useState(false);
+  // ── Order & payment hooks ───────────────────────────────────────────
+  const orderHook = useChatOrders({ conversationId, messages, isRTL });
+  const {
+    ordersForChat, setOrdersForChat, activeOrder, orderConfirmLoading,
+    handleOrderConfirmCompletion, daminOrder, setDaminOrder, daminActionLoading,
+    handleDaminAction, disputeModalVisible, setDisputeModalVisible,
+    disputeReason, setDisputeReason, handleDisputeSubmit,
+    orderDisputeModalVisible, setOrderDisputeModalVisible,
+    orderDisputeReason, setOrderDisputeReason,
+    orderDisputeLoading, handleOpenOrderDispute, handleSubmitOrderDispute,
+    paidOrderIds, getDaminStatusLabel,
+  } = orderHook;
 
   // Derive accepted receipt IDs: local state + receipts with status "final" + receipts that have a matching order (payment_link sent)
   const acceptedReceiptIds = React.useMemo(() => {
@@ -149,460 +160,41 @@ export default function ChatScreen() {
     }
     return ids;
   }, [localAcceptedReceiptIds, messages, ordersForChat]);
+  const paymentHook = useChatPayments({
+    conversationId, messages, isRTL, router, params,
+    daminOrder, setDaminOrder, setOrdersForChat, handleSendMessage,
+  });
+  const { handlePaymentPress, setPaymentContextAndOpen } = paymentHook;
+
   const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
   const [receiptPreviewAttachment, setReceiptPreviewAttachment] = useState(null);
   const [receiptPreviewData, setReceiptPreviewData] = useState(null);
   const [receiptPreviewLoading, setReceiptPreviewLoading] = useState(false);
-  const [selectedPaymentContext, setSelectedPaymentContext] = useState(null);
-  const selectedPaymentContextRef = useRef(null);
-  const [cardPayLoading, setCardPayLoading] = useState(false);
-  const openPaymentFlow = usePaymentFlowStore((state) => state.openPaymentFlow);
-  const [refreshing, setRefreshing] = useState(false);
-  const [orderDisputeModalVisible, setOrderDisputeModalVisible] = useState(false);
-  const [orderDisputeReason, setOrderDisputeReason] = useState("");
-  const [orderDisputeOrderId, setOrderDisputeOrderId] = useState(null);
-  const [orderDisputeLoading, setOrderDisputeLoading] = useState(false);
+  const [refreshing] = useState(false);
 
-  // Damin order context
-  const [daminOrder, setDaminOrder] = useState(null);
-  const [daminActionLoading, setDaminActionLoading] = useState(false);
-  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
-  const [disputeReason, setDisputeReason] = useState("");
-  const lastHandledPayResultRef = useRef(null);
 
-  useEffect(() => {
-    if (!conversationId) return;
-    getDaminOrderForChat(conversationId)
-      .then(setDaminOrder)
-      .catch((err) => console.warn("Failed to load damin order context:", err));
-  }, [conversationId]);
-
-  // Fetch + subscribe to ALL regular orders for this conversation
-  useEffect(() => {
-    if (!conversationId) return;
-    let unsubscribe;
-
-    const load = async () => {
-      try {
-        const { getOrdersForConversation, subscribeToConversationOrders } = await import("@/utils/supabase/orders");
-        const orders = await getOrdersForConversation(conversationId);
-        setOrdersForChat(orders);
-
-        unsubscribe = subscribeToConversationOrders(conversationId, (updated) => {
-          setOrdersForChat(updated);
-        });
-      } catch (err) {
-        console.warn("Failed to load order context:", err);
-      }
-    };
-
-    load();
-    return () => unsubscribe?.();
-  }, [conversationId]);
-
-  // Re-fetch damin order context when a payment receipt arrives via realtime
-  // (keeps the other party's daminOrder state fresh after payment)
-  const lastMessageId = messages[messages.length - 1]?.id;
-  useEffect(() => {
-    if (!conversationId || !lastMessageId) return;
-    const lastMsg = messages[messages.length - 1];
-    const hasPaymentReceipt = lastMsg?.attachments?.some(
-      (a) => a.type === "payment_receipt" && a.status === "succeeded"
-    );
-    if (hasPaymentReceipt) {
-      getDaminOrderForChat(conversationId)
-        .then((updated) => { if (updated) setDaminOrder(updated); })
-        .catch(() => {});
-    }
-  }, [lastMessageId, conversationId]);
-
-  // Handle return from Paymob checkout for damin payments
-  useEffect(() => {
-    if (!params.payResult || params.isDamin !== "true" || !params.orderId) return;
-
-    const handleDaminPayReturn = async () => {
-      try {
-        const payResult = JSON.parse(params.payResult);
-        const payResultKey = `${payResult?.paymentId || "no-payment-id"}:${payResult?.status || "unknown"}`;
-        if (lastHandledPayResultRef.current === payResultKey) return;
-        lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
-        const paymobPaymentId = payResult?.paymentId;
-        // Use params.id directly as fallback — conversationId from hook may not be resolved yet
-        const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
-
-        if (payResult.status === "succeeded") {
-          // Re-verify with backend before mutating order state.
-          if (!paymobPaymentId) {
-            Alert.alert(
-              isRTL ? "تعذر التحقق من الدفع" : "Payment Verification Failed",
-              isRTL ? "معرّف العملية مفقود." : "Missing payment reference."
-            );
-            return;
-          }
-
-          const verification = await checkPaymobStatus(paymobPaymentId);
-          if (verification.status !== "succeeded") {
-            Alert.alert(
-              isRTL ? "الدفع غير مؤكد" : "Payment Not Confirmed",
-              isRTL
-                ? "لم يتم تأكيد الدفع من مزود الدفع بعد."
-                : "Payment is not confirmed by the payment provider yet."
-            );
-            return;
-          }
-
-          // If backend returns payment metadata/order reference, ensure it matches this order.
-          const verifiedOrderId =
-            verification?.raw?.metadata?.orderId ||
-            verification?.raw?.metadata?.order_id ||
-            verification?.raw?.orderId ||
-            verification?.raw?.order_id ||
-            null;
-          if (verifiedOrderId && String(verifiedOrderId) !== String(orderId)) {
-            Alert.alert(
-              isRTL ? "تعذر التحقق من الدفع" : "Payment Verification Failed",
-              isRTL
-                ? "مرجع العملية لا يطابق هذا الطلب."
-                : "Payment reference does not match this order."
-            );
-            return;
-          }
-
-          // Update metadata
-          try {
-            await updateDaminOrderMetadata(orderId, {
-              payment_method: "card_paymob",
-              paymob_payment_id: paymobPaymentId,
-              payment_completed_at: new Date().toISOString(),
-            });
-          } catch (metaErr) {
-            console.warn("[DaminPay] Failed to update order metadata:", metaErr);
-          }
-
-          // Auto-confirm card payment (changes status to awaiting_completion)
-          try {
-            await confirmDaminCardPayment(orderId);
-          } catch (confirmErr) {
-            console.error("[DaminPay] Failed to confirm card payment:", confirmErr);
-          }
-
-          // Send styled payment receipt card
-          if (convId) {
-            try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
-                  (a) =>
-                    a.type === "payment_receipt" &&
-                    a.status === "succeeded" &&
-                    String(a.order_id) === String(orderId)
-                )
-              );
-              const receiptPayload = {
-                type: "payment_receipt",
-                status: "succeeded",
-                amount: params.amount || 0,
-                currency: "SAR",
-                method: "card",
-                methodLabelAr: "بطاقة ائتمان/خصم",
-                methodLabelEn: "Credit/Debit Card",
-                reference: paymobPaymentId,
-                createdAt: new Date().toISOString(),
-                order_id: orderId,
-              };
-              if (!alreadySent) {
-                await sendChatMessage(convId, null, [receiptPayload]);
-              }
-            } catch (msgErr) {
-              console.warn("[DaminPay] Failed to send payment receipt:", msgErr);
-            }
-          }
-
-          // Refresh damin context bar
-          try {
-            const updated = await getDaminOrderForChat(convId || conversationId);
-            setDaminOrder(updated);
-          } catch (refreshErr) {
-            console.warn("[DaminPay] Failed to refresh damin order context:", refreshErr);
-          }
-
-          Alert.alert(
-            isRTL ? "تم الدفع بنجاح" : "Payment Successful",
-            isRTL ? "تم تأكيد الدفع تلقائياً." : "Payment has been automatically confirmed."
-          );
-          router.setParams({
-            payResult: undefined,
-            isDamin: undefined,
-            orderId: undefined,
-            amount: undefined,
-          });
-        } else if (payResult.status === "failed") {
-          Alert.alert(
-            isRTL ? "فشل الدفع" : "Payment Failed",
-            payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
-          );
-          router.setParams({
-            payResult: undefined,
-            isDamin: undefined,
-            orderId: undefined,
-            amount: undefined,
-          });
-        }
-      } catch (outerErr) {
-        console.error("[DaminPay] handleDaminPayReturn error:", outerErr);
-      }
-    };
-
-    handleDaminPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
-
-  // Handle return from Paymob checkout for regular (receipt-based) payments
-  useEffect(() => {
-    if (!params.payResult || params.isDamin === "true" || !params.orderId) return;
-
-    const handleRegularPayReturn = async () => {
-      try {
-        const payResult = JSON.parse(params.payResult);
-        const payResultKey = `regular:${payResult?.paymentId || "no-id"}:${payResult?.status || "unknown"}`;
-        if (lastHandledPayResultRef.current === payResultKey) return;
-        lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
-        const paymobPaymentId = payResult?.paymentId;
-        const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
-
-        if (payResult.status === "succeeded") {
-          if (!paymobPaymentId) {
-            Alert.alert(
-              isRTL ? "تعذر التحقق من الدفع" : "Payment Verification Failed",
-              isRTL ? "معرّف العملية مفقود." : "Missing payment reference."
-            );
-            return;
-          }
-
-          const verification = await checkPaymobStatus(paymobPaymentId);
-          if (verification.status !== "succeeded") {
-            Alert.alert(
-              isRTL ? "الدفع غير مؤكد" : "Payment Not Confirmed",
-              isRTL ? "لم يتم تأكيد الدفع من مزود الدفع بعد." : "Payment is not confirmed by the payment provider yet."
-            );
-            return;
-          }
-
-          // Update order status to payment_verified
-          try {
-            const { updateOrderStatus } = await import("@/utils/supabase/orders");
-            await updateOrderStatus(orderId, "payment_verified");
-          } catch (statusErr) {
-            console.warn("[RegularPay] Failed to update order status:", statusErr);
-          }
-
-          // Send payment receipt message in chat
-          if (convId) {
-            try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
-                  (a) =>
-                    a.type === "payment_receipt" &&
-                    a.status === "succeeded" &&
-                    String(a.order_id) === String(orderId)
-                )
-              );
-              if (!alreadySent) {
-                await sendChatMessage(convId, null, [{
-                  type: "payment_receipt",
-                  status: "succeeded",
-                  amount: params.amount || 0,
-                  currency: "SAR",
-                  method: "card",
-                  methodLabelAr: "بطاقة ائتمان/خصم",
-                  methodLabelEn: "Credit/Debit Card",
-                  reference: paymobPaymentId,
-                  createdAt: new Date().toISOString(),
-                  order_id: orderId,
-                }]);
-              }
-            } catch (msgErr) {
-              console.warn("[RegularPay] Failed to send payment receipt:", msgErr);
-            }
-          }
-
-          // Refresh orders
-          try {
-            const { getOrdersForConversation } = await import("@/utils/supabase/orders");
-            const updated = await getOrdersForConversation(convId || conversationId);
-            setOrdersForChat(updated);
-          } catch {}
-
-          Alert.alert(
-            isRTL ? "تم الدفع بنجاح" : "Payment Successful",
-            isRTL ? "تم تأكيد الدفع." : "Payment has been confirmed."
-          );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
-        } else if (payResult.status === "failed") {
-          Alert.alert(
-            isRTL ? "فشل الدفع" : "Payment Failed",
-            payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
-          );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
-        }
-      } catch (outerErr) {
-        console.error("[RegularPay] handleRegularPayReturn error:", outerErr);
-      }
-    };
-
-    handleRegularPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
-
-  // Derive the latest active order for the context bar / completion bar
-  // Priority: first non-completed order, then the latest order overall
-  const activeOrder = React.useMemo(() => {
-    if (ordersForChat.length === 0) return null;
-    const activeStatuses = ["awaiting_payment", "payment_submitted", "awaiting_admin_transfer_approval", "payment_verified", "in_progress", "completion_requested", "paid"];
-    const active = ordersForChat.find((o) => activeStatuses.includes(o.status));
-    return active || ordersForChat[0]; // ordersForChat is sorted desc by created_at
-  }, [ordersForChat]);
-
-  const handleOrderConfirmCompletion = useCallback(() => {
-    if (!activeOrder?.id || orderConfirmLoading) return;
-    Alert.alert(
-      isRTL ? "تأكيد اكتمال الخدمة" : "Confirm Service Completion",
-      isRTL
-        ? "هل أنت متأكد أن الخدمة تمت بنجاح؟ سيتم إطلاق الأموال عند تأكيد الطرفين."
-        : "Are you sure the service has been completed? Funds will be released when both parties confirm.",
-      [
-        { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
-        {
-          text: isRTL ? "تأكيد" : "Confirm",
-          onPress: async () => {
-            setOrderConfirmLoading(true);
-            try {
-              const result = await confirmOrderCompletion(activeOrder.id);
-              showToast({
-                type: "success",
-                title: isRTL ? "تم التأكيد" : "Confirmed",
-                message: result.completed
-                  ? (isRTL ? "تم اكتمال الطلب وإطلاق الأموال" : "Order completed and funds released")
-                  : (isRTL ? "تم تأكيدك، بانتظار الطرف الآخر" : "Your confirmation recorded, waiting for the other party"),
-              });
-            } catch (err) {
-              console.error("Failed to confirm order completion:", err);
-              showToast({
-                type: "error",
-                title: isRTL ? "خطأ" : "Error",
-                message: err?.message || (isRTL ? "فشل التأكيد" : "Failed to confirm"),
-              });
-            } finally {
-              setOrderConfirmLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [activeOrder?.id, orderConfirmLoading, isRTL]);
-
-  const handleDaminAction = useCallback(async (action) => {
-    if (!daminOrder?.order_id || daminActionLoading) return;
-    const orderId = daminOrder.order_id;
-
-    if (action === "confirm_participation") {
-      Alert.alert(
-        isRTL ? "تأكيد المشاركة" : "Confirm Participation",
-        isRTL ? "هل تريد تأكيد مشاركتك في هذا الطلب؟" : "Do you want to confirm your participation in this order?",
-        [
-          { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
-          {
-            text: isRTL ? "تأكيد" : "Confirm",
-            onPress: async () => {
-              setDaminActionLoading(true);
-              try {
-                await confirmDaminOrderParticipation(orderId);
-                const updated = await getDaminOrderForChat(conversationId);
-                setDaminOrder(updated);
-              } catch (e) {
-                Alert.alert(isRTL ? "خطأ" : "Error", e.message);
-              } finally {
-                setDaminActionLoading(false);
-              }
-            },
-          },
-        ]
-      );
-    } else if (action === "pay") {
-      const paymentContext = {
-        amount: daminOrder.total_amount,
-        orderId,
-        isDamin: true,
-      };
-      setSelectedPaymentContext(paymentContext);
-      selectedPaymentContextRef.current = paymentContext;
-      openPaymentFlow({
-        amount: paymentContext.amount,
-        onCardPayment: handleCardPayment,
-        onPaymentSubmitted: handleBankTransferSubmitted,
-      });
-      router.push("/payment-modal");
-    } else if (action === "confirm_service") {
-      Alert.alert(
-        isRTL ? "إنهاء الخدمة وتحرير المبلغ" : "End Service & Release Funds",
-        isRTL
-          ? "هل تريد تأكيد إتمام الخدمة وتحرير المبلغ إلى محفظة مقدم الخدمة؟"
-          : "Confirm service completion and release funds to the service provider's wallet?",
-        [
-          { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
-          {
-            text: isRTL ? "تأكيد وتحرير" : "Confirm & Release",
-            onPress: async () => {
-              setDaminActionLoading(true);
-              try {
-                await completeDaminService(orderId);
-                // Send completion message in chat
-                const serviceValue = Number(daminOrder.service_value || 0).toLocaleString();
-                const completionMsg = isRTL
-                  ? `✅ تم إنهاء الخدمة وتحرير المبلغ (${serviceValue} ر.س) إلى محفظة مقدم الخدمة.`
-                  : `✅ Service completed. Funds (${serviceValue} SAR) released to the service provider's wallet.`;
-                await sendChatMessage(conversationId, completionMsg);
-                const updated = await getDaminOrderForChat(conversationId);
-                setDaminOrder(updated);
-              } catch (e) {
-                Alert.alert(isRTL ? "خطأ" : "Error", e.message);
-              } finally {
-                setDaminActionLoading(false);
-              }
-            },
-          },
-        ]
-      );
-    } else if (action === "dispute") {
-      setDisputeReason("");
-      setDisputeModalVisible(true);
-    }
-  }, [daminOrder, daminActionLoading, conversationId, isRTL]);
-
-  const handleDisputeSubmit = useCallback(async () => {
-    if (!daminOrder?.order_id || !disputeReason.trim()) return;
-    setDaminActionLoading(true);
-    try {
-      await submitDaminDispute(daminOrder.order_id, disputeReason);
-      setDisputeModalVisible(false);
-      setDisputeReason("");
-      const updated = await getDaminOrderForChat(conversationId);
-      setDaminOrder(updated);
-    } catch (e) {
-      Alert.alert(isRTL ? "خطأ" : "Error", e.message);
-    } finally {
-      setDaminActionLoading(false);
-    }
-  }, [daminOrder, disputeReason, conversationId, isRTL]);
+  // Sheet visibility state (native Modal)
+  const [receiptSheetVisible, setReceiptSheetVisible] = useState(false);
+  const [librarySheetVisible, setLibrarySheetVisible] = useState(false);
+  const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
 
   // Refs
-  const receiptBottomSheetRef = useRef(null);
-  const libraryBottomSheetRef = useRef(null);
-  const attachmentBottomSheetRef = useRef(null);
   const flatListRef = useRef(null);
+  const textInputRef = useRef(null);
   const ownerBlockShownRef = useRef(false);
+  const scrollTimeoutRef = useRef(null);
+  const highlightTimeoutRef = useRef(null);
 
   // Animations
   const sendButtonScale = useRef(new Animated.Value(1)).current;
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(scrollTimeoutRef.current);
+      clearTimeout(highlightTimeoutRef.current);
+    };
+  }, []);
 
   // Block opening chat with yourself (owner trying to open chat from their own ad)
   useEffect(() => {
@@ -632,17 +224,16 @@ export default function ChatScreen() {
     if (loadingMessages) return;
     const isNewMessage = messages.length > prevMessageCount.current;
     prevMessageCount.current = messages.length;
-    setTimeout(() => {
+    scrollTimeoutRef.current = setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: isNewMessage });
     }, isNewMessage ? 100 : 50);
+    return () => clearTimeout(scrollTimeoutRef.current);
   }, [loadingMessages, messages.length]);
 
-  // Bottom sheet callbacks
+  // Sheet callbacks
   const openReceiptSheet = useCallback(() => {
     Keyboard.dismiss();
-    // Auto-fill receipt data from ad context
     const updates = {};
-    // Description should be service/ad description, but user can edit
     if (resolvedAdDescription) {
       updates.description = resolvedAdDescription;
     }
@@ -652,77 +243,33 @@ export default function ChatScreen() {
     if (Object.keys(updates).length > 0) {
       updateReceiptData(updates);
     }
-    receiptBottomSheetRef.current?.expand();
+    setReceiptSheetVisible(true);
   }, [resolvedAdDescription, resolvedAdPrice, updateReceiptData]);
-
-  const openLibrarySheet = useCallback(() => {
-    Keyboard.dismiss();
-    libraryBottomSheetRef.current?.expand();
-  }, []);
 
   const openAttachmentSheet = useCallback(() => {
     Keyboard.dismiss();
-    attachmentBottomSheetRef.current?.expand();
+    setAttachmentSheetVisible(true);
   }, []);
 
   const handlePickImage = useCallback(async () => {
     const success = await pickImage();
-    if (success) {
-      attachmentBottomSheetRef.current?.close();
-    }
+    if (success) setAttachmentSheetVisible(false);
   }, [pickImage]);
 
   const handleTakePhoto = useCallback(async () => {
     const success = await takePhoto();
-    if (success) {
-      attachmentBottomSheetRef.current?.close();
-    }
+    if (success) setAttachmentSheetVisible(false);
   }, [takePhoto]);
 
   const handlePickDocument = useCallback(async () => {
     const success = await pickDocument();
-    if (success) {
-      attachmentBottomSheetRef.current?.close();
-    }
+    if (success) setAttachmentSheetVisible(false);
   }, [pickDocument]);
 
   const handleShareLocation = useCallback(async () => {
     const success = await shareLocation();
-    if (success) {
-      attachmentBottomSheetRef.current?.close();
-    }
+    if (success) setAttachmentSheetVisible(false);
   }, [shareLocation]);
-
-  const renderBackdrop = useCallback(
-    (props) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
-
-  // Get file icon based on extension
-  const getFileIcon = (fileName) => {
-    if (!fileName) return "📄";
-    const ext = fileName.split(".").pop()?.toLowerCase();
-    const iconMap = {
-      pdf: "📕",
-      doc: "📘",
-      docx: "📘",
-      xls: "📗",
-      xlsx: "📗",
-      ppt: "📙",
-      pptx: "📙",
-      txt: "📝",
-      zip: "🗜️",
-      rar: "🗜️",
-    };
-    return iconMap[ext] || "📄";
-  };
 
   // Open/download file
   const openFile = useCallback(async (attachment) => {
@@ -794,6 +341,7 @@ export default function ChatScreen() {
 
   // Send message wrapper
   const sendMessage = async () => {
+    hapticFeedback.confirm();
     Animated.sequence([
       Animated.spring(sendButtonScale, {
         toValue: 0.9,
@@ -809,11 +357,13 @@ export default function ChatScreen() {
       }),
     ]).start();
 
-    const success = await handleSendMessage(inputText, attachments);
+    const success = await handleSendMessage(inputText, attachments, { replyToId: replyToMessage?.id });
     if (success) {
+      hapticFeedback.success();
       setInputText("");
+      setReplyToMessage(null);
       clearAttachments();
-      setTimeout(() => {
+      scrollTimeoutRef.current = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
@@ -846,7 +396,7 @@ export default function ChatScreen() {
         // Send receipt as chat message
         await handleSendMessage("", [receiptAttachment]);
         resetReceiptData();
-        receiptBottomSheetRef.current?.close();
+        setReceiptSheetVisible(false);
       }
     } catch (error) {
       console.error("Error creating receipt:", error);
@@ -925,43 +475,6 @@ export default function ChatScreen() {
     }
   };
 
-  // Track which order_ids already have a successful payment — per order, not per conversation
-  const paidOrderIds = React.useMemo(() => {
-    const ids = new Set();
-
-    // 1. Check chat messages for payment_receipt with succeeded status
-    for (const msg of messages) {
-      for (const att of msg.attachments || []) {
-        if (att.type === "payment_receipt" && att.status === "succeeded" && att.order_id) {
-          ids.add(String(att.order_id));
-        }
-      }
-    }
-
-    // 2. Check damin order status — if awaiting_completion or completed, payment is done
-    if (daminOrder && ["awaiting_completion", "completed", "completion_requested"].includes(daminOrder.status)) {
-      ids.add(String(daminOrder.order_id));
-      // Mark ALL damin payment_link order_ids as paid
-      for (const msg of messages) {
-        for (const att of msg.attachments || []) {
-          if (att.type === "payment_link" && att.isDamin && att.order_id) {
-            ids.add(String(att.order_id));
-          }
-        }
-      }
-    }
-
-    // 3. Check ALL regular orders — mark each paid order individually
-    const paidStatuses = ["payment_verified", "in_progress", "completion_requested", "completed", "paid"];
-    for (const order of ordersForChat) {
-      if (paidStatuses.includes(order.status)) {
-        ids.add(String(order.id));
-      }
-    }
-
-    return ids;
-  }, [messages, daminOrder, ordersForChat]);
-
   // Deduplicate receipts: keep only latest message per receipt_id
   // A7: Messages are already sorted from hook; only re-sort if receipt dedup merges items
   const dedupedMessages = React.useMemo(() => {
@@ -1003,206 +516,31 @@ export default function ChatScreen() {
   const dedupedMessagesRef = useRef(dedupedMessages);
   dedupedMessagesRef.current = dedupedMessages;
 
-  // B1+B2: Payment press with full context (amount + orderId)
-  const handlePaymentPress = useCallback((paymentData) => {
-    // Auto-detect damin context: if a damin order is active and the orderId matches,
-    // mark as damin so the checkout flow correctly updates the damin_orders table.
-    const isDamin =
-      paymentData.isDamin ||
-      (daminOrder && String(paymentData.orderId) === String(daminOrder.order_id));
-    const paymentContext = { ...paymentData, isDamin: !!isDamin };
-    setSelectedPaymentContext(paymentContext);
-    selectedPaymentContextRef.current = paymentContext;
-    openPaymentFlow({
-      amount: paymentContext.amount,
-      onCardPayment: handleCardPayment,
-      onPaymentSubmitted: handleBankTransferSubmitted,
-    });
-    router.push("/payment-modal");
-  }, [daminOrder, openPaymentFlow, router]);
+  // Message map for reply lookups (id -> message)
+  const messageMapRef = useRef(new Map());
+  React.useMemo(() => {
+    const map = new Map();
+    for (const msg of messages) map.set(msg.id, msg);
+    messageMapRef.current = map;
+  }, [messages]);
 
-  const handleOpenOrderDispute = useCallback((orderId) => {
-    if (!orderId) return;
-    setOrderDisputeOrderId(orderId);
-    setOrderDisputeReason("");
-    setOrderDisputeModalVisible(true);
+  // Handle swipe-to-reply
+  const handleReply = useCallback((message) => {
+    hapticFeedback.tap();
+    setReplyToMessage(message);
+    textInputRef.current?.focus();
   }, []);
 
-  const handleSubmitOrderDispute = useCallback(async () => {
-    if (!orderDisputeOrderId || !orderDisputeReason.trim()) return;
-    setOrderDisputeLoading(true);
-    try {
-      const { updateOrderStatus, ORDER_STATUSES } = await import("@/utils/supabase/orders");
-      await updateOrderStatus(orderDisputeOrderId, ORDER_STATUSES.DISPUTED);
-      const disputeMsg = isRTL
-        ? `⚠️ تم رفع نزاع على الطلب.\nالسبب: ${orderDisputeReason.trim()}`
-        : `⚠️ A dispute has been submitted for this order.\nReason: ${orderDisputeReason.trim()}`;
-      if (conversationId) {
-        try { await sendChatMessage(conversationId, disputeMsg); } catch {}
-      }
-      setOrderDisputeModalVisible(false);
-      setOrderDisputeOrderId(null);
-      setOrderDisputeReason("");
-      Alert.alert(
-        isRTL ? "تم" : "Done",
-        isRTL ? "تم إرسال النزاع وسيتم مراجعته من الإدارة." : "Dispute submitted and will be reviewed by admin."
-      );
-    } catch (e) {
-      Alert.alert(isRTL ? "خطأ" : "Error", e?.message || (isRTL ? "فشل إرسال النزاع" : "Failed to submit dispute"));
-    } finally {
-      setOrderDisputeLoading(false);
-    }
-  }, [orderDisputeOrderId, orderDisputeReason, isRTL, conversationId]);
-
-  // B2: Card payment handler — creates Paymob intention and navigates to checkout
-  const handleCardPayment = useCallback(async (paymentMethod = 'card') => {
-    const ctx = selectedPaymentContextRef.current;
-    if (cardPayLoading || !ctx) return;
-
-    setCardPayLoading(true);
-    try {
-      const { getSupabaseSession } = await import("@/utils/supabase/client");
-      const { createPaymobIntention } = await import("@/utils/paymob");
-
-      const session = await getSupabaseSession();
-      const user = session?.user;
-      const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || "";
-      const nameParts = displayName.split(" ");
-
-      const isDamin = !!ctx.isDamin;
-
-      const { paymentId, checkoutUrl } = await createPaymobIntention({
-        amountSar: Number(ctx.amount),
-        customer: {
-          firstName: nameParts[0] || "User",
-          lastName: nameParts.slice(1).join(" ") || "N/A",
-          email: user?.email || `${user?.id}@wasitalan.com`,
-          phone: user?.phone || "",
-        },
-        metadata: {
-          orderId: ctx.orderId,
-          orderType: isDamin ? "damin" : "receipt",
-          conversationId,
-        },
-        paymentMethod,
-      });
-
-      router.push({
-        pathname: "/paymob-checkout",
-        params: {
-          checkoutUrl,
-          paymentId,
-          orderId: ctx.orderId,
-          conversationId,
-          amount: ctx.amount,
-          ...(isDamin ? { isDamin: "true" } : {}),
-        },
-      });
-    } catch (err) {
-      console.error("Failed to create payment intention:", err);
-      Alert.alert(
-        isRTL ? "خطأ" : "Error",
-        isRTL ? "فشل إنشاء عملية الدفع. حاول مرة أخرى." : "Failed to create payment. Please try again."
-      );
-    } finally {
-      setCardPayLoading(false);
-    }
-  }, [cardPayLoading, conversationId, isRTL, router]);
-
-  // B5: Bank transfer handler
-  const handleBankTransferSubmitted = useCallback(async ({ phoneNumber, receiptUri }) => {
-    const ctx = selectedPaymentContextRef.current;
-    if (!ctx?.orderId) return false;
-
-    const isDamin = !!ctx.isDamin;
-    setCardPayLoading(true);
-
-    try {
-      if (isDamin) {
-        const orderId = ctx.orderId;
-        const metadataUpdate = {
-          payment_method: "bank_transfer",
-          payment_submitted_at_client: new Date().toISOString(),
-        };
-        if (phoneNumber) metadataUpdate.transfer_phone = phoneNumber;
-
-        // Upload receipt image if provided
-        if (receiptUri) {
-          try {
-            const receiptUrl = await uploadDaminTransferReceipt(orderId, receiptUri);
-            if (receiptUrl) metadataUpdate.transfer_receipt_url = receiptUrl;
-          } catch (uploadErr) {
-            console.warn("Failed to upload damin receipt:", uploadErr);
-          }
-        }
-
-        await updateDaminOrderMetadata(orderId, metadataUpdate);
-        await submitDaminPayment(orderId);
-
-        // Send confirmation message in chat
-        const amount = Number(ctx.amount || 0).toFixed(2);
-        const msg = isRTL
-          ? `تم إرسال إيصال التحويل البنكي\nالمبلغ: ${amount} ر.س\nسيتم مراجعته من قبل الإدارة.`
-          : `Bank transfer receipt submitted\nAmount: ${amount} SAR\nUnder admin review.`;
-        if (conversationId) {
-          try { await sendChatMessage(conversationId, msg); } catch {}
-        }
-
-        // Refresh damin context bar
-        try {
-          const updated = await getDaminOrderForChat(conversationId);
-          setDaminOrder(updated);
-        } catch {}
-
-        Alert.alert(
-          isRTL ? "تم" : "Done",
-          isRTL ? "تم إرسال الدفع. سيتم التحقق والتأكيد قريباً." : "Payment submitted. It will be verified and confirmed soon."
-        );
-      } else {
-        const { submitOrderBankTransfer, uploadOrderTransferReceipt } = await import("@/utils/supabase/orders");
-        const orderId = ctx.orderId;
-
-        // Upload receipt image if provided
-        let receiptUrl = null;
-        if (receiptUri) {
-          try {
-            receiptUrl = await uploadOrderTransferReceipt(orderId, receiptUri);
-          } catch (uploadErr) {
-            console.warn("Failed to upload order transfer receipt:", uploadErr);
-          }
-        }
-
-        // Update order with transfer details + status in one call
-        await submitOrderBankTransfer(orderId, { phoneNumber, receiptUrl });
-
-        await handleSendMessage("", [{
-          type: "payment_receipt",
-          status: "pending",
-          amount: ctx.amount,
-          currency: "SAR",
-          method: "bank_transfer",
-          methodLabelAr: "تحويل بنكي",
-          methodLabelEn: "Bank Transfer",
-          reference: phoneNumber,
-          order_id: orderId,
-          createdAt: new Date().toISOString(),
-        }]);
-
-        Alert.alert(
-          isRTL ? "تم" : "Done",
-          isRTL
-            ? "تم إرسال الحوالة البنكية وبانتظار موافقة الإدارة."
-            : "Bank transfer submitted. Waiting for admin approval."
-        );
-      }
-      return true;
-    } catch (err) {
-      Alert.alert(isRTL ? "خطأ" : "Error", err.message);
-      return false;
-    } finally {
-      setCardPayLoading(false);
-    }
-  }, [handleSendMessage, isRTL, conversationId]);
+  // Scroll to replied message when tapping reply preview
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const handleReplyPress = useCallback((messageId) => {
+    const msgs = dedupedMessagesRef.current;
+    const index = msgs.findIndex((m) => m.id === messageId);
+    if (index === -1) return;
+    flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    setHighlightedMessageId(messageId);
+    highlightTimeoutRef.current = setTimeout(() => setHighlightedMessageId(null), 1500);
+  }, []);
 
   // A1: Render message — uses ref for grouping so callback is stable
   const renderMessage = useCallback(({ item, index }) => {
@@ -1226,49 +564,66 @@ export default function ChatScreen() {
        return <SystemMessageCard content={item.content} />;
     }
 
-    return (
-      <View style={[styles.messageRow, { flexDirection: isMe ? getRTLRowDirection(isRTL) : getRTLInverseRowDirection(isRTL), marginBottom: isLastInGroup ? 8 : 2 }]}>
-        {!isMe && otherUserProfile && isLastInGroup && (
-          <View style={styles.messageAvatarContainer}>
-            {otherUserProfile.avatarUrl ? (
-              <Image source={{ uri: otherUserProfile.avatarUrl }} style={styles.messageAvatar} />
-            ) : (
-              <View style={[styles.messageAvatar, { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>
-                  {(otherUserProfile.displayName || "U")[0].toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-        {/* Spacer for non-last messages to align with avatar */}
-        {!isMe && !isLastInGroup && <View style={{ width: 32 + 8 }} />}
+    // Resolve replied-to message
+    const repliedMsg = item.reply_to_id ? messageMapRef.current.get(item.reply_to_id) : null;
+    const repliedMessage = repliedMsg
+      ? { ...repliedMsg, _currentUserId: currentUserId, _otherName: otherUserProfile?.displayName }
+      : null;
 
-        <MessageBubble
-           item={item}
-           isMe={isMe}
-           isFirstInGroup={isFirstInGroup}
-           isLastInGroup={isLastInGroup}
-           onImagePress={setSelectedImage}
-           onFilePress={openFile}
-           onReceiptPress={openReceiptPreview}
-           onAcceptReceipt={handleAcceptReceipt}
-           isAcceptingReceipt={acceptingReceipt}
-           onPaymentPress={handlePaymentPress}
-           onSubmitDispute={handleOpenOrderDispute}
-           paidOrderIds={paidOrderIds}
-           currentUserId={currentUserId}
-           daminPayerUserId={daminOrder?.payer_user_id}
-           acceptedReceiptIds={acceptedReceiptIds}
-           orderPaidOverride={false}
-        />
-      </View>
+    const isHighlighted = item.id === highlightedMessageId;
+
+    return (
+      <SwipeableMessage onReply={() => handleReply(item)} isMe={isMe} isRTL={isRTL}>
+        <View style={[
+          styles.messageRow,
+          { flexDirection: isMe ? getRTLRowDirection(isRTL) : getRTLInverseRowDirection(isRTL), marginBottom: isLastInGroup ? 8 : 2 },
+          isHighlighted && { backgroundColor: colors.primaryLight + "50", borderRadius: 12 },
+        ]}>
+          {!isMe && otherUserProfile && isLastInGroup && (
+            <View style={styles.messageAvatarContainer}>
+              {otherUserProfile.avatarUrl ? (
+                <Image source={{ uri: otherUserProfile.avatarUrl }} style={styles.messageAvatar} />
+              ) : (
+                <View style={[styles.messageAvatar, { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold' }}>
+                    {(otherUserProfile.displayName || "U")[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+          {/* Spacer for non-last messages to align with avatar */}
+          {!isMe && !isLastInGroup && <View style={{ width: 32 + 8 }} />}
+
+          <MessageBubble
+             item={item}
+             isMe={isMe}
+             isFirstInGroup={isFirstInGroup}
+             isLastInGroup={isLastInGroup}
+             onImagePress={setSelectedImage}
+             onFilePress={openFile}
+             onReceiptPress={openReceiptPreview}
+             onAcceptReceipt={handleAcceptReceipt}
+             isAcceptingReceipt={acceptingReceipt}
+             onPaymentPress={handlePaymentPress}
+             onSubmitDispute={handleOpenOrderDispute}
+             paidOrderIds={paidOrderIds}
+             currentUserId={currentUserId}
+             daminPayerUserId={daminOrder?.payer_user_id}
+             acceptedReceiptIds={acceptedReceiptIds}
+             orderPaidOverride={false}
+             repliedMessage={repliedMessage}
+             onReplyPress={handleReplyPress}
+          />
+        </View>
+      </SwipeableMessage>
     );
-  }, [currentUserId, isRTL, otherUserProfile, colors, acceptingReceipt, handleAcceptReceipt, openFile, openReceiptPreview, handlePaymentPress, handleOpenOrderDispute, paidOrderIds, daminOrder?.payer_user_id, acceptedReceiptIds]);
+  }, [currentUserId, isRTL, otherUserProfile, colors, acceptingReceipt, handleAcceptReceipt, openFile, openReceiptPreview, handlePaymentPress, handleOpenOrderDispute, paidOrderIds, daminOrder?.payer_user_id, acceptedReceiptIds, handleReply, handleReplyPress, highlightedMessageId]);
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
+  const chatTitle = otherUserProfile?.displayName || params.name || params.adTitle || t.chat.title;
 
   const skeletonMessages = React.useMemo(
     () =>
@@ -1279,81 +634,26 @@ export default function ChatScreen() {
     []
   );
 
-  const getDaminStatusLabel = useCallback((status) => {
-    if (status === "created" || status === "pending_confirmations") {
-      return isRTL ? "بانتظار التأكيد" : "Awaiting Confirmation";
-    }
-    if (status === "both_confirmed") {
-      return isRTL ? "بانتظار الدفع" : "Awaiting Payment";
-    }
-    if (status === "payment_submitted") {
-      return isRTL ? "بانتظار موافقة الإدارة" : "Awaiting Admin Approval";
-    }
-    if (status === "escrow_deposit") {
-      return isRTL ? "تم إيداع المبلغ" : "Escrow Deposit Done";
-    }
-    if (status === "awaiting_completion") {
-      return isRTL ? "تم الدفع · بانتظار إتمام الخدمة" : "Paid · Awaiting Completion";
-    }
-    if (status === "completion_requested") {
-      return isRTL ? "بانتظار موافقة الإدارة" : "Pending Admin Approval";
-    }
-    if (status === "completed") {
-      return isRTL ? "مكتمل" : "Completed";
-    }
-    return status;
-  }, [isRTL]);
-
-  const refreshChat = useCallback(async () => {
-    if (!conversationId) return;
-
-    setRefreshing(true);
-    try {
-      const tasks = [refreshMessages()];
-
-      tasks.push(
-        getDaminOrderForChat(conversationId)
-          .then((updated) => setDaminOrder(updated || null))
-          .catch((err) => {
-            console.warn("Failed to refresh damin order context:", err);
-          })
-      );
-
-      tasks.push((async () => {
-        try {
-          const { getOrdersForConversation } = await import("@/utils/supabase/orders");
-          const orders = await getOrdersForConversation(conversationId);
-          setOrdersForChat(orders);
-        } catch (err) {
-          console.warn("Failed to refresh order context:", err);
-        }
-      })());
-
-      await Promise.all(tasks);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [conversationId, refreshMessages]);
-
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
-      <StatusBar style={colors.statusBar} />
-
-      <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            {
-              paddingTop: insets.top + 10,
-              backgroundColor: colors.background,
-              borderBottomColor: colors.border,
-              flexDirection: "row",
-            },
-          ]}
-        >
-          {/* Center: tappable user info + receipt button */}
-          <View style={styles.userInfoRow}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerLargeTitle: false,
+          headerTitleAlign: "center",
+          title: chatTitle,
+          headerBackVisible: false,
+          headerLeftContainerStyle: styles.headerSideContainer,
+          headerRightContainerStyle: styles.headerSideContainer,
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+            >
+              <ChevronRight size={20} color={colors.text} />
+            </Pressable>
+          ),
+          headerLeft: () => (
             <Pressable
               onPress={() =>
                 router.push({
@@ -1366,55 +666,16 @@ export default function ChatScreen() {
                   },
                 })
               }
-              style={[styles.userInfo, { flexDirection: rowDirection }]}
+              style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
             >
-              {((otherUserProfile?.avatarUrl || params.avatar) && (
-                <Image
-                  source={{ uri: otherUserProfile?.avatarUrl || params.avatar }}
-                  style={styles.headerAvatar}
-                />
-              )) || (
-                <View style={[styles.headerAvatar, { backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" }]}>
-                  <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
-                    {(otherUserProfile?.displayName || params.name || "U")[0].toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <View style={[styles.userTexts, { alignItems: getRTLStartAlign(isRTL) }]}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  {otherUserProfile?.displayName || params.name || params.adTitle || t.chat.title}
-                </Text>
-                {params.isOnline === "true" && (
-                  <View style={[styles.onlineStatus, { flexDirection: rowDirection }]}>
-                    <View style={styles.onlineDot} />
-                    <Text style={styles.onlineText}>{isRTL ? "متصل" : "Online"}</Text>
-                  </View>
-                )}
-              </View>
+              <Info size={18} color={colors.text} />
             </Pressable>
+          ),
+        }}
+      />
+      <StatusBar style={colors.statusBar} />
 
-            {isAdOwner && (
-              <Pressable
-                testID="chat-receipt-btn"
-                onPress={openReceiptSheet}
-                style={[styles.headerReceiptButton, { backgroundColor: colors.primaryLight }]}
-              >
-                <Text style={{ color: colors.primary, fontWeight: "bold", fontSize: 10, lineHeight: 12 }}>
-                  {isRTL ? "إصدار فاتورة" : "Receipt"}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-
-          {/* Back button (right side) */}
-          <Pressable
-            onPress={() => router.back()}
-            style={[styles.headerButton, { backgroundColor: colors.surface }]}
-          >
-            <ChevronRight size={20} color={colors.text} />
-          </Pressable>
-        </View>
-
+      <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         {/* Ad Context Header */}
         {resolvedAdTitle && !daminOrder ? (
           <View
@@ -1585,7 +846,7 @@ export default function ChatScreen() {
                 )}
                 {daminOrder.available_actions.includes("pay") && (
                   <Pressable
-                    onPress={() => handleDaminAction("pay")}
+                    onPress={() => setPaymentContextAndOpen({ amount: daminOrder.total_amount, orderId: daminOrder.order_id, isDamin: true })}
                     style={[styles.compactActionBtn, { backgroundColor: "#10B981" }]}
                   >
                     <CreditCard size={14} color="#fff" />
@@ -1690,9 +951,8 @@ export default function ChatScreen() {
               />
             </SkeletonGroup>
           ) : (
-            <FlatList
+            <FlashList
               ref={flatListRef}
-              style={{ flex: 1 }}
               data={dedupedMessages}
               keyExtractor={(item) => item.id}
               renderItem={renderMessage}
@@ -1701,8 +961,11 @@ export default function ChatScreen() {
               ListHeaderComponent={loadingMore ? <ActivityIndicator style={{ padding: 10 }} /> : null}
               refreshing={hasMore ? refreshing : false}
               onRefresh={hasMore ? loadOlderMessages : undefined}
+              estimatedItemSize={80}
             />
           )}
+
+          <TypingIndicator visible={isOtherTyping} />
         </View>
 
         {/* Attachments Preview */}
@@ -1741,6 +1004,27 @@ export default function ChatScreen() {
           </View>
         )}
 
+        {/* Reply Preview Bar */}
+        {replyToMessage && (
+          <View style={[styles.replyBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <View style={[styles.replyBarAccent, { backgroundColor: colors.primary }]} />
+            <Reply size={16} color={colors.primary} style={{ marginHorizontal: 8 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }} numberOfLines={1}>
+                {replyToMessage.sender_id === currentUserId
+                  ? (isRTL ? "أنت" : "You")
+                  : (otherUserProfile?.displayName || (isRTL ? "المستخدم" : "User"))}
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                {replyToMessage.content || (replyToMessage.attachments?.[0]?.type === "image" ? "📷" : "📎")}
+              </Text>
+            </View>
+            <Pressable onPress={() => setReplyToMessage(null)} hitSlop={8} style={{ padding: 4 }}>
+              <X size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        )}
+
         {/* Input Area */}
         <View
           style={[
@@ -1764,6 +1048,7 @@ export default function ChatScreen() {
           {/* Text Input */}
           <View style={[styles.inputWrapper, { backgroundColor: colors.surface }]}>
             <TextInput
+              ref={textInputRef}
               testID="chat-text-input"
               style={[
                 styles.textInput,
@@ -1772,7 +1057,10 @@ export default function ChatScreen() {
               placeholder={t.chat.typeMessage}
               placeholderTextColor={colors.textMuted}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={(text) => { setInputText(text); notifyTyping(); }}
+              onContentSizeChange={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.create(150, 'easeInEaseOut', 'opacity'));
+              }}
               multiline
               maxLength={1000}
               editable={!loadingMessages}
@@ -2146,198 +1434,203 @@ export default function ChatScreen() {
         </View>
       </Modal>
 
-      {/* Payment Modal */}
-      {/* Receipt Bottom Sheet */}
-      <BottomSheet
-        ref={receiptBottomSheetRef}
-        index={-1}
-        snapPoints={["70%", "90%"]}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
+      {/* Receipt Modal */}
+      <Modal
+        visible={receiptSheetVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setReceiptSheetVisible(false)}
       >
-        <BottomSheetScrollView style={styles.sheetContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-          <Text style={[styles.sheetTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-            {t.chat.createReceipt}
-          </Text>
-
-          {/* Ad Context Info */}
-          {resolvedAdTitle ? (
-            <View style={[styles.receiptAdContext, { backgroundColor: colors.primaryLight, flexDirection: rowDirection }]}>
-              <Receipt size={16} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.receiptAdContextLabel, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
-                  {isRTL ? "إيصال لـ:" : "Receipt for:"}
-                </Text>
-                <Text style={[styles.receiptAdContextValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                  {resolvedAdTitle}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          {/* Helper Text */}
-          <Text style={[styles.receiptHelper, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-            {isRTL 
-              ? "سيتم إنشاء إيصال إلكتروني بتوقيعك. يمكن للمشتري قبوله وتوقيعه." 
-              : "An electronic receipt with your signature will be created. The buyer can accept and sign it."}
-          </Text>
-
-          <View style={styles.receiptForm}>
-            {/* Description Field */}
-            <View>
-              <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                {isRTL ? "الوصف" : "Description"}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+            <View style={[styles.modalHandle, { flexDirection: rowDirection, borderBottomColor: colors.border }]}>
+              <Text style={[styles.sheetTitle, { color: colors.text, marginBottom: 0, flex: 1, textAlign: getRTLTextAlign(isRTL) }]}>
+                {t.chat.createReceipt}
               </Text>
-              <View style={[styles.receiptInput, { backgroundColor: colors.surface }]}>
-                <BottomSheetTextInput
-                  testID="receipt-desc-input"
-                  style={[styles.receiptTextInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
-                  placeholder={isRTL ? "وصف الخدمة أو المنتج" : "Service or product description"}
-                  placeholderTextColor={colors.textMuted}
-                  value={receiptData.description}
-                  onChangeText={(text) => updateReceiptData({ description: text })}
-                  multiline
-                />
-              </View>
+              <Pressable onPress={() => setReceiptSheetVisible(false)} style={styles.modalCloseButton}>
+                <X size={22} color={colors.text} />
+              </Pressable>
             </View>
-
-            {/* Amount Field */}
-            <View>
-              <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                {isRTL ? "المبلغ" : "Amount"}
-              </Text>
-              <View style={[styles.receiptInput, { backgroundColor: colors.surface, flexDirection: rowDirection }]}>
-                <BottomSheetTextInput
-                  testID="receipt-amount-input"
-                  style={[styles.receiptTextInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL), flex: 1 }]}
-                  placeholder={isRTL ? "أدخل المبلغ" : "Enter amount"}
-                  placeholderTextColor={colors.textMuted}
-                  value={receiptData.amount}
-                  onChangeText={(text) => updateReceiptData({ amount: text })}
-                  keyboardType="numeric"
-                />
-                <View style={[styles.currencyBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.currencyBadgeText}>{t.common.sar}</Text>
+            <ScrollView style={styles.sheetContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+              {/* Ad Context Info */}
+              {resolvedAdTitle ? (
+                <View style={[styles.receiptAdContext, { backgroundColor: colors.primaryLight, flexDirection: rowDirection }]}>
+                  <Receipt size={16} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.receiptAdContextLabel, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
+                      {isRTL ? "إيصال لـ:" : "Receipt for:"}
+                    </Text>
+                    <Text style={[styles.receiptAdContextValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                      {resolvedAdTitle}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </View>
+              ) : null}
 
-            {/* Date Field (read-only) */}
-            <View>
-              <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                {isRTL ? "التاريخ" : "Date"}
+              {/* Helper Text */}
+              <Text style={[styles.receiptHelper, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                {isRTL
+                  ? "سيتم إنشاء إيصال إلكتروني بتوقيعك. يمكن للمشتري قبوله وتوقيعه."
+                  : "An electronic receipt with your signature will be created. The buyer can accept and sign it."}
               </Text>
-              <View style={[styles.receiptInput, { backgroundColor: colors.surfaceSecondary }]}>
-                <Text style={[styles.receiptDateText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                  {new Date(receiptData.date).toLocaleDateString(isRTL ? "ar-SA-u-ca-gregory" : "en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    calendar: "gregory",
-                  })}
+
+              <View style={styles.receiptForm}>
+                {/* Description Field */}
+                <View>
+                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {isRTL ? "الوصف" : "Description"}
+                  </Text>
+                  <View style={[styles.receiptInput, { backgroundColor: colors.surface }]}>
+                    <TextInput
+                      testID="receipt-desc-input"
+                      style={[styles.receiptTextInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                      placeholder={isRTL ? "وصف الخدمة أو المنتج" : "Service or product description"}
+                      placeholderTextColor={colors.textMuted}
+                      value={receiptData.description}
+                      onChangeText={(text) => updateReceiptData({ description: text })}
+                      multiline
+                    />
+                  </View>
+                </View>
+
+                {/* Amount Field */}
+                <View>
+                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {isRTL ? "المبلغ" : "Amount"}
+                  </Text>
+                  <View style={[styles.receiptInput, { backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                    <TextInput
+                      testID="receipt-amount-input"
+                      style={[styles.receiptTextInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL), flex: 1 }]}
+                      placeholder={isRTL ? "أدخل المبلغ" : "Enter amount"}
+                      placeholderTextColor={colors.textMuted}
+                      value={receiptData.amount}
+                      onChangeText={(text) => updateReceiptData({ amount: text })}
+                      keyboardType="numeric"
+                    />
+                    <View style={[styles.currencyBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.currencyBadgeText}>{t.common.sar}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Date Field (read-only) */}
+                <View>
+                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {isRTL ? "التاريخ" : "Date"}
+                  </Text>
+                  <View style={[styles.receiptInput, { backgroundColor: colors.surfaceSecondary }]}>
+                    <Text style={[styles.receiptDateText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                      {new Date(receiptData.date).toLocaleDateString(isRTL ? "ar-SA-u-ca-gregory" : "en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        calendar: "gregory",
+                      })}
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  testID="receipt-create-btn"
+                  onPress={createReceipt}
+                  disabled={creatingReceipt}
+                  style={[styles.createReceiptButton, { backgroundColor: creatingReceipt ? colors.textMuted : colors.primary }]}
+                >
+                  {creatingReceipt ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Check size={20} color="#fff" />
+                      <Text style={styles.createReceiptText}>{t.chat.createReceipt}</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Library Modal */}
+      <Modal
+        visible={librarySheetVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setLibrarySheetVisible(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHandle, { flexDirection: rowDirection, borderBottomColor: colors.border }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text, marginBottom: 0, flex: 1, textAlign: getRTLTextAlign(isRTL) }]}>
+              {t.chat.previousMedia}
+            </Text>
+            <Pressable onPress={() => setLibrarySheetVisible(false)} style={styles.modalCloseButton}>
+              <X size={22} color={colors.text} />
+            </Pressable>
+          </View>
+          <View style={styles.sheetContent}>
+            <Text style={[styles.noMediaText, { color: colors.textMuted }]}>{t.chat.noMedia}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Attachment Options Modal */}
+      <Modal
+        visible={attachmentSheetVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAttachmentSheetVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setAttachmentSheetVisible(false)}>
+          <Pressable style={[styles.modalBottomSheet, { backgroundColor: colors.background }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.modalDragHandle, { backgroundColor: colors.textMuted }]} />
+            <View style={styles.attachmentOptions}>
+              <Pressable onPress={handlePickImage} style={styles.attachmentOption}>
+                <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.primaryLight }]}>
+                  <ImageIcon size={24} color={colors.primary} />
+                </View>
+                <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
+                  {t.chat.attachImage}
                 </Text>
-              </View>
+              </Pressable>
+
+              <Pressable onPress={handleTakePhoto} style={styles.attachmentOption}>
+                <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Camera size={24} color={colors.text} />
+                </View>
+                <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
+                  {isRTL ? "التقاط صورة" : "Take Photo"}
+                </Text>
+              </Pressable>
+
+              <Pressable onPress={handlePickDocument} style={styles.attachmentOption}>
+                <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.surfaceSecondary }]}>
+                  <FileText size={24} color={colors.text} />
+                </View>
+                <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
+                  {t.chat.attachFile}
+                </Text>
+              </Pressable>
+
+              <Pressable onPress={handleShareLocation} disabled={sharingLocation} style={styles.attachmentOption}>
+                <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.primaryLight, opacity: sharingLocation ? 0.7 : 1 }]}>
+                  {sharingLocation ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <MapPin size={24} color={colors.primary} />
+                  )}
+                </View>
+                <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
+                  {sharingLocation
+                    ? (isRTL ? "جاري تحديد الموقع..." : "Getting location...")
+                    : t.chat.shareLocation}
+                </Text>
+              </Pressable>
             </View>
-
-            <Pressable
-              testID="receipt-create-btn"
-              onPress={createReceipt}
-              disabled={creatingReceipt}
-              style={[styles.createReceiptButton, { backgroundColor: creatingReceipt ? colors.textMuted : colors.primary }]}
-            >
-              {creatingReceipt ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Check size={20} color="#fff" />
-                  <Text style={styles.createReceiptText}>{t.chat.createReceipt}</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-        </BottomSheetScrollView>
-      </BottomSheet>
-
-      {/* Library Bottom Sheet */}
-      <BottomSheet
-        ref={libraryBottomSheetRef}
-        index={-1}
-        snapPoints={["50%"]}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
-      >
-        <BottomSheetView style={styles.sheetContent}>
-          <Text style={[styles.sheetTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-            {t.chat.previousMedia}
-          </Text>
-
-          <Text style={[styles.noMediaText, { color: colors.textMuted }]}>{t.chat.noMedia}</Text>
-        </BottomSheetView>
-      </BottomSheet>
-
-      {/* Attachment Options Bottom Sheet */}
-      <BottomSheet
-        ref={attachmentBottomSheetRef}
-        index={-1}
-        snapPoints={["35%"]}
-        enablePanDownToClose
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.textMuted }}
-      >
-        <BottomSheetView style={styles.sheetContent}>
-          <View style={styles.attachmentOptions}>
-            <Pressable onPress={handlePickImage} style={styles.attachmentOption}>
-              <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.primaryLight }]}>
-                <ImageIcon size={24} color={colors.primary} />
-              </View>
-              <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
-                {t.chat.attachImage}
-              </Text>
-            </Pressable>
-
-            <Pressable onPress={handleTakePhoto} style={styles.attachmentOption}>
-              <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.surfaceSecondary }]}>
-                <Camera size={24} color={colors.text} />
-              </View>
-              <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
-                {isRTL ? "التقاط صورة" : "Take Photo"}
-              </Text>
-            </Pressable>
-
-            <Pressable onPress={handlePickDocument} style={styles.attachmentOption}>
-              <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.surfaceSecondary }]}>
-                <FileText size={24} color={colors.text} />
-              </View>
-              <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
-                {t.chat.attachFile}
-              </Text>
-            </Pressable>
-
-            <Pressable onPress={handleShareLocation} disabled={sharingLocation} style={styles.attachmentOption}>
-              <View style={[styles.attachmentOptionIcon, { backgroundColor: colors.primaryLight, opacity: sharingLocation ? 0.7 : 1 }]}>
-                {sharingLocation ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <MapPin size={24} color={colors.primary} />
-                )}
-              </View>
-              <Text style={[styles.attachmentOptionText, { color: colors.text }]}>
-                {sharingLocation
-                  ? (isRTL ? "جاري تحديد الموقع..." : "Getting location...")
-                  : t.chat.shareLocation}
-              </Text>
-            </Pressable>
-          </View>
-        </BottomSheetView>
-      </BottomSheet>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -2487,7 +1780,7 @@ const styles = StyleSheet.create({
   },
   attachmentPreviewItem: {
     position: "relative",
-    marginRight: 10,
+    marginEnd: 10,
   },
   attachmentPreviewImage: {
     width: 60,
@@ -2510,6 +1803,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  // Reply Bar
+  replyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+  },
+  replyBarAccent: {
+    width: 3,
+    height: "100%",
+    borderRadius: 2,
+    minHeight: 32,
   },
 
   // Input Area
@@ -2540,7 +1848,43 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  // Bottom Sheet
+  // Modal Sheets
+  modalContainer: {
+    flex: 1,
+  },
+  modalHandle: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalBottomSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 12,
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
   sheetContent: {
     flex: 1,
     paddingHorizontal: 20,
@@ -2602,7 +1946,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    marginLeft: 8,
+    marginStart: 8,
   },
   currencyBadgeText: {
     color: "#fff",
@@ -2727,7 +2071,7 @@ const styles = StyleSheet.create({
   },
   adContextMetaItem: {
     fontSize: 12,
-    marginRight: 12,
+    marginEnd: 12,
   },
 
   // Damin Order Context Bar
@@ -3068,5 +2412,15 @@ const styles = StyleSheet.create({
   receiptPreviewActionText: {
     fontSize: 14,
     fontWeight: "800",
+  },
+  headerSideContainer: {
+    paddingHorizontal: 8,
+  },
+  headerBackButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

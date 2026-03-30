@@ -6,10 +6,11 @@ import { showToast } from '@/utils/notifications/inAppStore';
 import { useTheme } from '@/utils/theme/store';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   Bell,
+  Clock3,
   ChevronLeft,
   ChevronRight,
   Edit,
@@ -26,6 +27,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -33,21 +35,24 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function ThemeSwitch({ isDark, colors }) {
-  const animatedKnobStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withSpring(isDark ? 20 : 2, { damping: 15, stiffness: 150 }) }],
-  }));
+  const translateX = React.useRef(new Animated.Value(isDark ? 20 : 2)).current;
+
+  React.useEffect(() => {
+    Animated.spring(translateX, {
+      toValue: isDark ? 20 : 2,
+      damping: 15,
+      stiffness: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [isDark]);
 
   return (
     <View style={[styles.switch, { backgroundColor: isDark ? colors.primary : colors.border }]}>
-      <Animated.View style={[styles.switchKnob, animatedKnobStyle]} />
+      <Animated.View style={[styles.switchKnob, { transform: [{ translateX }] }]} />
     </View>
   );
 }
@@ -193,9 +198,14 @@ export default function ProfileScreen() {
     loadOrdersCount();
   }, [currentUserId, loadOrdersCount, loadUserAds]);
 
-  const handleAction = (action) => {
+  const handleAction = async (action) => {
     if (action === 'toggleTheme') toggleTheme();
-    if (action === 'toggleLanguage') toggleLanguage();
+    if (action === 'toggleLanguage') {
+      // toggleLanguage may restart the app for an RTL/LTR flip.
+      // The returned flag isn't needed here — if a restart happens
+      // nothing runs after await anyway.
+      await toggleLanguage();
+    }
   };
 
   const handleDeleteAd = async (adId, adTitle) => {
@@ -326,12 +336,38 @@ export default function ProfileScreen() {
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
 
+  const getAdTypeLabel = useCallback((type) => {
+    if (type === 'tanazul') return isRTL ? 'تنازل' : 'Tanazul';
+    if (type === 'taqib') return isRTL ? 'تعقيب' : 'Taqib';
+    return isRTL ? 'ضامن' : 'Dhamen';
+  }, [isRTL]);
+
+  const getAdMetaLine = useCallback((ad) => {
+    const parts = [
+      ad.metadata?.profession_label_ar_short,
+      ad.metadata?.profession_label_en_short,
+      ad.metadata?.profession,
+      ad.metadata?.nationality,
+      ad.location,
+    ].filter(Boolean);
+
+    return parts.slice(0, 2).join(' • ');
+  }, []);
+
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerLargeTitle: false,
+          headerTitleAlign: 'center',
+          title: isRTL ? 'حسابي' : 'Profile',
+        }}
+      />
       <StatusBar style={colors.statusBar} />
       <ScrollView 
         ref={scrollViewRef}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -344,7 +380,7 @@ export default function ProfileScreen() {
         }
       >
         {/* Profile Header */}
-        <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
+        <FadeInView delay={100} style={styles.header}>
             <View style={styles.profileImageContainer}>
                 {profileLoading ? (
                   <SkeletonGroup>
@@ -417,11 +453,11 @@ export default function ProfileScreen() {
                   <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.profile.myAds}</Text>
                 </Pressable>
             </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* My Ads Section */}
-        <Animated.View
-          entering={FadeInDown.delay(150)}
+        <FadeInView
+          delay={150}
           style={styles.adsSection}
           onLayout={(event) => setAdsSectionY(event.nativeEvent.layout.y)}
         >
@@ -442,37 +478,29 @@ export default function ProfileScreen() {
           {adsLoading ? (
             <View style={styles.adsLoadingContainer}>
               <SkeletonGroup>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[
-                    styles.adsScrollContent,
-                    { flexDirection: rowDirection },
-                  ]}
-                  pointerEvents="none"
-                >
+                <View style={styles.adsList}>
                   {Array.from({ length: 3 }).map((_, idx) => (
                     <View
                       key={`sk-ad-${idx}`}
                       style={[
-                        { height: 220 },
-                        styles.adCard,
+                        styles.adListCard,
                         { backgroundColor: colors.surface, borderColor: colors.border },
                       ]}
                     >
-                      <Skeleton height={16} radius={8} width={70} />
-                      <Skeleton height={16} radius={8} width="90%" style={{ marginTop: 16 }} />
-                      <Skeleton height={12} radius={8} width="100%" style={{ marginTop: 12 }} />
-                      <Skeleton height={12} radius={8} width="80%" style={{ marginTop: 10 }} />
-                      <Skeleton height={16} radius={8} width={90} style={{ marginTop: 14 }} />
-                      <View style={{ height: 12 }} />
-                      <View style={[styles.adCardActions, { flexDirection: rowDirection }]}>
-                        <Skeleton height={34} radius={10} width="48%" />
-                        <Skeleton height={34} radius={10} width="48%" />
+                      <View style={[styles.adListTopRow, { flexDirection: rowDirection }]}>
+                        <Skeleton height={26} radius={13} width={86} />
+                        <Skeleton height={12} radius={8} width={90} />
+                      </View>
+                      <Skeleton height={18} radius={8} width="72%" style={{ marginTop: 14 }} />
+                      <Skeleton height={13} radius={7} width="58%" style={{ marginTop: 10 }} />
+                      <Skeleton height={14} radius={7} width={110} style={{ marginTop: 14 }} />
+                      <View style={[styles.adListActions, { flexDirection: rowDirection }]}>
+                        <Skeleton height={40} radius={12} width="48%" />
+                        <Skeleton height={40} radius={12} width="48%" />
                       </View>
                     </View>
                   ))}
-                </ScrollView>
+                </View>
               </SkeletonGroup>
             </View>
           ) : userAds.length === 0 ? (
@@ -499,47 +527,57 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
           ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.adsScrollContent, { flexDirection: getRTLRowDirection(isRTL) }]}
-            >
+            <View style={styles.adsList}>
               {userAds.map((ad, index) => (
-                <Animated.View 
-                  key={ad.id} 
-                  entering={FadeInDown.delay(200 + index * 50)}
-                  style={[styles.adCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                <FadeInView
+                  key={ad.id}
+                  delay={200 + index * 45}
+                  style={[styles.adListCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  <View style={[styles.adTypeTag, { backgroundColor: colors.primaryLight, alignSelf: getRTLStartAlign(isRTL) }]}>
-                    <Text style={[styles.adTypeText, { color: colors.primary }]}>
-                      {ad.type === 'tanazul' ? (isRTL ? 'تنازل' : 'Tanazul') :
-                       ad.type === 'taqib' ? (isRTL ? 'تعقيب' : 'Taqib') :
-                       (isRTL ? 'ضامن' : 'Dhamen')}
-                    </Text>
+                  <View style={[styles.adListTopRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                    <View style={[styles.adTypeTag, { backgroundColor: colors.primaryLight }]}>
+                      <Text style={[styles.adTypeText, { color: colors.primary }]}>
+                        {getAdTypeLabel(ad.type)}
+                      </Text>
+                    </View>
+                    <View style={[styles.adMetaRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                      <Clock3 size={14} color={colors.textMuted} />
+                      <Text style={[styles.adMetaText, { color: colors.textMuted }]}>
+                        {new Date(ad.created_at).toLocaleDateString(
+                          isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US',
+                          { year: 'numeric', month: 'short', day: 'numeric' }
+                        )}
+                      </Text>
+                    </View>
                   </View>
-                  
+
                   <Text style={[styles.adCardTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]} numberOfLines={2}>
                     {ad.title}
                   </Text>
-                  
-                  {ad.description && (
-                    <Text style={[styles.adCardDescription, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]} numberOfLines={2}>
-                      {ad.description}
+
+                  {getAdMetaLine(ad) ? (
+                    <Text style={[styles.adMetaSummary, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]} numberOfLines={1}>
+                      {getAdMetaLine(ad)}
                     </Text>
-                  )}
-                  
-                  {ad.price && (
+                  ) : null}
+
+                  {ad.price ? (
                     <Text style={[styles.adCardPrice, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
-                      {ad.price.toLocaleString()} {t.common.sar}
+                      {Number(ad.price).toLocaleString()} {t.common.sar}
                     </Text>
-                  )}
-                  
-                  <View style={[styles.adCardActions, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                  ) : null}
+
+                  <View style={[styles.adListActions, { flexDirection: getRTLRowDirection(isRTL) }]}>
                     <Pressable
                       onPress={() => handleEditAd(ad)}
                       style={({ pressed }) => [
                         styles.adActionButton,
-                        { backgroundColor: colors.primaryLight, opacity: pressed ? 0.7 : 1, flexDirection: getRTLRowDirection(isRTL) }
+                        {
+                          backgroundColor: colors.primary + '14',
+                          borderColor: colors.primary + '28',
+                          opacity: pressed ? 0.75 : 1,
+                          flexDirection: getRTLRowDirection(isRTL),
+                        }
                       ]}
                     >
                       <Edit size={16} color={colors.primary} />
@@ -547,12 +585,17 @@ export default function ProfileScreen() {
                         {t.profile.edit}
                       </Text>
                     </Pressable>
-                    
+
                     <Pressable
                       onPress={() => handleDeleteAd(ad.id, ad.title)}
                       style={({ pressed }) => [
                         styles.adActionButton,
-                        { backgroundColor: colors.error + '15', opacity: pressed ? 0.7 : 1, flexDirection: getRTLRowDirection(isRTL) }
+                        {
+                          backgroundColor: colors.error + '12',
+                          borderColor: colors.error + '28',
+                          opacity: pressed ? 0.75 : 1,
+                          flexDirection: getRTLRowDirection(isRTL),
+                        }
                       ]}
                     >
                       <Trash2 size={16} color={colors.error} />
@@ -561,18 +604,18 @@ export default function ProfileScreen() {
                       </Text>
                     </Pressable>
                   </View>
-                </Animated.View>
+                </FadeInView>
               ))}
-            </ScrollView>
+            </View>
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
             {MENU_ITEMS.map((section, sectionIndex) => (
-                <Animated.View 
-                    key={sectionIndex} 
-                    entering={FadeInDown.delay(200 + (sectionIndex * 100))}
+                <FadeInView
+                    key={sectionIndex}
+                    delay={200 + (sectionIndex * 100)}
                     style={styles.section}
                 >
                     <Text style={[styles.sectionTitle, { color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -586,10 +629,10 @@ export default function ProfileScreen() {
                             </React.Fragment>
                         ))}
                     </View>
-                </Animated.View>
+                </FadeInView>
             ))}
-            
-            <Animated.View entering={FadeInDown.delay(500)}>
+
+            <FadeInView delay={500}>
                 <Pressable 
                   onPress={handleSignOut}
                   style={[styles.logoutButton, { backgroundColor: colors.error + '15', flexDirection: getRTLRowDirection(isRTL) }]}
@@ -597,7 +640,7 @@ export default function ProfileScreen() {
                     <LogOut size={20} color={colors.error} />
                     <Text style={[styles.logoutText, { color: colors.error }]}>{t.profile.logout}</Text>
                 </Pressable>
-            </Animated.View>
+            </FadeInView>
         </View>
 
         <View style={{ height: insets.bottom + 28 }} />
@@ -611,10 +654,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 16,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
+    paddingHorizontal: 20,
     paddingVertical: 20,
   },
   profileImageContainer: {
@@ -790,8 +835,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   adsLoadingContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
+    paddingVertical: 4,
   },
   noAdsContainer: {
     padding: 32,
@@ -817,16 +861,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-  adsScrollContent: {
-    paddingVertical: 4,
+  adsList: {
     gap: 12,
   },
-  adCard: {
-    width: 280,
+  adListCard: {
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
-    marginEnd: 12,
+  },
+  adListTopRow: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   adTypeTag: {
     alignSelf: 'flex-start',
@@ -839,30 +885,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  adMetaRow: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  adMetaText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   adCardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  adCardDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 20,
+  adMetaSummary: {
+    fontSize: 13,
+    marginBottom: 10,
+    lineHeight: 18,
   },
   adCardPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  adCardActions: {
+  adListActions: {
     gap: 8,
-    marginTop: 'auto',
   },
   adActionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,

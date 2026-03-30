@@ -1,65 +1,97 @@
-import React, { forwardRef, useCallback, useMemo } from 'react';
-import { StyleSheet } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react';
+import { StyleSheet, Modal, View, Pressable, Dimensions } from 'react-native';
 import { useTheme } from '@/utils/theme/store';
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 /**
- * Reusable Bottom Sheet Component
- * 
- * @param {Object} props
- * @param {React.ReactNode} props.children - Content to render inside the bottom sheet
- * @param {string[]} [props.snapPoints=['50%']] - Snap points for the bottom sheet
- * @param {Function} [props.onChange] - Callback when sheet position changes
- * @param {boolean} [props.enablePanDownToClose=true] - Whether to enable pan down to close
- * @param {string} [props.backgroundStyle] - Custom background style
+ * Reusable Bottom Sheet Component - Modal-based replacement for @gorhom/bottom-sheet
+ * Exposes .present() and .dismiss() to match the gorhom API.
  */
-const AppBottomSheet = forwardRef(({ 
-  children, 
-  snapPoints = ['50%'], 
+const AppBottomSheet = forwardRef(({
+  children,
+  snapPoints = ['50%'],
   onChange,
   enablePanDownToClose = true,
   backgroundStyle,
-  ...props 
+  ...props
 }, ref) => {
   const { colors } = useTheme();
-  
-  // renderBackdrop
-  const renderBackdrop = useCallback(
-    (props) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
+  const [visible, setVisible] = useState(false);
 
-  const _snapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const present = useCallback(() => {
+    setVisible(true);
+    onChange?.(0);
+  }, [onChange]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    onChange?.(-1);
+  }, [onChange]);
+
+  useImperativeHandle(ref, () => ({
+    present,
+    dismiss,
+  }), [present, dismiss]);
+
+  const snapHeight = snapPoints[0];
+  const sheetHeight = typeof snapHeight === 'string' && snapHeight.endsWith('%')
+    ? (parseInt(snapHeight) / 100) * SCREEN_HEIGHT
+    : typeof snapHeight === 'number' ? snapHeight : SCREEN_HEIGHT * 0.5;
 
   return (
-    <BottomSheetModal
-      ref={ref}
-      index={0}
-      snapPoints={_snapPoints}
-      onChange={onChange}
-      enablePanDownToClose={enablePanDownToClose}
-      backdropComponent={renderBackdrop}
-      backgroundStyle={[{ backgroundColor: colors.surface }, backgroundStyle]}
-      handleIndicatorStyle={{ backgroundColor: colors.textSecondary }}
-      {...props}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={enablePanDownToClose ? dismiss : undefined}
     >
-      <BottomSheetView style={styles.contentContainer}>
-        {children}
-      </BottomSheetView>
-    </BottomSheetModal>
+      <View style={styles.overlay}>
+        <Pressable
+          style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
+          onPress={enablePanDownToClose ? dismiss : undefined}
+        />
+
+        <View
+          style={[
+            styles.sheet,
+            { backgroundColor: colors.surface, height: sheetHeight },
+            backgroundStyle,
+          ]}
+        >
+          <View style={[styles.handle, { backgroundColor: colors.textSecondary }]} />
+          <View style={styles.contentContainer}>
+            {children}
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 });
 
 AppBottomSheet.displayName = 'AppBottomSheet';
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    overflow: 'hidden',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
   contentContainer: {
     flex: 1,
   },

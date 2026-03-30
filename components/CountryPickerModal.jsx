@@ -1,4 +1,4 @@
-import { COUNTRIES, getCountryName, searchCountries } from "@/utils/countries";
+import { getCountryName, searchCountries } from "@/utils/countries";
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
 import { Search, X } from "lucide-react-native";
@@ -130,7 +130,7 @@ export default function CountryPickerModal({ visible, onClose, onSelect, selecte
           <TextInput
             style={[
               styles.searchInput,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' },
             ]}
             placeholder={isRTL ? "ابحث عن دولة..." : "Search country..."}
             placeholderTextColor={colors.textMuted}
@@ -220,6 +220,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     minWidth: 48,
-    textAlign: "right",
+    textAlign: "end",
   },
 });

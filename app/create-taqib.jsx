@@ -3,8 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import FadeInView from "@/components/ui/FadeInView";
 
 // Native Components
 import {
@@ -95,7 +94,7 @@ export default function CreateTaqibScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View entering={FadeInDown}>
+          <FadeInView>
             <NativeFormSection
               title={isRTL ? "تفاصيل الخدمة" : "SERVICE DETAILS"}
             >
@@ -146,7 +145,7 @@ export default function CreateTaqibScreen() {
                 testID="taqib-submit-btn"
               />
             </View>
-          </Animated.View>
+          </FadeInView>
         </ScrollView>
       </KeyboardAvoidingAnimatedView>
 
@@ -181,7 +180,7 @@ export default function CreateTaqibScreen() {
             />
           </View>
 
-          <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false}>
             {filteredCities.map((item, index) => (
               <NationalityItem
                 key={index}
@@ -191,7 +190,7 @@ export default function CreateTaqibScreen() {
                 isRTL={isRTL}
               />
             ))}
-          </BottomSheetScrollView>
+          </ScrollView>
         </View>
       </NativeBottomSheet>
     </View>

@@ -20,7 +20,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/utils/supabase/client";
 
@@ -194,7 +194,7 @@ export default function PersonalInformationScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              <Animated.View entering={FadeInUp.delay(100)} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FadeInView delay={100} direction="up" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Pressable onPress={pickAvatar} style={[styles.avatarWrap, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   {avatarUrl ? (
                     <Image source={{ uri: avatarUrl }} style={styles.avatarImg} contentFit="cover" />
@@ -292,7 +292,7 @@ export default function PersonalInformationScreen() {
                       : (isRTL ? "حفظ التغييرات" : "Save Changes")}
                   </Text>
                 </Pressable>
-              </Animated.View>
+              </FadeInView>
             </ScrollView>
           </View>
         </TouchableWithoutFeedback>

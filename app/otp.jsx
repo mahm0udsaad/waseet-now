@@ -8,7 +8,6 @@ import { StatusBar } from "expo-status-bar";
 import { ArrowLeft, ArrowRight, CheckCircle2, RefreshCw, Shield } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown, FadeInUp, ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function maskPhone(phone) {
@@ -174,7 +173,7 @@ export default function OtpScreen() {
       <StatusBar style={colors.statusBar} />
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <View style={[styles.mainContainer, { paddingTop: insets.top + 10 }]}>
-          <Animated.View entering={FadeInDown.delay(80)} style={[styles.header, { flexDirection: rowDirection }]}>
+          <View style={[styles.header, { flexDirection: rowDirection }]}>
             <Pressable
               onPress={() => router.back()}
               style={[styles.backButton, { backgroundColor: colors.surface }]}
@@ -182,12 +181,12 @@ export default function OtpScreen() {
               {isRTL ? <ArrowRight size={22} color={colors.text} /> : <ArrowLeft size={22} color={colors.text} />}
             </Pressable>
             <View style={styles.headerSpacer} />
-          </Animated.View>
+          </View>
 
-          <Animated.View entering={FadeInUp.delay(140)} style={styles.content}>
-            <Animated.View entering={ZoomIn.delay(160)} style={[styles.iconCircle, { backgroundColor: colors.primaryLight }]}>
+          <View style={styles.content}>
+            <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight }]}>
               <Shield size={40} color={colors.primary} />
-            </Animated.View>
+            </View>
 
             <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
@@ -208,7 +207,7 @@ export default function OtpScreen() {
               style={styles.hiddenInput}
             />
 
-            <Animated.View entering={FadeInUp.delay(220)} style={styles.otpArea}>
+            <View style={styles.otpArea}>
               <OtpBoxes value={otp} onPress={focusOtp} colors={colors} />
 
               <Pressable
@@ -252,13 +251,13 @@ export default function OtpScreen() {
                   {isRTL ? "تغيير رقم الجوال" : "Change phone number"}
                 </Text>
               </Pressable>
-            </Animated.View>
-          </Animated.View>
+            </View>
+          </View>
         </View>
 
         {success && (
           <View style={[styles.successOverlay, { backgroundColor: colors.overlay }]}>
-            <Animated.View entering={ZoomIn} style={[styles.successCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.successCard, { backgroundColor: colors.surface }]}>
               <View style={[styles.successIcon, { backgroundColor: colors.primaryLight }]}>
                 <CheckCircle2 size={46} color={colors.success} />
               </View>
@@ -270,7 +269,7 @@ export default function OtpScreen() {
               <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
                 {isRTL ? "جاري تحويلك الآن..." : "Redirecting you now..."}
               </Text>
-            </Animated.View>
+            </View>
           </View>
         )}
       </KeyboardAvoidingAnimatedView>

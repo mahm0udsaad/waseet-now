@@ -1,5 +1,6 @@
 import { AppScrollView } from "@/components/layout";
 import CountryPickerModal from "@/components/CountryPickerModal";
+import AppPrimaryButton from "@/components/expo-ui/app-primary-button";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { COUNTRIES, getCountryName } from "@/utils/countries";
 import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
@@ -11,8 +12,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
-  ArrowLeft,
-  ArrowRight,
   ChevronDown,
   Phone,
 } from "lucide-react-native";
@@ -28,14 +27,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function SignInScreen() {
   const router = useRouter();
@@ -48,10 +39,6 @@ export default function SignInScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
-
-  // Animation values
-  const verifyScale = useSharedValue(1);
-  const logoScale = useSharedValue(1);
 
   const handleSendCode = async () => {
     const isValidLength =
@@ -69,9 +56,6 @@ export default function SignInScreen() {
     }
 
     setIsVerifying(true);
-    verifyScale.value = withSpring(0.95, {}, () => {
-      verifyScale.value = withSpring(1);
-    });
 
     try {
       const fullPhone = `${selectedCountry.dialCode}${phoneNumber}`;
@@ -92,22 +76,14 @@ export default function SignInScreen() {
     }
   };
 
-  const verifyAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: verifyScale.value }],
-  }));
-
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-  }));
-
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
 
   const renderPhoneInput = () => (
-    <Animated.View entering={FadeInUp.delay(300)} style={styles.contentContainer}>
+    <View style={styles.contentContainer}>
       {/* Logo */}
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={[styles.logoSection, logoAnimatedStyle]}>
+      <View style={styles.logoSection}>
         <View style={[styles.logoCircle, { backgroundColor: "#FFFFFF", shadowColor: colors.primary }]}>
           <Image
             source={require("@/assets/images/logo.png")}
@@ -118,7 +94,7 @@ export default function SignInScreen() {
         <Text style={[styles.logoText, { color: colors.text }]}>
           {isRTL ? "وسيط الان" : "Waseet Alan"}
         </Text>
-      </Animated.View>
+      </View>
 
       {/* Header Text */}
       <View style={styles.textContainer}>
@@ -131,7 +107,7 @@ export default function SignInScreen() {
       </View>
 
       {/* Phone Input */}
-      <Animated.View entering={FadeInUp.delay(600)} style={styles.inputGroup}>
+      <View style={styles.inputGroup}>
         <CountryPickerModal
           visible={showCountryPicker}
           onClose={() => setShowCountryPicker(false)}
@@ -197,36 +173,23 @@ export default function SignInScreen() {
           />
         </View>
 
-        <Animated.View style={verifyAnimatedStyle}>
-          <Pressable
-            testID="signin-continue-btn"
-            onPress={handleSendCode}
-            disabled={isVerifying || !phoneNumber}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              {
-                backgroundColor: colors.primary,
-                opacity: (isVerifying || !phoneNumber) ? 0.7 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isVerifying
-                ? (isRTL ? "جاري الإرسال..." : "Sending...")
-                : (isRTL ? "متابعة برقم الجوال" : "Continue with Phone")}
-            </Text>
-            {!isVerifying && (
-              isRTL 
-                ? <ArrowLeft size={20} color="#fff" />
-                : <ArrowRight size={20} color="#fff" />
-            )}
-          </Pressable>
-        </Animated.View>
-      </Animated.View>
+        <AppPrimaryButton
+          testID="signin-continue-btn"
+          label={
+            isVerifying
+              ? (isRTL ? "جاري الإرسال..." : "Sending...")
+              : (isRTL ? "متابعة برقم الجوال" : "Continue with Phone")
+          }
+          onPress={handleSendCode}
+          disabled={isVerifying || !phoneNumber}
+          trailingIcon={isRTL ? "arrow_back" : "arrow_forward"}
+          systemImage={isRTL ? "arrow.left" : "arrow.right"}
+          style={styles.primaryButton}
+        />
+      </View>
 
       {/* Sign Up Link */}
-      <Animated.View entering={FadeIn.delay(800)} style={[styles.footerLink, { flexDirection: rowDirection }]}>
+      <View style={[styles.footerLink, { flexDirection: rowDirection }]}>
         <Text style={[styles.footerText, { color: colors.textSecondary }]}>
           {isRTL ? "ليس لديك حساب؟ " : "Don't have an account? "}
         </Text>
@@ -235,7 +198,7 @@ export default function SignInScreen() {
             {isRTL ? "سجل الآن" : "Sign Up"}
           </Text>
         </Pressable>
-      </Animated.View>
+      </View>
 
       {__DEV__ && (
         <Pressable
@@ -248,7 +211,7 @@ export default function SignInScreen() {
           </Text>
         </Pressable>
       )}
-    </Animated.View>
+    </View>
   );
 
   return (
@@ -383,22 +346,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    borderRadius: 16,
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
+    width: "100%",
   },
 
   footerLink: {

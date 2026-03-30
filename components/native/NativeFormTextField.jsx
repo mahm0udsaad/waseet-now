@@ -53,7 +53,7 @@ export function NativeFormTextField({
           { color: colors.text },
           multiline 
             ? { textAlign: getRTLTextAlign(isRTL), marginBottom: spacing.xs }
-            : (isRTL ? { marginLeft: spacing.md, marginRight: 0 } : { marginRight: spacing.md, marginLeft: 0 })
+            : { marginEnd: spacing.md, marginStart: 0 }
         ]}>
           {label}
           {required && <Text style={{ color: colors.error }}> *</Text>}
@@ -71,7 +71,7 @@ export function NativeFormTextField({
           style={[
             styles.input,
             multiline && styles.multilineInput,
-            { color: colors.text },
+            { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' },
             !editable && { opacity: 0.5 },
             style,
           ]}
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.body,
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   input: {
     ...typography.body,

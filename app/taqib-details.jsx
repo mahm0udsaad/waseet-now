@@ -17,15 +17,8 @@ import {
 } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, {
-  BounceIn,
-  FadeInDown,
-  SlideInRight,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  ZoomIn,
-} from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
+import ScalePressable from "@/components/ui/ScalePressable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TaqibDetailsScreen() {
@@ -33,7 +26,7 @@ export default function TaqibDetailsScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL, rowDirection } = useTranslation();
+  const { isRTL, rowDirection } = useTranslation();
   const [isFavorited, setIsFavorited] = useState(false);
 
   // Mock data - in real app this would come from route params or API
@@ -59,30 +52,7 @@ export default function TaqibDetailsScreen() {
     isVerified: true,
   };
 
-  // Animation values
-  const callScale = useSharedValue(1);
-  const chatScale = useSharedValue(1);
-  const submitScale = useSharedValue(1);
-  const favoriteScale = useSharedValue(1);
-
-  const handleCall = () => {
-    callScale.value = withSpring(0.95, {}, () => {
-      callScale.value = withSpring(1);
-    });
-    Alert.alert(
-      isRTL ? "اتصال" : "Call",
-      isRTL ? "سيتم الاتصال بمقدم الخدمة عبر رقم محمي" : "You will call the service provider via a protected number",
-      [
-        { text: isRTL ? "إلغاء" : "Cancel", style: "cancel" },
-        { text: isRTL ? "اتصال" : "Call", onPress: () => console.log("Calling...") },
-      ]
-    );
-  };
-
   const handleChat = () => {
-    chatScale.value = withSpring(0.95, {}, () => {
-      chatScale.value = withSpring(1);
-    });
     router.push({
       pathname: "/chat",
       params: { 
@@ -95,9 +65,6 @@ export default function TaqibDetailsScreen() {
   };
 
   const handleSubmitOffer = () => {
-    submitScale.value = withSpring(0.95, {}, () => {
-      submitScale.value = withSpring(1);
-    });
     Alert.alert(
       isRTL ? "تقديم عرض" : "Submit Offer",
       isRTL ? "هل تريد تقديم عرض لهذا الطلب؟" : "Do you want to submit an offer for this request?",
@@ -109,9 +76,6 @@ export default function TaqibDetailsScreen() {
   };
 
   const handleFavorite = () => {
-    favoriteScale.value = withSpring(0.95, {}, () => {
-      favoriteScale.value = withSpring(1);
-    });
     setIsFavorited(!isFavorited);
   };
 
@@ -125,22 +89,6 @@ export default function TaqibDetailsScreen() {
       ]
     );
   };
-
-  const callAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: callScale.value }],
-  }));
-
-  const chatAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: chatScale.value }],
-  }));
-
-  const submitAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: submitScale.value }],
-  }));
-
-  const favoriteAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: favoriteScale.value }],
-  }));
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -174,8 +122,7 @@ export default function TaqibDetailsScreen() {
 
   const headerActions = (
     <View style={[styles.headerActions, { flexDirection: "row" }]}>
-      <Animated.View style={favoriteAnimatedStyle}>
-        <Pressable
+      <Pressable
           onPress={handleFavorite}
           style={[styles.headerButton, { backgroundColor: colors.surface }]}
         >
@@ -185,7 +132,6 @@ export default function TaqibDetailsScreen() {
             fill={isFavorited ? colors.primary : "transparent"}
           />
         </Pressable>
-      </Animated.View>
 
       <Pressable
         onPress={handleShare}
@@ -197,10 +143,7 @@ export default function TaqibDetailsScreen() {
   );
 
   const renderHeader = () => (
-    <Animated.View
-      entering={SlideInRight.delay(100)}
-      style={[styles.header, { flexDirection: "row" }]}
-    >
+    <FadeInView delay={100} direction="right" style={[styles.header, { flexDirection: "row" }]}>
       {isRTL ? headerActions : backButton}
 
       <View style={styles.headerTitleContainer}>
@@ -210,15 +153,12 @@ export default function TaqibDetailsScreen() {
       </View>
 
       {isRTL ? backButton : headerActions}
-    </Animated.View>
+    </FadeInView>
   );
 
   const renderMainCard = () => {
     return (
-      <Animated.View
-        entering={ZoomIn.delay(200)}
-        style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      >
+      <FadeInView delay={200} style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Header with Category Icon and Status */}
         <View style={[styles.mainCardHeader, { flexDirection: rowDirection }]}>
           <View style={[styles.categoryRow, { flexDirection: rowDirection }]}>
@@ -245,15 +185,12 @@ export default function TaqibDetailsScreen() {
 
         {/* Verification Badge */}
         {requestData.isVerified && (
-          <Animated.View
-            entering={BounceIn.delay(400)}
-            style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}
-          >
+          <FadeInView delay={400} spring style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}>
             <CheckCircle size={16} color={colors.primary} />
             <Text style={[styles.verifiedText, { color: colors.primary }]}>
               {isRTL ? "موثق" : "Verified"}
             </Text>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Description */}
@@ -332,15 +269,12 @@ export default function TaqibDetailsScreen() {
             </View>
           </View>
         )}
-      </Animated.View>
+      </FadeInView>
     );
   };
 
   const renderDocumentsSection = () => (
-    <Animated.View
-      entering={FadeInDown.delay(300)}
-      style={[styles.documentsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-    >
+    <FadeInView delay={300} style={[styles.documentsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[styles.documentsHeader, { flexDirection: rowDirection }]}>
         <FileText size={20} color={colors.primary} />
         <Text style={[styles.documentsTitle, { color: colors.text }]}>
@@ -360,7 +294,7 @@ export default function TaqibDetailsScreen() {
           </View>
         ))}
       </View>
-    </Animated.View>
+    </FadeInView>
   );
 
   const renderActionSection = () => (
@@ -394,24 +328,24 @@ export default function TaqibDetailsScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtonsRow}>
-        <Animated.View style={[chatAnimatedStyle, { flex: 1, marginLeft: 12 }]}>
-          <Pressable onPress={handleChat} style={styles.secondaryButton}>
+        <ScalePressable onPress={handleChat} style={{ flex: 1, marginLeft: 12 }}>
+          <View style={styles.secondaryButton}>
             <MessageCircle size={18} color="#fff" />
             <Text style={styles.secondaryButtonText}>
               {isRTL ? "رسالة" : "Message"}
             </Text>
-          </Pressable>
-        </Animated.View>
+          </View>
+        </ScalePressable>
 
         {requestData.status === "pending" && (
-          <Animated.View style={[submitAnimatedStyle, { flex: 1, marginLeft: 12 }]}>
-            <Pressable onPress={handleSubmitOffer} style={styles.primaryButton}>
+          <ScalePressable onPress={handleSubmitOffer} style={{ flex: 1, marginLeft: 12 }}>
+            <View style={styles.primaryButton}>
               <DollarSign size={18} color="#fff" />
               <Text style={styles.primaryButtonText}>
                 {isRTL ? "تقديم عرض" : "Submit Offer"}
               </Text>
-            </Pressable>
-          </Animated.View>
+            </View>
+          </ScalePressable>
         )}
       </View>
     </View>

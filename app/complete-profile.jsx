@@ -1,6 +1,5 @@
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { useLanguage, getRTLTextAlign } from "@/utils/i18n/store";
-import { supabase } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import {
   generateFallbackDisplayName,
@@ -36,7 +35,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown, FadeInUp, ZoomIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function isValidEmail(email) {
@@ -111,10 +109,12 @@ export default function CompleteProfileScreen() {
     ? (isRTL ? "أضف صورة واسم وبريد (اختياري) لإكمال التسجيل" : "Add a photo, name and email (optional) to finish setup")
     : (isRTL ? "اختر اللغة والمظهر الذي تفضله" : "Pick your preferred language and theme");
 
+  // Returns true if the app restarted (RTL/LTR flip in production).
   const applyPrefsLocally = async () => {
-    // Keep UX immediate: apply preferences to app right away.
-    await setLanguage(selectedLanguage);
+    const { restarted } = await setLanguage(selectedLanguage);
+    if (restarted) return true;
     await setTheme(selectedTheme);
+    return false;
   };
 
   const pickAvatar = async () => {
@@ -173,8 +173,8 @@ export default function CompleteProfileScreen() {
 
     setSaving(true);
     try {
-      await applyPrefsLocally();
-
+      // Persist profile BEFORE applying language — if the language change
+      // triggers an app restart the DB write must already be done.
       await upsertMyProfile({
         display_name: safeName,
         email: safeEmail,
@@ -183,6 +183,9 @@ export default function CompleteProfileScreen() {
         theme: selectedTheme,
         is_profile_complete: true,
       });
+
+      const restarted = await applyPrefsLocally();
+      if (restarted) return; // app is reloading
 
       setSuccess(true);
       setSaving(false);
@@ -219,7 +222,7 @@ export default function CompleteProfileScreen() {
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={[styles.main, { paddingTop: insets.top + 8 }]}>
-            <Animated.View entering={FadeInDown.delay(80)} style={[styles.header, { flexDirection: rowDirection }]}>
+            <View style={[styles.header, { flexDirection: rowDirection }]}>
               <Pressable
                 onPress={() => {
                   Keyboard.dismiss();
@@ -252,7 +255,7 @@ export default function CompleteProfileScreen() {
                   {skipText}
                 </Text>
               </Pressable>
-            </Animated.View>
+            </View>
 
             {/* Scrollable content so inputs stay visible above keyboard */}
             <ScrollView
@@ -266,12 +269,12 @@ export default function CompleteProfileScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              <Animated.View entering={FadeInUp.delay(120)} style={styles.content}>
+              <View style={styles.content}>
                 <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
 
                 {step === 0 ? (
-                  <Animated.View entering={FadeIn} style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <View style={[styles.card, { backgroundColor: colors.surface }]}>
                 <Pressable
                   onPress={pickAvatar}
                   style={[styles.avatarWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -312,7 +315,7 @@ export default function CompleteProfileScreen() {
                     onChangeText={setDisplayName}
                     placeholder={isRTL ? "الاسم (اختياري)" : "Name (optional)"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' }]}
                     autoCapitalize="words"
                     textContentType="name"
                     returnKeyType="next"
@@ -341,7 +344,7 @@ export default function CompleteProfileScreen() {
                     onChangeText={setEmail}
                     placeholder={isRTL ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' }]}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoCorrect={false}
@@ -358,9 +361,9 @@ export default function CompleteProfileScreen() {
                     {isRTL ? "البريد الإلكتروني غير صحيح" : "Email looks invalid"}
                   </Text>
                 )}
-                  </Animated.View>
+                  </View>
                 ) : (
-                  <Animated.View entering={FadeIn} style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <View style={[styles.card, { backgroundColor: colors.surface }]}>
                 <View style={styles.sectionTitleRow}>
                   <Globe size={18} color={colors.primary} />
                   <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -440,9 +443,9 @@ export default function CompleteProfileScreen() {
                 <Text style={[styles.helper, { color: colors.textMuted }]}>
                   {isRTL ? "يمكنك تغيير هذه الإعدادات لاحقاً من الملف الشخصي" : "You can change these later from Profile"}
                 </Text>
-                  </Animated.View>
+                  </View>
                 )}
-              </Animated.View>
+              </View>
               {/* Space so the last field isn't hidden behind the footer */}
               <View style={{ height: 100 }} />
             </ScrollView>
@@ -490,7 +493,7 @@ export default function CompleteProfileScreen() {
 
         {success && (
           <View style={[styles.successOverlay, { backgroundColor: colors.overlay }]}>
-            <Animated.View entering={ZoomIn} style={[styles.successCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.successCard, { backgroundColor: colors.surface }]}>
               <View style={[styles.successIcon, { backgroundColor: colors.primaryLight }]}>
                 <CheckCircle2 size={46} color={colors.success} />
               </View>
@@ -500,7 +503,7 @@ export default function CompleteProfileScreen() {
               <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
                 {isRTL ? "جاري تحويلك..." : "Redirecting..."}
               </Text>
-            </Animated.View>
+            </View>
           </View>
         )}
       </KeyboardAvoidingAnimatedView>
@@ -657,4 +660,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-

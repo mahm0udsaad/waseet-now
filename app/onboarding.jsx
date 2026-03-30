@@ -15,13 +15,6 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeInRight,
-  FadeInLeft,
-  FadeOut,
-  LinearTransition,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function OnboardingScreen() {
@@ -98,16 +91,15 @@ export default function OnboardingScreen() {
   };
 
   const handleLanguageSelect = async (lang) => {
-    await setLanguage(lang);
+    const { restarted } = await setLanguage(lang);
+    if (restarted) return; // app is reloading — don't advance screens
     nextScreen();
   };
 
   // --- Render Language Screen (Minimalist) ---
   const renderLanguageScreen = () => (
-    <Animated.View
+    <View
       key="lang-screen"
-      entering={FadeIn.duration(400)}
-      exiting={FadeOut.duration(300)}
       style={styles.langScreen}
     >
       <View style={styles.langHeader}>
@@ -179,19 +171,14 @@ export default function OnboardingScreen() {
           </View>
         </Pressable>
       </View>
-    </Animated.View>
+    </View>
   );
 
   // --- Render Content Screen (Minimalist) ---
   const renderContentScreen = (screenData, index) => {
-    // Determine animation direction based on RTL and screen transition
-    const enterAnim = isRTL ? FadeInLeft : FadeInRight;
-
     return (
-      <Animated.View
+      <View
         key={`screen-${index}`}
-        entering={enterAnim.duration(350).springify().damping(20)}
-        exiting={FadeOut.duration(200)}
         style={styles.contentScreen}
       >
         <View style={styles.imageArea}>
@@ -226,7 +213,7 @@ export default function OnboardingScreen() {
             </Text>
           </ScrollView>
         </View>
-      </Animated.View>
+      </View>
     );
   };
 
@@ -254,9 +241,8 @@ export default function OnboardingScreen() {
             {screens.slice(1).map((_, idx) => {
               const isActive = currentScreen === idx + 1;
               return (
-                <Animated.View
+                <View
                   key={idx}
-                  layout={LinearTransition.springify().damping(20)}
                   style={[
                     styles.dot,
                     {

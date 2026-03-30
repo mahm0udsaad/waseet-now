@@ -1,145 +1,144 @@
 {
-  "expo": {
-    "name": "وسيط الآن",
-    "slug": "kafel",
-    "version": "1.1.5",
-    "platforms": [
-      "ios",
-      "android"
-    ],
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "jsEngine": "hermes",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "kafel",
-    "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.mahm09d.kafel",
-      "associatedDomains": [
-        "applinks:wasitalan.com",
-        "applinks:www.wasitalan.com"
+    "expo": {
+      "newArchEnabled": false,
+      "name": "وسيط الان",
+      "slug": "kafel",
+      "version": "1.1.8",
+      "platforms": [
+        "ios",
+        "android"
       ],
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleDisplayName": "وسيط الآن",
-        "CFBundleName": "وسيط الآن",
-        "NSCameraUsageDescription": "Allow camera access so you can take photos to attach in chats, upload payment receipts, and set your profile picture.",
-        "NSPhotoLibraryUsageDescription": "Allow photo library access so you can choose existing photos to attach in chats, upload payment receipts, and set your profile picture.",
-        "NSLocationWhenInUseUsageDescription": "Allow location access while using the app so you can share your current location in chat conversations."
-      }
-    },
-    "android": {
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": true,
-      "package": "com.mahm09d.kafel",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "wasitalan.com",
-              "pathPrefix": "/tanazul"
-            },
-            {
-              "scheme": "https",
-              "host": "wasitalan.com",
-              "pathPrefix": "/taqib"
-            },
-            {
-              "scheme": "https",
-              "host": "www.wasitalan.com",
-              "pathPrefix": "/tanazul"
-            },
-            {
-              "scheme": "https",
-              "host": "www.wasitalan.com",
-              "pathPrefix": "/taqib"
+      "runtimeVersion": {
+        "policy": "appVersion"
+      },
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "kafel",
+      "userInterfaceStyle": "automatic",
+      "ios": {
+        "supportsTablet": true,
+        "bundleIdentifier": "com.mahm09d.kafel",
+        "associatedDomains": [
+          "applinks:wasitalan.com",
+          "applinks:www.wasitalan.com"
+        ],
+        "infoPlist": {
+          "ITSAppUsesNonExemptEncryption": false,
+          "CFBundleDisplayName": "وسيط الان",
+          "CFBundleName": "وسيط الان",
+          "NSCameraUsageDescription": "Allow camera access so you can take photos to attach in chats, upload payment receipts, and set your profile picture.",
+          "NSPhotoLibraryUsageDescription": "Allow photo library access so you can choose existing photos to attach in chats, upload payment receipts, and set your profile picture.",
+          "NSLocationWhenInUseUsageDescription": "Allow location access while using the app so you can share your current location in chat conversations."
+        }
+      },
+      "android": {
+        "edgeToEdgeEnabled": true,
+        "predictiveBackGestureEnabled": true,
+        "package": "com.mahm09d.kafel",
+        "intentFilters": [
+          {
+            "action": "VIEW",
+            "autoVerify": true,
+            "data": [
+              {
+                "scheme": "https",
+                "host": "wasitalan.com",
+                "pathPrefix": "/tanazul"
+              },
+              {
+                "scheme": "https",
+                "host": "wasitalan.com",
+                "pathPrefix": "/taqib"
+              },
+              {
+                "scheme": "https",
+                "host": "www.wasitalan.com",
+                "pathPrefix": "/tanazul"
+              },
+              {
+                "scheme": "https",
+                "host": "www.wasitalan.com",
+                "pathPrefix": "/taqib"
+              }
+            ],
+            "category": [
+              "BROWSABLE",
+              "DEFAULT"
+            ]
+          }
+        ]
+      },
+      "web": {
+        "output": "static",
+        "favicon": "./assets/images/icon.png",
+        "lang": "ar",
+        "dir": "rtl"
+      },
+      "plugins": [
+        "expo-router",
+        [
+          "expo-localization",
+          {
+            "supportsRTL": true,
+            "supportedLocales": [
+              "ar",
+              "en"
+            ]
+          }
+        ],
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/images/splash-logo.png",
+            "imageWidth": 250,
+            "resizeMode": "contain",
+            "backgroundColor": "#14264D",
+            "dark": {
+              "backgroundColor": "#14264D"
             }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/icon.png",
-      "lang": "ar",
-      "dir": "rtl"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-localization",
-        {
-          "supportsRTL": true,
-          "supportedLocales": [
-            "ar",
-            "en"
-          ]
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-logo.png",
-          "imageWidth": 250,
-          "resizeMode": "contain",
-          "backgroundColor": "#14264D",
-          "dark": {
-            "backgroundColor": "#14264D"
           }
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#ffffff",
-          "sounds": [
-            "./assets/sounds/notification.wav"
-          ]
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "15.1"
-          },
-          "android": {
-            "minSdkVersion": 24
+        ],
+        [
+          "expo-notifications",
+          {
+            "icon": "./assets/images/icon.png",
+            "color": "#ffffff",
+            "sounds": [
+              "./assets/sounds/notification.wav"
+            ]
           }
+        ],
+        [
+          "expo-build-properties",
+          {
+            "ios": {
+              "deploymentTarget": "15.1"
+            },
+            "android": {
+              "minSdkVersion": 24
+            }
+          }
+        ],
+        "expo-font",
+        "expo-secure-store",
+        "expo-web-browser"
+      ],
+      "experiments": {
+        "typedRoutes": true
+      },
+      "extra": {
+        "supportsRTL": true,
+        "supportedLocales": [
+          "ar",
+          "en"
+        ],
+        "router": {},
+        "eas": {
+          "projectId": "87a25a41-7179-401e-92ed-78c92d0192cc"
         }
-      ],
-      "expo-font",
-      "expo-secure-store",
-      "@react-native-google-signin/google-signin",
-      "expo-web-browser"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "extra": {
-      "supportsRTL": true,
-      "supportedLocales": [
-        "ar",
-        "en"
-      ],
-      "router": {},
-      "eas": {
-        "projectId": "87a25a41-7179-401e-92ed-78c92d0192cc"
+      },
+      "updates": {
+        "enabled": false
       }
-    },
-    "updates": {
-      "url": "https://u.expo.dev/87a25a41-7179-401e-92ed-78c92d0192cc"
     }
   }
-}

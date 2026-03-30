@@ -16,8 +16,8 @@ import {
   Search
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import FadeInView from "@/components/ui/FadeInView";
 
 export default function TanazulListScreen() {
   const router = useRouter();
@@ -183,7 +183,7 @@ export default function TanazulListScreen() {
       <View style={styles.content}>
 
         {/* Search Bar */}
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.searchContainer}>
+        <FadeInView delay={200} style={styles.searchContainer}>
           <View
             style={[
               styles.searchBar,
@@ -207,147 +207,114 @@ export default function TanazulListScreen() {
               <Filter size={18} color={colors.text} />
             </Pressable>
           </View>
-        </Animated.View>
+        </FadeInView>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => loadAds({ isRefresh: true })}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          {loading && !refreshing && renderListSkeleton()}
-
-          {error && (
-            <Text style={{ textAlign: getRTLTextAlign(isRTL), color: colors.error, marginBottom: 12 }}>
-              {error}
-            </Text>
-          )}
-
-          {!loading && filteredAds.length === 0 && !error && (
-            <Text style={{ color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }}>
-              {isRTL ? "لا توجد إعلانات حالياً" : "No ads yet"}
-            </Text>
-          )}
-
-          {filteredAds.map((ad, index) => {
-            const arabicProfession =
-              ad.metadata?.profession_label_ar_short ||
-              ad.metadata?.profession_label_ar ||
-              "";
-            const englishProfession =
-              ad.metadata?.profession_label_en_short ||
-              ad.metadata?.profession_label_en ||
-              "";
-            const baseTitle = ad.title || "";
-            const titleText =
-              isRTL
+        {loading && !refreshing ? (
+          renderListSkeleton()
+        ) : (
+          <FlatList
+            data={filteredAds}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => loadAds({ isRefresh: true })}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+            ListEmptyComponent={
+              error ? (
+                <Text style={{ textAlign: getRTLTextAlign(isRTL), color: colors.error, marginBottom: 12 }}>{error}</Text>
+              ) : (
+                <Text style={{ color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }}>
+                  {isRTL ? "لا توجد إعلانات حالياً" : "No ads yet"}
+                </Text>
+              )
+            }
+            renderItem={({ item: ad, index }) => {
+              const arabicProfession = ad.metadata?.profession_label_ar_short || ad.metadata?.profession_label_ar || "";
+              const englishProfession = ad.metadata?.profession_label_en_short || ad.metadata?.profession_label_en || "";
+              const baseTitle = ad.title || "";
+              const titleText = isRTL
                 ? arabicProfession
-                  ? baseTitle
-                    ? baseTitle.includes(arabicProfession)
-                      ? baseTitle
-                      : `${baseTitle} - ${arabicProfession}`
-                    : arabicProfession
+                  ? baseTitle ? (baseTitle.includes(arabicProfession) ? baseTitle : `${baseTitle} - ${arabicProfession}`) : arabicProfession
                   : baseTitle
                 : englishProfession || baseTitle;
+              const professionText = isRTL
+                ? (ad.metadata?.profession_label_ar || ad.metadata?.profession_label_ar_short || ad.metadata?.profession || "")
+                : (ad.metadata?.profession_label_en || ad.metadata?.profession_label_en_short || ad.metadata?.profession || "");
 
-            const professionText = isRTL
-              ? (ad.metadata?.profession_label_ar || ad.metadata?.profession_label_ar_short || ad.metadata?.profession || "")
-              : (ad.metadata?.profession_label_en || ad.metadata?.profession_label_en_short || ad.metadata?.profession || "");
-
-            return (
-            <Animated.View key={ad.id} entering={FadeInDown.delay(300 + index * 100)}>
-              <Pressable
-                onPress={() => router.push({ pathname: "/tanazul-details", params: { id: ad.id } })}
-                style={({ pressed }) => [
-                  styles.adCard,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-              >
-                {/* Header: Verified & Time */}
-                <View style={[styles.adHeader, { flexDirection: rowDirection }]}>
-                  {ad.metadata?.verified && (
-                    <View style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight }]}>
-                      <CheckCircle size={12} color={colors.primary} style={{ marginHorizontal: 4 }} />
-                      <Text style={[styles.verifiedText, { color: colors.primary }]}>
-                        {isRTL ? "موثق" : "Verified"}
-                      </Text>
+              return (
+                <FadeInView delay={Math.min(300 + index * 100, 700)}>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/tanazul-details", params: { id: ad.id } })}
+                    style={({ pressed }) => [
+                      styles.adCard,
+                      { backgroundColor: colors.card, borderColor: colors.border, transform: [{ scale: pressed ? 0.98 : 1 }] },
+                    ]}
+                  >
+                    <View style={[styles.adHeader, { flexDirection: rowDirection }]}>
+                      {ad.metadata?.verified && (
+                        <View style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight }]}>
+                          <CheckCircle size={12} color={colors.primary} style={{ marginHorizontal: 4 }} />
+                          <Text style={[styles.verifiedText, { color: colors.primary }]}>
+                            {isRTL ? "موثق" : "Verified"}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={[styles.timeRow, { flexDirection: rowDirection }]}>
+                        <Clock size={12} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
+                        <Text style={[styles.timeText, { color: colors.textMuted }]}>
+                          {ad.created_at ? new Date(ad.created_at).toLocaleString(isRTL ? "ar-SA-u-ca-gregory" : "en-US") : ""}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                  <View style={[styles.timeRow, { flexDirection: rowDirection }]}>
-                    <Clock size={12} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
-                    <Text style={[styles.timeText, { color: colors.textMuted }]}>
-                      {ad.created_at
-                        ? new Date(ad.created_at).toLocaleString(
-                            isRTL ? "ar-SA-u-ca-gregory" : "en-US"
-                          )
-                        : ""}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Main Content */}
-                <View style={[styles.adMain, { flexDirection: rowDirection }]}>
-                  <View style={styles.adTextContainer}>
-                    <Text style={[styles.adTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                      {titleText}
-                    </Text>
-                    <View style={[styles.professionRow, { flexDirection: rowDirection }]}>
-                      <Briefcase size={12} color={colors.textSecondary} style={{ marginHorizontal: 4 }} />
-                      <Text style={[styles.professionText, { color: colors.textSecondary }]}>
-                        {professionText} • {ad.metadata?.nationality || ""}
-                      </Text>
+                    <View style={[styles.adMain, { flexDirection: rowDirection }]}>
+                      <View style={styles.adTextContainer}>
+                        <Text style={[styles.adTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>{titleText}</Text>
+                        <View style={[styles.professionRow, { flexDirection: rowDirection }]}>
+                          <Briefcase size={12} color={colors.textSecondary} style={{ marginHorizontal: 4 }} />
+                          <Text style={[styles.professionText, { color: colors.textSecondary }]}>
+                            {professionText} • {ad.metadata?.nationality || ""}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.flagCircle, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                        <Text style={styles.flagEmoji}>{ad.metadata?.flag || "🏳️"}</Text>
+                      </View>
                     </View>
-                  </View>
-
-                  <View style={[styles.flagCircle, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-                    <Text style={styles.flagEmoji}>{ad.metadata?.flag || "🏳️"}</Text>
-                  </View>
-                </View>
-
-                {/* Footer: Details Grid */}
-                <View style={[styles.adFooter, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
-                  <View style={styles.footerItem}>
-                    <Text style={[styles.footerLabel, { color: colors.textMuted }]}>
-                      {isRTL ? "العمر" : "Age"}
-                    </Text>
-                    <Text style={[styles.footerValue, { color: colors.text }]}>
-                      {ad.metadata?.age ? `${ad.metadata.age} ${isRTL ? "سنة" : "yrs"}` : isRTL ? "غير محدد" : "N/A"}
-                    </Text>
-                  </View>
-                  <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.footerItem}>
-                    <Text style={[styles.footerLabel, { color: colors.textMuted }]}>
-                      {isRTL ? "الموقع" : "Location"}
-                    </Text>
-                    <View style={[styles.locationRow, { flexDirection: rowDirection }]}>
-                      <MapPin size={10} color={colors.primary} style={{ marginHorizontal: 2 }} />
-                      <Text style={[styles.footerValue, { color: colors.text }]}>{ad.location || ad.metadata?.location || ""}</Text>
+                    <View style={[styles.adFooter, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
+                      <View style={styles.footerItem}>
+                        <Text style={[styles.footerLabel, { color: colors.textMuted }]}>{isRTL ? "العمر" : "Age"}</Text>
+                        <Text style={[styles.footerValue, { color: colors.text }]}>
+                          {ad.metadata?.age ? `${ad.metadata.age} ${isRTL ? "سنة" : "yrs"}` : isRTL ? "غير محدد" : "N/A"}
+                        </Text>
+                      </View>
+                      <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+                      <View style={styles.footerItem}>
+                        <Text style={[styles.footerLabel, { color: colors.textMuted }]}>{isRTL ? "الموقع" : "Location"}</Text>
+                        <View style={[styles.locationRow, { flexDirection: rowDirection }]}>
+                          <MapPin size={10} color={colors.primary} style={{ marginHorizontal: 2 }} />
+                          <Text style={[styles.footerValue, { color: colors.text }]}>{ad.location || ad.metadata?.location || ""}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+                      <View style={styles.footerItem}>
+                        <Text style={[styles.footerLabel, { color: colors.textMuted }]}>{isRTL ? "السعر" : "Price"}</Text>
+                        <Text style={[styles.priceValue, { color: colors.primary }]}>
+                          {ad.price ?? ad.metadata?.transferAmount ?? "-"} {isRTL ? "ر.س" : "SAR"}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
-                  <View style={styles.footerItem}>
-                    <Text style={[styles.footerLabel, { color: colors.textMuted }]}>
-                      {isRTL ? "السعر" : "Price"}
-                    </Text>
-                    <Text style={[styles.priceValue, { color: colors.primary }]}>
-                      {ad.price ?? ad.metadata?.transferAmount ?? "-"} {isRTL ? "ر.س" : "SAR"}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            </Animated.View>
-          )})}
-        </ScrollView>
+                  </Pressable>
+                </FadeInView>
+              );
+            }}
+          />
+        )}
 
       </View>
     </LinearGradient>

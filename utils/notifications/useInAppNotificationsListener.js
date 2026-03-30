@@ -1,13 +1,33 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "expo-router";
-import * as Notifications from "expo-notifications";
-import { getSupabaseUser } from "@/utils/supabase/client";
+import { Platform } from "react-native";
+import { supabase } from "@/utils/supabase/client";
 import { fetchMyNotifications, subscribeToMyNotifications } from "@/utils/supabase/notifications";
 import { useInAppNotificationsStore } from "./inAppStore";
 import { useTranslation } from "@/utils/i18n/store";
 import { getLocalizedNotificationContent } from "./formatNotification";
 
-export function useInAppNotificationsListener() {
+async function scheduleInAppNotificationSound({ title, body }) {
+  // Delay expo-notifications module access until after startup completes.
+  // On iOS 26 release builds, touching this TurboModule too early can crash.
+  if (Platform.OS !== "ios" && Platform.OS !== "android") return;
+
+  try {
+    const Notifications = await import("expo-notifications");
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: title || "",
+        body: body || "",
+        sound: "notification.wav",
+      },
+      trigger: { type: "timeInterval", seconds: 1 },
+    });
+  } catch (_error) {
+    // Best-effort only. Notification sound must never affect app stability.
+  }
+}
+
+export function useInAppNotificationsListener(enabled = true) {
   const { isRTL } = useTranslation();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
@@ -24,23 +44,26 @@ export function useInAppNotificationsListener() {
   useEffect(() => { isRTLRef.current = isRTL; }, [isRTL]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     let mounted = true;
 
-    const start = async () => {
-      const user = await getSupabaseUser();
-      const userId = user?.id;
-      if (!userId || !mounted) return;
+    const startSubscription = (userId) => {
+      // Tear down any previous subscription
+      unsubRef.current?.();
+      unsubRef.current = null;
 
-      // initial load
-      try {
-        const data = await fetchMyNotifications({ limit: 30 });
-        if (mounted) setNotifications(data);
-      } catch {
-        // don't block app on notification errors
+      if (!userId) {
+        setNotifications([]);
+        return;
       }
 
+      // initial load
+      fetchMyNotifications({ limit: 30 })
+        .then((data) => { if (mounted) setNotifications(data); })
+        .catch(() => {}); // don't block app on notification errors
+
       // realtime subscription
-      unsubRef.current?.();
       unsubRef.current = subscribeToMyNotifications(userId, (notif) => {
         addNotification(notif);
         const localized = getLocalizedNotificationContent(notif, isRTLRef.current);
@@ -60,29 +83,37 @@ export function useInAppNotificationsListener() {
           orderId: notif.order_id || notif.data?.order_id,
         });
 
-        // Play notification sound via a local notification
-        // (shouldShowAlert: false suppresses the banner, shouldPlaySound: true plays the sound)
-        Notifications.scheduleNotificationAsync({
-          content: {
-            title: localized.title || "",
-            body: localized.body || "",
-            sound: "notification.wav",
-          },
-          trigger: null, // immediate
-        }).catch(() => {}); // best-effort
+        scheduleInAppNotificationSound({
+          title: localized.title,
+          body: localized.body,
+        });
       });
     };
 
-    start();
+    // Subscribe to auth changes — reconnect notifications on login, tear down on logout
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!mounted) return;
+        if (event === 'SIGNED_OUT') {
+          startSubscription(null);
+        } else if (session?.user?.id) {
+          startSubscription(session.user.id);
+        }
+      }
+    );
+
     return () => {
       mounted = false;
       unsubRef.current?.();
       unsubRef.current = null;
+      authSub?.unsubscribe();
     };
-  }, [addNotification, setNotifications, showToast]);
+  }, [addNotification, enabled, setNotifications, showToast]);
 
   // Helper: mark conversation notifications read when you navigate to a chat
   useEffect(() => {
+    if (!enabled) return;
+
     const markIfChat = async () => {
       // Chat routes:
       // - /chat (alias)
@@ -91,5 +122,5 @@ export function useInAppNotificationsListener() {
       // We don't have params here, so the chat screen should call markConversationNotificationsRead itself.
     };
     markIfChat();
-  }, [pathname, router]);
+  }, [enabled, pathname, router]);
 }

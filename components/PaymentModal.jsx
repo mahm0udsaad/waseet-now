@@ -85,10 +85,12 @@ export default function PaymentModal({ onClose }) {
 
   const handleCardAction = async (paymentMethod) => {
     if (!onCardPayment || isBusy) return;
-    handleClose();
+    const cardPaymentFn = onCardPayment;
+    // Close modal without resetting store — the callback needs store state intact
+    onClose();
     setTimeout(() => {
-      onCardPayment(paymentMethod);
-    }, 0);
+      cardPaymentFn(paymentMethod);
+    }, 300);
   };
 
   const pickReceiptImage = async () => {

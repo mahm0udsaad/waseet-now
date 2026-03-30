@@ -1,28 +1,25 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { CheckCircle2, ChevronRight, Circle } from "lucide-react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { Alert } from "react-native";
+import FadeInView from "@/components/ui/FadeInView";
 
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
 import { NativeButton } from "@/components/native";
 import { createDaminOrder } from "@/utils/supabase/daminOrders";
 import { hapticFeedback } from "@/utils/native/haptics";
-import { useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { getCommissionDisplayText } from "@/constants/commissionConfig";
 
 export default function DaminTermsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { isRTL } = useTranslation();
   const params = useLocalSearchParams();
-  const showToast = useInAppNotificationsStore((state) => state.showToast);
   
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -131,8 +128,8 @@ export default function DaminTermsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Introduction */}
-        <Animated.View
-          entering={FadeInDown.delay(100)}
+        <FadeInView
+          delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -143,11 +140,11 @@ export default function DaminTermsScreen() {
               ? "خدمة الضامن هي نظام ضمان للمدفوعات بين طرفين (الدافع والمستفيد). تحمي هذه الخدمة كلا الطرفين من خلال الاحتفاظ بالأموال حتى اكتمال الخدمة."
               : "The Damin service is a payment guarantee system between two parties (payer and beneficiary). This service protects both parties by holding funds until service completion."}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Commission */}
-        <Animated.View
-          entering={FadeInDown.delay(200)}
+        <FadeInView
+          delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -165,11 +162,11 @@ export default function DaminTermsScreen() {
               ? `يتم احتساب عمولة المنصة بنسبة ${commissionText} فقط من قيمة الخدمة. لا توجد ضرائب أو رسوم إضافية. العمولة غير قابلة للتفاوض.`
               : `The platform charges a ${commissionText} commission on the service value only. No additional taxes or fees. The commission is non-negotiable.`}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Workflow */}
-        <Animated.View
-          entering={FadeInDown.delay(300)}
+        <FadeInView
+          delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -203,11 +200,11 @@ export default function DaminTermsScreen() {
               </Text>
             ))}
           </View>
-        </Animated.View>
+        </FadeInView>
 
         {/* Confirmation Required */}
-        <Animated.View
-          entering={FadeInDown.delay(400)}
+        <FadeInView
+          delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -218,11 +215,11 @@ export default function DaminTermsScreen() {
               ? "لن يتقدم الطلب دون تأكيد كلا الطرفين. إذا رفض أي طرف، سيتم إلغاء الطلب. يمكن لأي طرف رفض المشاركة قبل إيداع الأموال."
               : "The order will not progress without confirmation from both parties. If either party rejects, the order will be cancelled. Either party can reject participation before fund deposit."}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Dispute Resolution */}
-        <Animated.View
-          entering={FadeInDown.delay(500)}
+        <FadeInView
+          delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -233,7 +230,7 @@ export default function DaminTermsScreen() {
               ? "في حالة حدوث نزاع، سيتم الاحتفاظ بالأموال في الحساب الضامن حتى يتم حل المشكلة. يمكنك الاتصال بالدعم للمساعدة في حل النزاعات."
               : "In case of a dispute, funds will be held in escrow until the issue is resolved. You can contact support for assistance with dispute resolution."}
           </Text>
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
 
       {/* Bottom Actions */}

@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
-  FlatList,
   Dimensions,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -15,9 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ChevronRight, FileText, Image as ImageIcon, Calendar } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLStartAlign, getRTLRowDirection } from "@/utils/i18n/store";
+import { useTranslation, getRTLStartAlign } from "@/utils/i18n/store";
 import { supabase } from "@/utils/supabase/client";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import * as WebBrowser from "expo-web-browser";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -27,7 +26,7 @@ export default function ChatInfoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL, rowDirection } = useTranslation();
+  const { isRTL, rowDirection } = useTranslation();
   const params = useLocalSearchParams();
 
   const { conversationId, otherUserId, otherUserName, otherUserAvatar } = params;
@@ -180,7 +179,7 @@ export default function ChatInfoScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Profile Card */}
-        <Animated.View entering={FadeInDown.duration(300)} style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <FadeInView style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
           ) : (
@@ -200,10 +199,10 @@ export default function ChatInfoScreen() {
               </Text>
             </View>
           ) : null}
-        </Animated.View>
+        </FadeInView>
 
         {/* Media Section */}
-        <Animated.View entering={FadeInDown.delay(80).duration(300)} style={styles.section}>
+        <FadeInView delay={80} style={styles.section}>
           <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
             <ImageIcon size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -230,10 +229,10 @@ export default function ChatInfoScreen() {
               ))}
             </View>
           )}
-        </Animated.View>
+        </FadeInView>
 
         {/* Receipts Section */}
-        <Animated.View entering={FadeInDown.delay(160).duration(300)} style={styles.section}>
+        <FadeInView delay={160} style={styles.section}>
           <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
             <FileText size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -278,7 +277,7 @@ export default function ChatInfoScreen() {
               </Pressable>
             ))
           )}
-        </Animated.View>
+        </FadeInView>
 
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>

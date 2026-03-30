@@ -64,12 +64,17 @@ async function uploadChatAttachment(userId, attachment) {
     });
   if (error) throw error;
 
-  return {
+  const result = {
     type: attachment.type,
     path: objectPath,
     name: attachment.name || objectPath.split("/").pop(),
     mimeType: contentType,
   };
+  if (attachment.type === "image" && attachment.width && attachment.height) {
+    result.width = attachment.width;
+    result.height = attachment.height;
+  }
+  return result;
 }
 
 function getMimeType(extension) {
@@ -113,37 +118,58 @@ export async function fetchConversations() {
   const conversationIds = (memberships || []).map((m) => m.conversation_id);
   if (conversationIds.length === 0) return [];
 
-  // Step 2: Fetch conversations with their last message
-  const { data: conversations, error: convError } = await supabase
-    .from("conversations")
-    .select(`
-      id,
-      type,
-      ad_id,
-      created_at,
-      messages (
+  // Steps 2-6: Run all independent queries in parallel
+  const [convResult, membersResult, ordersResult, unreadResult] = await Promise.all([
+    // Step 2: Fetch conversations with their last message
+    supabase
+      .from("conversations")
+      .select(`
         id,
-        sender_id,
-        content,
-        attachments,
-        created_at
-      )
-    `)
-    .in("id", conversationIds)
-    .order("created_at", { referencedTable: "messages", ascending: false })
-    .limit(1, { foreignTable: "messages" });
+        type,
+        ad_id,
+        created_at,
+        messages (
+          id,
+          sender_id,
+          content,
+          attachments,
+          created_at
+        )
+      `)
+      .in("id", conversationIds)
+      .order("created_at", { referencedTable: "messages", ascending: false })
+      .limit(1, { foreignTable: "messages" }),
 
-  if (convError) throw convError;
+    // Step 3: Batch-fetch ALL members for these conversations
+    supabase
+      .from("conversation_members")
+      .select("conversation_id, user_id")
+      .in("conversation_id", conversationIds),
 
-  // Step 3: Batch-fetch ALL members for these conversations in ONE query
-  const { data: allMembers, error: allMembersError } = await supabase
-    .from("conversation_members")
-    .select("conversation_id, user_id")
-    .in("conversation_id", conversationIds);
+    // Step 5: Batch-fetch latest order status per conversation
+    supabase
+      .from("orders")
+      .select("id, conversation_id, status")
+      .in("conversation_id", conversationIds)
+      .order("created_at", { ascending: false }),
 
-  if (allMembersError) {
-    console.error("Error fetching all members:", allMembersError);
+    // Step 6: Batch-fetch unread notification counts per conversation
+    supabase
+      .from("notifications")
+      .select("conversation_id")
+      .eq("recipient_id", userId)
+      .neq("actor_id", userId)
+      .is("read_at", null)
+      .in("conversation_id", conversationIds),
+  ]);
+
+  if (convResult.error) throw convResult.error;
+  const conversations = convResult.data;
+
+  if (membersResult.error) {
+    console.error("Error fetching all members:", membersResult.error);
   }
+  const allMembers = membersResult.data;
 
   // Build map: conversationId -> otherUserId
   const otherUserMap = new Map();
@@ -153,7 +179,7 @@ export async function fetchConversations() {
     }
   }
 
-  // Step 4: Batch-fetch ALL other user profiles in ONE query
+  // Step 4: Batch-fetch ALL other user profiles in ONE query (depends on members result)
   const otherUserIds = [...new Set(otherUserMap.values())];
   const profileMap = new Map();
   if (otherUserIds.length > 0) {
@@ -169,33 +195,17 @@ export async function fetchConversations() {
     }
   }
 
-  // Step 5: Batch-fetch latest order status per conversation
   const orderStatusMap = new Map();
-  const { data: orders, error: ordersError } = await supabase
-    .from("orders")
-    .select("id, conversation_id, status")
-    .in("conversation_id", conversationIds)
-    .order("created_at", { ascending: false });
-
-  if (!ordersError && orders) {
-    for (const o of orders) {
-      // Keep only the latest order per conversation (first seen = newest due to DESC)
+  if (!ordersResult.error && ordersResult.data) {
+    for (const o of ordersResult.data) {
       if (!orderStatusMap.has(o.conversation_id)) {
         orderStatusMap.set(o.conversation_id, o.status);
       }
     }
   }
 
-  // Step 6: Batch-fetch unread notification counts per conversation
-  // Filter out actor_id = userId to avoid counting the user's own sent messages
   const unreadCountMap = new Map();
-  const { data: unreadNotifs } = await supabase
-    .from("notifications")
-    .select("conversation_id")
-    .eq("recipient_id", userId)
-    .neq("actor_id", userId)
-    .is("read_at", null)
-    .in("conversation_id", conversationIds);
+  const unreadNotifs = unreadResult.data;
 
   for (const n of unreadNotifs || []) {
     if (n.conversation_id) {
@@ -274,7 +284,7 @@ export async function fetchMessages(conversationId, { limit = 30, before } = {})
   return hydrated.reverse();
 }
 
-export async function sendMessage(conversationId, content, attachments = []) {
+export async function sendMessage(conversationId, content, attachments = [], { replyToId } = {}) {
   const session = await ensureSupabaseSession();
   const userId = session.user.id;
 
@@ -283,14 +293,17 @@ export async function sendMessage(conversationId, content, attachments = []) {
     uploadedAttachments.push(await uploadChatAttachment(userId, attachment));
   }
 
+  const row = {
+    conversation_id: conversationId,
+    sender_id: userId,
+    content: content || null,
+    attachments: uploadedAttachments,
+  };
+  if (replyToId) row.reply_to_id = replyToId;
+
   const { data, error } = await supabase
     .from("messages")
-    .insert({
-      conversation_id: conversationId,
-      sender_id: userId,
-      content: content || null,
-      attachments: uploadedAttachments,
-    })
+    .insert(row)
     .select()
     .single();
 
@@ -481,5 +494,38 @@ export async function createAdDmConversation(otherUserId, adId) {
   }
 
   return { conversation_id: conversationId };
+}
+
+// ── Typing Presence ──
+
+export function createTypingChannel(conversationId, currentUserId, onTypingChange) {
+  if (!conversationId || !currentUserId) return null;
+
+  const channelName = `typing-${conversationId}`;
+
+  const channel = supabase.channel(channelName, { config: { presence: { key: currentUserId } } });
+
+  channel
+    .on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState();
+      const othersTyping = Object.keys(state).some(
+        (key) => key !== currentUserId && state[key]?.some((p) => p.typing)
+      );
+      onTypingChange(othersTyping);
+    })
+    .subscribe();
+
+  return channel;
+}
+
+export function trackTyping(channel, isTyping) {
+  if (!channel) return;
+  channel.track({ typing: isTyping });
+}
+
+export function removeTypingChannel(channel) {
+  if (!channel) return;
+  channel.untrack();
+  supabase.removeChannel(channel);
 }
 

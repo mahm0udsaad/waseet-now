@@ -28,7 +28,7 @@ import {
   markNotificationRead,
 } from "@/utils/supabase/notifications";
 import { getNotificationRoute } from "@/utils/notifications/routing";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import { NativeButton } from "@/components/native";
 import { getLocalizedNotificationContent } from "@/utils/notifications/formatNotification";
 
@@ -270,9 +270,9 @@ export default function NotificationsScreen() {
             const localizedContent = getLocalizedNotificationContent(notification, isRTL);
 
             return (
-              <Animated.View
+              <FadeInView
                 key={notification.id}
-                entering={FadeInDown.delay(index * 50)}
+                delay={index * 50}
               >
                 <Pressable
                   onPress={() => handleNotificationPress(notification)}
@@ -425,7 +425,7 @@ export default function NotificationsScreen() {
                     />
                   ) : null}
                 </Pressable>
-              </Animated.View>
+              </FadeInView>
             );
           })
         )}
@@ -612,8 +612,8 @@ const styles = StyleSheet.create({
   },
   notificationContent: {
     flex: 1,
-    marginLeft: 12,
-    marginRight: 12,
+    marginStart: 12,
+    marginEnd: 12,
   },
   typeLabel: {
     fontSize: 12,
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     position: "absolute",
     top: 12,
-    right: 12,
+    end: 12,
   },
   messageCountBadge: {
     minWidth: 24,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     position: "absolute",
     top: 8,
-    right: 8,
+    end: 8,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,

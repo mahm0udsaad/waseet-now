@@ -22,7 +22,7 @@ import {
 import { useTheme } from '@/utils/theme/store';
 import { useTranslation, getRTLRowDirection, getRTLTextAlign } from '@/utils/i18n/store';
 import { showToast } from '@/utils/notifications/inAppStore';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from "@/components/ui/FadeInView";
 import { Skeleton, SkeletonGroup } from '@/components/ui/Skeleton';
 import { getWalletSummary } from '@/utils/supabase/wallet';
 
@@ -81,10 +81,10 @@ export default function WalletOverviewScreen() {
     return `${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR`;
   };
 
-  const StatCard = ({ icon: Icon, label, value, iconColor, entering, testID }) => (
-    <Animated.View
+  const StatCard = ({ icon: Icon, label, value, iconColor, delay, testID }) => (
+    <FadeInView
       testID={testID}
-      entering={entering}
+      delay={delay}
       style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={[styles.statIconContainer, { backgroundColor: iconColor + '20' }]}>
@@ -92,16 +92,16 @@ export default function WalletOverviewScreen() {
       </View>
       <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
       <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-    </Animated.View>
+    </FadeInView>
   );
 
-  const ActionButton = ({ icon: Icon, label, onPress, variant = 'primary', entering, testID }) => {
+  const ActionButton = ({ icon: Icon, label, onPress, variant = 'primary', delay, testID }) => {
     const bgColor = variant === 'primary' ? colors.primary : colors.surface;
     const textColor = variant === 'primary' ? '#fff' : colors.text;
     const iconColor = variant === 'primary' ? '#fff' : colors.primary;
 
     return (
-      <Animated.View entering={entering} style={styles.actionButtonWrapper}>
+      <FadeInView delay={delay} style={styles.actionButtonWrapper}>
         <Pressable
           testID={testID}
           onPress={onPress}
@@ -117,7 +117,7 @@ export default function WalletOverviewScreen() {
           <Icon size={20} color={iconColor} />
           <Text style={[styles.actionButtonText, { color: textColor }]}>{label}</Text>
         </Pressable>
-      </Animated.View>
+      </FadeInView>
     );
   };
 
@@ -156,9 +156,9 @@ export default function WalletOverviewScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Main Balance Card */}
-        <Animated.View
+        <FadeInView
           testID="wallet-available-balance"
-          entering={FadeInDown.delay(100)}
+          delay={100}
           style={[styles.balanceCard, { backgroundColor: colors.primary }]}
         >
           <LinearGradient
@@ -180,7 +180,7 @@ export default function WalletOverviewScreen() {
                 : (isRTL ? 'لا يوجد رصيد قابل للسحب' : 'No balance available')}
             </Text>
           </LinearGradient>
-        </Animated.View>
+        </FadeInView>
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -189,7 +189,7 @@ export default function WalletOverviewScreen() {
             label={isRTL ? 'قيد الانتظار' : 'In Escrow'}
             value={formatCurrency(escrow)}
             iconColor="#F59E0B"
-            entering={FadeInDown.delay(200)}
+            delay={200}
             testID="wallet-escrow-held"
           />
           <StatCard
@@ -197,13 +197,13 @@ export default function WalletOverviewScreen() {
             label={isRTL ? 'إجمالي المكاسب' : 'Total Earnings'}
             value={formatCurrency(totalEarned)}
             iconColor="#10B981"
-            entering={FadeInDown.delay(250)}
+            delay={250}
           />
         </View>
 
         {/* Info Banner */}
-        <Animated.View
-          entering={FadeInDown.delay(300)}
+        <FadeInView
+          delay={300}
           style={[styles.infoBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.infoBannerText, { color: colors.textSecondary }]}>
@@ -211,7 +211,7 @@ export default function WalletOverviewScreen() {
               ? 'المبالغ قيد الانتظار هي أموال محجوزة من المشترين وسيتم إصدارها عند اكتمال الطلب.'
               : 'Escrow amounts are funds held from buyers and will be released when orders are completed.'}
           </Text>
-        </Animated.View>
+        </FadeInView>
 
         {/* Actions Section */}
         <View style={styles.actionsSection}>
@@ -224,7 +224,7 @@ export default function WalletOverviewScreen() {
             label={isRTL ? 'سحب الأموال' : 'Withdraw Funds'}
             onPress={handleWithdrawPress}
             variant="primary"
-            entering={FadeInDown.delay(350)}
+            delay={350}
             testID="wallet-withdraw-btn"
           />
 
@@ -233,14 +233,14 @@ export default function WalletOverviewScreen() {
             label={isRTL ? 'سجل المعاملات' : 'Transaction History'}
             onPress={() => router.push('/wallet-transactions')}
             variant="secondary"
-            entering={FadeInDown.delay(400)}
+            delay={400}
             testID="wallet-transactions-list"
           />
         </View>
 
         {/* Quick Stats */}
-        <Animated.View
-          entering={FadeInDown.delay(450)}
+        <FadeInView
+          delay={450}
           style={[styles.quickStatsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
           <Text style={[styles.quickStatsTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
@@ -266,7 +266,7 @@ export default function WalletOverviewScreen() {
               </Text>
             </View>
           </View>
-        </Animated.View>
+        </FadeInView>
       </AppScrollView>
     </LinearGradient>
   );

@@ -25,6 +25,7 @@ interface ExpoPushMessage {
   title: string;
   body: string;
   data: Record<string, unknown>;
+  badge: number;
   channelId: string;
   priority: "high";
   image?: string; // Notification image (Android large icon, iOS attachment)
@@ -151,6 +152,15 @@ Deno.serve(async (req: Request) => {
       notificationImage = undefined;
     }
 
+    // Count unread notifications for badge
+    const { count: unreadCount } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", recipient_id)
+      .is("read_at", null);
+
+    const badgeCount = unreadCount ?? 1;
+
     // Build push messages
     const pushMessages: ExpoPushMessage[] = tokens.map((tokenRow: TokenRow) => ({
       to: tokenRow.expo_push_token,
@@ -165,6 +175,7 @@ Deno.serve(async (req: Request) => {
         damin_order_id,
         ...notifData,
       },
+      badge: badgeCount,
       channelId: "default",
       priority: "high",
       ...(notificationImage && { image: notificationImage }), // Add image if available

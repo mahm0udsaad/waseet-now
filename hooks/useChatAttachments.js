@@ -49,6 +49,8 @@ export function useChatAttachments(t, isRTL) {
         id: `img-${Date.now()}-${index}`,
         type: "image",
         uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
         mimeType: asset.mimeType || "image/jpeg",
       }));
       setAttachments((prev) => [...prev, ...newAttachments]);
@@ -77,6 +79,8 @@ export function useChatAttachments(t, isRTL) {
           id: `img-${Date.now()}`,
           type: "image",
           uri: result.assets[0].uri,
+          width: result.assets[0].width,
+          height: result.assets[0].height,
           mimeType: result.assets[0].mimeType || "image/jpeg",
         },
       ]);
@@ -100,6 +104,7 @@ export function useChatAttachments(t, isRTL) {
           type: "file",
           uri: asset.uri,
           name: asset.name,
+          size: asset.size,
           mimeType: asset.mimeType || "application/octet-stream",
         }));
         setAttachments((prev) => [...prev, ...newAttachments]);

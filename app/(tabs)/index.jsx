@@ -2,8 +2,8 @@ import { AppScrollView } from "@/components/layout";
 import { NativeIcon } from "@/components/native/NativeIcon";
 import PromotionalBanners from "@/components/PromotionalBanners";
 import { BorderRadius, Shadows, Spacing } from "@/constants/theme";
-import { useLanguage, getRTLTextAlign, getRTLStartAlign, pickRTLValue } from "@/utils/i18n/store";
-import { useInAppNotificationsStore, showToast } from "@/utils/notifications/inAppStore";
+import { getRTLStartAlign, getRTLTextAlign, pickRTLValue, useLanguage } from "@/utils/i18n/store";
+import { showToast, useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { fetchMyNotifications } from "@/utils/supabase/notifications";
 import { useTheme } from "@/utils/theme/store";
 import { BlurView } from "expo-blur";
@@ -18,10 +18,6 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeInUp
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FIXED_HEADER_HEIGHT = 68;
@@ -36,6 +32,9 @@ export default function HomeScreen() {
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
   const [refreshing, setRefreshing] = useState(false);
   const [bannersRefreshKey, setBannersRefreshKey] = useState(0);
+  const headerRowDirection = isRTL ? "row" : rowDirection;
+  const homeGreeting = isRTL ? "مرحباً بك" : "Welcome to";
+  const homeBrand = isRTL ? "وسيط الان" : "Waseet";
 
   const handleRefresh = async () => {
     if (refreshing) return;
@@ -108,12 +107,11 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Animated.View
-              entering={FadeInUp.delay(50)}
+            <View
               style={[
                 styles.heroCard,
                 {
-                  flexDirection: rowDirection,
+                  flexDirection: headerRowDirection,
                 },
               ]}
             >
@@ -160,23 +158,23 @@ export default function HomeScreen() {
               </View>
 
               <View style={[styles.brandSection, { flexDirection: rowDirection }]}>
-                <View style={{ flexShrink: 1 }}>
-                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {isRTL ? "مرحباً بك" : "Welcome back"}
-                  </Text>
-                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {isRTL ? "وسيط الان" : "Waseet Alan"}
-                  </Text>
-                </View>
-                <View style={[styles.logoWrapper, Shadows.small]}>
+              <View style={[styles.logoWrapper, Shadows.small]}>
                   <Image
                     source={require("@/assets/images/logo.png")}
                     style={styles.logo}
                     contentFit="contain"
                   />
                 </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {homeGreeting}
+                  </Text>
+                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {homeBrand}
+                  </Text>
+                </View>
               </View>
-            </Animated.View>
+            </View>
           </BlurView>
         ) : (
           <View
@@ -188,12 +186,11 @@ export default function HomeScreen() {
               },
             ]}
           >
-            <Animated.View
-              entering={FadeInUp.delay(50)}
+            <View
               style={[
                 styles.heroCard,
                 {
-                  flexDirection: rowDirection,
+                  flexDirection: headerRowDirection,
                 },
               ]}
             >
@@ -240,14 +237,6 @@ export default function HomeScreen() {
               </View>
 
               <View style={[styles.brandSection, { flexDirection: rowDirection }]}>
-                <View style={{ flexShrink: 1 }}>
-                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {isRTL ? "مرحباً بك" : "Welcome back"}
-                  </Text>
-                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {isRTL ? "وسيط الان" : "Waseet Alan"}
-                  </Text>
-                </View>
                 <View style={[styles.logoWrapper, Shadows.small]}>
                   <Image
                     source={require("@/assets/images/logo.png")}
@@ -255,8 +244,16 @@ export default function HomeScreen() {
                     contentFit="contain"
                   />
                 </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={[styles.greeting, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {homeGreeting}
+                  </Text>
+                  <Text style={[styles.brandName, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    {homeBrand}
+                  </Text>
+                </View>
               </View>
-            </Animated.View>
+            </View>
           </View>
         )}
       </View>
@@ -288,11 +285,7 @@ export default function HomeScreen() {
           </Text>
           <View style={styles.servicesGrid}>
             {services.map((service, index) => (
-              <Animated.View 
-                key={service.id} 
-                entering={FadeInDown.delay(index * 100).springify()}
-                style={styles.serviceCardWrapper}
-              >
+              <View key={service.id} style={styles.serviceCardWrapper}>
                 <Pressable
                   testID={`service-${service.id}`}
                   onPress={() => router.push(service.route)}
@@ -320,13 +313,12 @@ export default function HomeScreen() {
                      <NativeIcon name={pickRTLValue(isRTL, "left", "right")} size={16} color={colors.textMuted} />
                   </View>
                 </Pressable>
-              </Animated.View>
+              </View>
             ))}
           </View>
         </View>
 
-        <Animated.View 
-          entering={FadeInUp.delay(500)}
+        <View
           style={[styles.statsContainer, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
         >
           <View style={styles.statItem}>
@@ -349,7 +341,7 @@ export default function HomeScreen() {
               {isRTL ? "دعم" : "Support"}
             </Text>
           </View>
-        </Animated.View>
+        </View>
 
       </AppScrollView>
     </View>

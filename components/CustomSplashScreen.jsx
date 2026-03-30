@@ -1,65 +1,13 @@
 import { Image } from 'expo-image';
-import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 const BRAND_COLOR = '#14264D';
 
-export default function CustomSplashScreen({ onAnimationComplete }) {
-  const logoOpacity = useSharedValue(0);
-  const logoTranslateY = useSharedValue(24); // Slightly higher starting point
-  
-  const taglineOpacity = useSharedValue(0);
-  const taglineTranslateY = useSharedValue(20);
-
-  useEffect(() => {
-    // 1. Animate Logo
-    logoOpacity.value = withTiming(1, {
-      duration: 600,
-      easing: Easing.out(Easing.exp), // A smoother, more dramatic fade
-    });
-    logoTranslateY.value = withSpring(0, {
-      damping: 14, // Controls the "bounciness" (higher = less bouncy)
-      stiffness: 90, // Controls the speed of the spring
-    });
-
-    // 2. Animate Tagline (with delay)
-    taglineOpacity.value = withDelay(
-      350,
-      withTiming(1, { duration: 600, easing: Easing.out(Easing.exp) })
-    );
-    taglineTranslateY.value = withDelay(
-      350,
-      withSpring(0, { damping: 14, stiffness: 90 }, (finished) => {
-        // 3. Notify the app when the final animation is done
-        if (finished && onAnimationComplete) {
-          runOnJS(onAnimationComplete)();
-        }
-      })
-    );
-  }, [logoOpacity, logoTranslateY, taglineOpacity, taglineTranslateY, onAnimationComplete]);
-
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-    transform: [{ translateY: logoTranslateY.value }],
-  }));
-
-  const taglineStyle = useAnimatedStyle(() => ({
-    opacity: taglineOpacity.value,
-    transform: [{ translateY: taglineTranslateY.value }],
-  }));
-
+export default function CustomSplashScreen() {
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.logoBlock, logoStyle]}>
+      <View style={styles.logoBlock}>
         <Image
           source={require('@/assets/images/splash-logo.png')}
           style={styles.logo}
@@ -67,11 +15,11 @@ export default function CustomSplashScreen({ onAnimationComplete }) {
           accessibilityRole="image"
           accessibilityLabel="App Logo"
         />
-      </Animated.View>
+      </View>
 
-      <Animated.Text style={[styles.tagline, taglineStyle]}>
+      <Text style={styles.tagline}>
         انت في امان
-      </Animated.Text>
+      </Text>
     </View>
   );
 }

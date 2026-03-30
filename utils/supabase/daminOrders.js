@@ -2,6 +2,27 @@ import { ensureSupabaseSession, supabase } from "./client";
 import { getCommissionConfig } from "@/constants/commissionConfig";
 
 /**
+ * Get damin order context for a chat conversation.
+ * Returns order info + available actions, or null if no active order between chat participants.
+ * @param {string} conversationId
+ * @returns {Promise<Object|null>}
+ */
+export async function getDaminOrderForChat(conversationId) {
+  await ensureSupabaseSession();
+  if (!conversationId) return null;
+
+  const { data, error } = await supabase.rpc("get_damin_order_for_chat", {
+    p_conversation_id: conversationId,
+  });
+  if (error) {
+    console.warn("Failed to get damin order for chat:", error);
+    return null;
+  }
+
+  return data || null;
+}
+
+/**
  * Create a Damin order
  * @param {Object} data
  * @param {string} data.serviceTypeOrDetails - Service type or details

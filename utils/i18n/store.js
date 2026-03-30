@@ -1,14 +1,10 @@
 import { create } from 'zustand';
-import Constants from 'expo-constants';
 import { getLocales } from 'expo-localization';
 import * as SecureStore from 'expo-secure-store';
-import * as Updates from 'expo-updates';
-import { DevSettings, I18nManager, Platform } from 'react-native';
 
 const LANGUAGE_KEY = 'app-language';
 const SUPPORTED_LANGUAGES = ['ar', 'en'];
 const FALLBACK_LANGUAGE = 'ar';
-const isExpoGo = Constants.appOwnership === 'expo';
 
 const getDeviceLocale = () => getLocales()?.[0] ?? null;
 
@@ -19,31 +15,6 @@ const resolvePreferredLanguage = (savedLanguage) =>
   normalizeLanguage(savedLanguage) ??
   normalizeLanguage(getDeviceLocale()?.languageCode) ??
   FALLBACK_LANGUAGE;
-
-const syncNativeLayoutDirection = async (isRTL) => {
-  if (Platform.OS === 'web' || I18nManager.isRTL === isRTL) {
-    return;
-  }
-
-  I18nManager.allowRTL(isRTL);
-  I18nManager.forceRTL(isRTL);
-
-  if (__DEV__ || isExpoGo) {
-    console.warn(
-      '[i18n] RTL direction changed. Expo Go/dev will not fully reload native layout direction, especially on Android. Verify direction changes in a development or production build after restart.'
-    );
-    return;
-  }
-
-  try {
-    await Updates.reloadAsync();
-  } catch (error) {
-    console.warn('[i18n] Failed to reload after RTL change:', error);
-    if (!isExpoGo) {
-      DevSettings.reload();
-    }
-  }
-};
 
 // Arabic translations
 const ar = {
@@ -371,14 +342,15 @@ const en = {
 
 const translations = { ar, en };
 
+// RTL is handled purely in JS via flexDirection — no native I18nManager dependency.
+// This avoids the iOS 26 crash caused by I18nManager.forceRTL + expo-updates ErrorRecovery.
 export const getRTLRowDirection = (isRTL) => {
-  // Rely on the active native/layout direction instead of compensating in JS.
-  // Manual mismatch flipping caused Android double-reversal when the native RTL
-  // state and JS language state were temporarily out of sync.
-  return 'row';
+  return isRTL ? 'row-reverse' : 'row';
 };
 
-export const getRTLInverseRowDirection = () => 'row-reverse';
+export const getRTLInverseRowDirection = (isRTL) => {
+  return isRTL ? 'row' : 'row-reverse';
+};
 
 export const getRTLTextAlign = (isRTL) => (isRTL ? 'right' : 'left');
 
@@ -413,16 +385,15 @@ export const useLanguageStore = create((set, get) => ({
   setLanguage: async (language) => {
     const nextLanguage = resolvePreferredLanguage(language);
     const nextSnapshot = getDirectionSnapshot(nextLanguage);
-
     await SecureStore.setItemAsync(LANGUAGE_KEY, nextLanguage);
     set(nextSnapshot);
-    await syncNativeLayoutDirection(nextSnapshot.isRTL);
+    return { restarted: false };
   },
   
   toggleLanguage: async () => {
     const currentLang = get().language;
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
-    await get().setLanguage(newLang);
+    return get().setLanguage(newLang);
   },
   
   initLanguage: async () => {
@@ -430,15 +401,6 @@ export const useLanguageStore = create((set, get) => ({
       const savedLang = await SecureStore.getItemAsync(LANGUAGE_KEY);
       const initialSnapshot = getDirectionSnapshot(resolvePreferredLanguage(savedLang));
       set(initialSnapshot);
-      // Only set direction flags — do NOT reload during init.
-      // Reloading here causes an infinite loop because forceRTL
-      // state doesn't persist through Updates.reloadAsync().
-      // syncNativeLayoutDirection (with reload) is called from
-      // setLanguage/toggleLanguage when the user explicitly changes language.
-      if (Platform.OS !== 'web' && I18nManager.isRTL !== initialSnapshot.isRTL) {
-        I18nManager.allowRTL(initialSnapshot.isRTL);
-        I18nManager.forceRTL(initialSnapshot.isRTL);
-      }
     } catch (error) {
       console.log('Error loading language:', error);
     }

@@ -24,22 +24,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  ZoomIn,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL, rowDirection } = useTranslation();
+  const { isRTL, rowDirection } = useTranslation();
 
   const [method, setMethod] = useState(null); // 'phone'
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // default: Saudi Arabia
@@ -47,15 +38,8 @@ export default function RegisterScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-  // Animation values
-  const phoneScale = useSharedValue(1);
-  const verifyScale = useSharedValue(1);
-
   const handleSelectMethod = (selectedMethod) => {
     if (selectedMethod === "phone") {
-      phoneScale.value = withSpring(0.95, {}, () => {
-        phoneScale.value = withSpring(1);
-      });
       setMethod("phone");
     }
   };
@@ -76,9 +60,6 @@ export default function RegisterScreen() {
     }
 
     setIsVerifying(true);
-    verifyScale.value = withSpring(0.95, {}, () => {
-      verifyScale.value = withSpring(1);
-    });
 
     try {
       const fullPhone = `${selectedCountry.dialCode}${phoneNumber}`;
@@ -97,14 +78,6 @@ export default function RegisterScreen() {
     }
   };
 
-  const phoneAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: phoneScale.value }],
-  }));
-
-  const verifyAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: verifyScale.value }],
-  }));
-
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
@@ -113,7 +86,7 @@ export default function RegisterScreen() {
   const renderMethodSelection = () => (
     <View style={styles.methodSelectionContainer}>
       {/* Logo */}
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.logoSection}>
+      <View style={styles.logoSection}>
         <View style={[styles.logoCircle, { backgroundColor: "#FFFFFF", shadowColor: colors.primary }]}>
           <Image
             source={require("@/assets/images/logo.png")}
@@ -121,20 +94,20 @@ export default function RegisterScreen() {
             contentFit="contain"
           />
         </View>
-      </Animated.View>
+      </View>
 
-      <Animated.View entering={FadeInDown.delay(200)} style={styles.methodSelectionHeader}>
+      <View style={styles.methodSelectionHeader}>
         <Text style={[styles.methodSelectionTitle, { color: colors.text }]}>
           {isRTL ? "إنشاء حساب" : "Create Account"}
         </Text>
         <Text style={[styles.methodSelectionSubtitle, { color: colors.textSecondary }]}>
           {isRTL ? "اختر طريقة التسجيل المفضلة" : "Choose your preferred sign up method"}
         </Text>
-      </Animated.View>
+      </View>
 
       <View style={styles.methodCards}>
         {/* Phone Number Option */}
-        <Animated.View entering={ZoomIn.delay(300)} style={phoneAnimatedStyle}>
+        <View>
           <Pressable
             onPress={() => handleSelectMethod("phone")}
             style={({ pressed }) => [
@@ -156,11 +129,11 @@ export default function RegisterScreen() {
               {isRTL ? "سجل باستخدام رقم جوالك" : "Sign up with your phone"}
             </Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </View>
 
       {/* Sign In Link */}
-      <Animated.View entering={FadeIn.delay(600)} style={[styles.footerLink, { flexDirection: rowDirection }]}>
+      <View style={[styles.footerLink, { flexDirection: rowDirection }]}>
         <Text style={[styles.footerText, { color: colors.textSecondary }]}>
           {isRTL ? "لديك حساب بالفعل؟ " : "Already have an account? "}
         </Text>
@@ -169,14 +142,14 @@ export default function RegisterScreen() {
             {isRTL ? "تسجيل الدخول" : "Sign In"}
           </Text>
         </Pressable>
-      </Animated.View>
+      </View>
     </View>
   );
 
   // Phone Number Entry Screen
   const renderPhoneEntry = () => (
     <View style={styles.phoneEntryContainer}>
-      <Animated.View entering={FadeInDown.delay(200)} style={styles.phoneEntryHeader}>
+      <View style={styles.phoneEntryHeader}>
         <View style={[styles.phoneIconCircle, { backgroundColor: colors.primaryLight }]}>
           <Phone size={36} color={colors.primary} />
         </View>
@@ -186,9 +159,9 @@ export default function RegisterScreen() {
         <Text style={[styles.phoneEntrySubtitle, { color: colors.textSecondary }]}>
           {isRTL ? "سنرسل لك رمز التحقق عبر الرسائل النصية" : "We'll send you a verification code via SMS"}
         </Text>
-      </Animated.View>
+      </View>
 
-      <Animated.View entering={FadeInUp.delay(300)} style={styles.phoneInputContainer}>
+      <View style={styles.phoneInputContainer}>
         <CountryPickerModal
           visible={showCountryPicker}
           onClose={() => setShowCountryPicker(false)}
@@ -248,7 +221,7 @@ export default function RegisterScreen() {
         </View>
 
         {phoneNumber.length >= selectedCountry.minLength && (
-          <Animated.View style={verifyAnimatedStyle} entering={FadeInDown.delay(100)}>
+          <View>
             <Pressable
               onPress={handleSendCode}
               disabled={isVerifying}
@@ -267,9 +240,9 @@ export default function RegisterScreen() {
                   : (isRTL ? "إرسال رمز التحقق" : "Send Verification Code")}
               </Text>
             </Pressable>
-          </Animated.View>
+          </View>
         )}
-      </Animated.View>
+      </View>
     </View>
   );
 
@@ -280,10 +253,7 @@ export default function RegisterScreen() {
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
           {/* Header */}
-          <Animated.View
-            entering={FadeInDown.delay(100)}
-            style={[styles.header, { flexDirection: rowDirection }]}
-          >
+          <View style={[styles.header, { flexDirection: rowDirection }]}>
             <Pressable
               onPress={() => {
                 if (method) {
@@ -311,7 +281,7 @@ export default function RegisterScreen() {
             </Text>
 
             <View style={styles.headerSpacer} />
-          </Animated.View>
+          </View>
 
           {/* Content */}
           {!method ? renderMethodSelection() : method === "phone" ? renderPhoneEntry() : null}

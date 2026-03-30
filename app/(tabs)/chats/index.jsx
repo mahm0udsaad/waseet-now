@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   View,
@@ -8,11 +8,11 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, Check, CheckCheck } from 'lucide-react-native';
+import { Check, CheckCheck, ChevronRight, Search } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
 import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
 import { fetchConversations, subscribeToConversationMembership } from '@/utils/supabase/chat';
@@ -22,23 +22,30 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 
 export default function ChatsListScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { colors, isDark } = useTheme();
   const { t, isRTL, rowDirection } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const searchInputRef = useRef(null);
   const membershipUnsubRef = useRef(null);
   const messageChannelRef = useRef(null);
   const setTotalUnread = useChatUnreadStore((s) => s.setTotalUnread);
   const incrementChatUnread = useChatUnreadStore((s) => s.incrementUnread);
   const decrementChatUnread = useChatUnreadStore((s) => s.decrementUnread);
 
-  // Reload conversations every time the screen is focused (e.g. coming back from a chat)
+  // Reload conversations on focus, but skip if loaded recently (within 2s)
+  const lastLoadRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastLoadRef.current < 2000) return;
+      lastLoadRef.current = now;
       loadConversations();
     }, [])
   );
@@ -46,6 +53,15 @@ export default function ChatsListScreen() {
   useEffect(() => {
     getSupabaseUser().then((user) => setCurrentUserId(user?.id || null));
   }, []);
+
+  useEffect(() => {
+    if (!isSearchActive) return;
+    const timeoutId = setTimeout(() => {
+      searchInputRef.current?.focus?.();
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [isSearchActive]);
 
   const loadConversations = async (isRefresh = false) => {
     if (isRefresh) {
@@ -165,8 +181,11 @@ export default function ChatsListScreen() {
     return previews[att.type] || (isRTL ? '📩 مرفق' : '📩 Attachment');
   }, [isRTL]);
 
-  const filteredChats = conversations.filter((chat) =>
-    (chat.name || chat.id).toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChats = useMemo(
+    () => conversations.filter((chat) =>
+      (chat.name || chat.id).toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [conversations, searchQuery]
   );
 
   const skeletonChats = React.useMemo(
@@ -271,25 +290,81 @@ export default function ChatsListScreen() {
   );
   }, [colors, isRTL, t, handleChatPress, getLastMessagePreview]);
 
+  const Separator = useCallback(
+    () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
+    [colors.border]
+  );
+
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerLargeTitle: false,
+          headerTitleAlign: 'center',
+          title: isRTL ? 'المحادثات' : 'Chats',
+          headerLeftContainerStyle: styles.headerSideContainer,
+          headerRightContainerStyle: styles.headerSideContainer,
+          headerLeft: () => (
+            <Pressable
+              onPress={() => {
+                if (isSearchActive) {
+                  setIsSearchActive(false);
+                  setSearchQuery('');
+                  return;
+                }
+                setIsSearchActive(true);
+              }}
+              style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+            >
+              <Search size={16} color={colors.text} />
+            </Pressable>
+          ),
+          headerRight: () =>
+            navigation.canGoBack() ? (
+              <Pressable
+                onPress={() => router.back()}
+                style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+              >
+                <ChevronRight size={20} color={colors.text} />
+              </Pressable>
+            ) : null,
+        }}
+      />
       <StatusBar style={colors.statusBar} />
-      <View style={styles.header}>
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, flexDirection: getRTLRowDirection(isRTL) }]}>
-            <Search size={20} color={colors.textMuted} style={{ marginHorizontal: 10 }} />
+
+      {isSearchActive ? (
+        <View style={styles.searchContainer}>
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: rowDirection,
+              },
+            ]}
+          >
+            <Search size={18} color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-                placeholder={isRTL ? 'بحث في المحادثات...' : 'Search chats...'}
-                placeholderTextColor={colors.textMuted}
-                style={[styles.searchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+              ref={searchInputRef}
+              placeholder={isRTL ? 'بحث في المحادثات...' : 'Search chats...'}
+              placeholderTextColor={colors.textMuted}
+              style={[styles.searchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
             />
+          </View>
         </View>
-      </View>
+      ) : null}
 
       {error ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -361,7 +436,7 @@ export default function ChatsListScreen() {
               colors={[colors.primary]}
             />
           }
-          ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
+          ItemSeparatorComponent={Separator}
           ListEmptyComponent={
             !loading ? (
               <View style={styles.emptyStateContainer}>
@@ -386,24 +461,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 16,
-    paddingHorizontal: 20,
-    marginBottom: 10,
+  listContent: {
+    paddingBottom: 100, // Space for bottom tab bar
   },
   searchContainer: {
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  searchBar: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingHorizontal: 4,
-    marginBottom: 10,
+    borderWidth: 1,
     alignItems: 'center',
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    paddingVertical: 4,
   },
-  listContent: {
-    paddingBottom: 100, // Space for bottom tab bar
+  headerSideContainer: {
+    paddingHorizontal: 8,
+  },
+  headerBackButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chatItem: {
     paddingVertical: 16,

@@ -15,7 +15,7 @@ A comprehensive digital marketplace platform for Saudi Arabia, providing secure 
 - **Damen (الضامن)** - Guaranteed security and surety services
 
 ### Technical Features
-- 🔐 **Secure Authentication** - OTP verification, Google Sign-in, and secure token management
+- 🔐 **Secure Authentication** - OTP verification and secure token management
 - 💬 **Real-time Chat** - Integrated messaging with push notifications
 - 🌍 **Multi-language Support** - Arabic (RTL) and English (LTR) with seamless switching
 - 🎨 **Dark/Light Theme** - Automatic theme switching with system preference detection
@@ -54,7 +54,6 @@ A comprehensive digital marketplace platform for Saudi Arabia, providing secure 
    Required environment variables:
    - `EXPO_PUBLIC_SUPABASE_URL` - Your Supabase project URL
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-   - `EXPO_PUBLIC_GOOGLE_CLIENT_ID` - Google OAuth client ID
 
 4. **Set up Supabase**
    - Create a new project on [Supabase](https://supabase.com)
@@ -107,7 +106,6 @@ kafel/
 
 ### Backend & Services
 - **Supabase** - Backend-as-a-Service (Database, Auth, Storage)
-- **Google Sign-in** - OAuth authentication
 - **Expo Notifications** - Push notification service
 
 ### UI & Styling
@@ -129,7 +127,6 @@ Create a `.env` file in the root directory:
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-EXPO_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 ### Supabase Setup

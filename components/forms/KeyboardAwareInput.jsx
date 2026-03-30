@@ -9,7 +9,7 @@ import {
   InputAccessoryView,
   Keyboard,
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import FadeInView from "@/components/ui/FadeInView";
 import { Check } from "lucide-react-native";
 import { getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
 
@@ -30,7 +30,7 @@ const KeyboardAwareInput = memo(({
   const inputRef = useRef(null);
 
   return (
-    <Animated.View entering={FadeInDown} style={styles.inputContainer}>
+    <FadeInView style={styles.inputContainer}>
       <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
         {label}
       </Text>
@@ -62,7 +62,7 @@ const KeyboardAwareInput = memo(({
           />
         </View>
       </View>
-    </Animated.View>
+    </FadeInView>
   );
 });
 
