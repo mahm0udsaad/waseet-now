@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import FadeInView from "@/components/ui/FadeInView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronDown, ChevronRight } from "lucide-react-native";
+import { ChevronDown } from "lucide-react-native";
 
 // Native Components
 import {
@@ -162,17 +162,8 @@ export default function CreateDhamenScreen() {
           headerShown: true,
           headerLargeTitle: false,
           title: t?.dhamen?.title || (isRTL ? "طلب ضامن" : "Request Guarantee"),
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackButtonDisplayMode: "minimal",
-          headerLeft: undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         }}
       />
       <StatusBar style={colors.statusBar} />

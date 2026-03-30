@@ -3,11 +3,8 @@ import { I18nManager } from 'react-native';
 import { getLocales } from 'expo-localization';
 import * as SecureStore from 'expo-secure-store';
 
-// Disable native RTL — the app handles layout direction purely in JS.
-// forceRTL(false) takes effect on next JS reload; NATIVE_IS_RTL captures
-// the current session state so helpers can compensate immediately.
-I18nManager.allowRTL(false);
-I18nManager.forceRTL(false);
+// Native RTL is controlled via forceRTL() + app reload when direction changes.
+// NATIVE_IS_RTL captures the current session state so helpers stay consistent.
 const NATIVE_IS_RTL = I18nManager.isRTL;
 
 const LANGUAGE_KEY = 'app-language';
@@ -350,12 +347,10 @@ const en = {
 
 const translations = { ar, en };
 
-// RTL layout is handled in JS.  When the device language is Arabic the native
-// I18nManager automatically flips 'row'/'row-reverse', marginStart/End, and
-// flex-start/end.  To avoid double-flipping we compare the *app's* desired
-// direction with the *native* direction and only apply a reversal when they
-// disagree.  After forceRTL(false) takes effect (next launch) NATIVE_IS_RTL
-// becomes false and the helpers collapse to the straightforward path.
+// RTL layout helpers.  After initLanguage / setLanguage ensure native RTL
+// matches the app language (via forceRTL + reload), NATIVE_IS_RTL always
+// equals the app's desired direction and these helpers simply return 'row',
+// 'flex-start', etc., letting the native layout system handle flipping.
 export const getRTLRowDirection = (appIsRTL) => {
   const needsFlip = appIsRTL !== NATIVE_IS_RTL;
   return needsFlip ? 'row-reverse' : 'row';
@@ -400,28 +395,61 @@ const getDirectionSnapshot = (language) => {
   };
 };
 
+// Reload the JS bundle so forceRTL takes effect.
+const reloadForRTL = async () => {
+  try {
+    const Updates = await import('expo-updates');
+    await Updates.reloadAsync();
+  } catch {
+    // In dev or when Updates is unavailable, fall back to DevSettings.
+    try {
+      const RN = require('react-native');
+      RN.DevSettings?.reload?.();
+    } catch { /* direction change will take effect on next manual restart */ }
+  }
+};
+
 export const useLanguageStore = create((set, get) => ({
   ...getDirectionSnapshot(FALLBACK_LANGUAGE),
-  
+
   setLanguage: async (language) => {
     const nextLanguage = resolvePreferredLanguage(language);
-    const nextSnapshot = getDirectionSnapshot(nextLanguage);
+    const nextIsRTL = nextLanguage === 'ar';
     await SecureStore.setItemAsync(LANGUAGE_KEY, nextLanguage);
-    set(nextSnapshot);
+
+    // When direction changes, update native RTL and reload.
+    if (I18nManager.isRTL !== nextIsRTL) {
+      I18nManager.allowRTL(nextIsRTL);
+      I18nManager.forceRTL(nextIsRTL);
+      await reloadForRTL();
+      return { restarted: true };
+    }
+
+    set(getDirectionSnapshot(nextLanguage));
     return { restarted: false };
   },
-  
+
   toggleLanguage: async () => {
     const currentLang = get().language;
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
     return get().setLanguage(newLang);
   },
-  
+
   initLanguage: async () => {
     try {
       const savedLang = await SecureStore.getItemAsync(LANGUAGE_KEY);
-      const initialSnapshot = getDirectionSnapshot(resolvePreferredLanguage(savedLang));
-      set(initialSnapshot);
+      const language = resolvePreferredLanguage(savedLang);
+      const appIsRTL = language === 'ar';
+
+      // Ensure native RTL matches the app language on startup.
+      if (I18nManager.isRTL !== appIsRTL) {
+        I18nManager.allowRTL(appIsRTL);
+        I18nManager.forceRTL(appIsRTL);
+        await reloadForRTL();
+        return; // App will restart — no state update needed.
+      }
+
+      set(getDirectionSnapshot(language));
     } catch (error) {
       console.log('Error loading language:', error);
     }

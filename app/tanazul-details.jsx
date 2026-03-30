@@ -7,7 +7,6 @@ import { SkeletonGroup } from "@/components/ui/Skeleton";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
-import { ChevronRight } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, Share } from "react-native";
 import FadeInView from "@/components/ui/FadeInView";
@@ -134,30 +133,12 @@ export default function TanazulDetailsScreen() {
       <Stack.Screen
         options={{
           title: isRTL ? "تفاصيل التنازل" : "Tanazul Details",
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackButtonDisplayMode: "minimal",
-          headerLeft: isRTL
-            ? () => (
-                <Pressable onPress={handleShare} style={styles.iconButton}>
-                  <NativeIcon name="share" size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <View style={{ flexDirection: "row" }}>
-                  <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                </View>
-              )
-            : () => (
-            <View style={{ flexDirection: "row" }}>
-              <Pressable onPress={handleShare} style={styles.iconButton}>
-                <NativeIcon name="share" size={22} color={colors.text} />
-              </Pressable>
-            </View>
+          headerRight: () => (
+            <Pressable onPress={handleShare} style={styles.iconButton}>
+              <NativeIcon name="share" size={22} color={colors.text} />
+            </Pressable>
           ),
         }}
       />

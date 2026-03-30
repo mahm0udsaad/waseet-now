@@ -27,7 +27,6 @@ import {
   UserCheck,
   Briefcase,
   AlertTriangle,
-  ChevronRight,
 } from 'lucide-react-native';
 import FadeInView from "@/components/ui/FadeInView";
 
@@ -885,15 +884,6 @@ export default function DaminOrderDetailsScreen() {
             headerShown: true,
             headerLargeTitle: false,
             title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-            headerBackVisible: !isRTL,
-            headerLeft: isRTL ? () => null : undefined,
-            headerRight: isRTL
-              ? () => (
-                  <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                )
-              : undefined,
           }}
         />
         <StatusBar style={colors.statusBar} />
@@ -922,15 +912,6 @@ export default function DaminOrderDetailsScreen() {
             headerShown: true,
             headerLargeTitle: false,
             title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-            headerBackVisible: !isRTL,
-            headerLeft: isRTL ? () => null : undefined,
-            headerRight: isRTL
-              ? () => (
-                  <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                )
-              : undefined,
           }}
         />
         <StatusBar style={colors.statusBar} />
@@ -1255,15 +1236,6 @@ export default function DaminOrderDetailsScreen() {
           headerShown: true,
           headerLargeTitle: false,
           title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-          headerBackVisible: !isRTL,
-          headerLeft: isRTL ? () => null : undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         }}
       />
       <StatusBar style={colors.statusBar} />

@@ -90,38 +90,10 @@ export default function TaqibListScreen() {
           headerTitleAlign: "center",
           title: isRTL ? "إعلانات التعقيب" : "Taqib Ads",
           headerBackButtonDisplayMode: "minimal",
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackTitle: "",
-          headerLeftContainerStyle: styles.headerSideContainer,
           headerRightContainerStyle: styles.headerSideContainer,
-          headerLeft: isRTL
-            ? () => (
-                <Pressable
-                  testID="taqib-add-btn"
-                  onPress={() => router.push("/create-taqib")}
-                  style={({ pressed }) => [
-                    styles.headerAddButton,
-                    { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
-                  ]}
-                >
-                  <Plus size={18} color="#fff" />
-                  <Text style={styles.headerAddButtonText}>
-                    {isRTL ? "إضافة إعلان" : "Add Ad"}
-                  </Text>
-                </Pressable>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable
-                  onPress={() => router.back()}
-                  style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
-                >
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : () => (
+          headerRight: () => (
             <Pressable
               testID="taqib-add-btn"
               onPress={() => router.push("/create-taqib")}

@@ -27,159 +27,79 @@ export default function HomeFixedHeader({
 
   const content = (
     <View style={styles.headerContent}>
-      {isRTL ? (
-        <>
-          <View style={styles.actionsSection}>
-            <HeaderActionButton
-              accessibilityLabel={isRTL ? "تغيير اللغة" : "Change language"}
-              onPress={onToggleLanguage}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <Text style={[styles.languageText, { color: colors.primary }]}>
-                {language === "ar" ? "EN" : "ع"}
-              </Text>
-            </HeaderActionButton>
+      <View style={styles.brandSection}>
+        <View style={[styles.logoWrapper, Shadows.small]}>
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.logo}
+            contentFit="contain"
+          />
+        </View>
 
-            <HeaderActionButton
-              accessibilityLabel={
-                isDark
-                  ? isRTL
-                    ? "تفعيل الوضع الفاتح"
-                    : "Switch to light mode"
-                  : isRTL
-                    ? "تفعيل الوضع الداكن"
-                    : "Switch to dark mode"
-              }
-              onPress={onToggleTheme}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <NativeIcon
-                name={isDark ? "sun" : "moon"}
-                size={20}
-                color={isDark ? colors.warning : colors.primary}
-              />
-            </HeaderActionButton>
+        <View style={{ flexShrink: 1 }}>
+          <Text
+            style={[
+              styles.greeting,
+              { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
+            ]}
+          >
+            {homeGreeting}
+          </Text>
+          <Text
+            style={[
+              styles.brandName,
+              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+            ]}
+          >
+            {homeBrand}
+          </Text>
+        </View>
+      </View>
 
-            <HeaderActionButton
-              accessibilityLabel={isRTL ? "الإشعارات" : "Notifications"}
-              onPress={onOpenNotifications}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <NativeIcon name="notification" size={20} color={colors.text} />
-              {unreadCount > 0 ? (
-                <View style={[styles.badge, { backgroundColor: colors.error }]}>
-                  <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
-                </View>
-              ) : null}
-            </HeaderActionButton>
-          </View>
-
-          <View style={styles.brandSection}>
-            <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
-              <Text
-                style={[
-                  styles.greeting,
-                  { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
-                ]}
-              >
-                {homeGreeting}
-              </Text>
-              <Text
-                style={[
-                  styles.brandName,
-                  { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
-                ]}
-              >
-                {homeBrand}
-              </Text>
+      <View style={styles.actionsSection}>
+        <HeaderActionButton
+          accessibilityLabel={isRTL ? "الإشعارات" : "Notifications"}
+          onPress={onOpenNotifications}
+          backgroundColor={colors.surfaceHighlight}
+        >
+          <NativeIcon name="notification" size={20} color={colors.text} />
+          {unreadCount > 0 ? (
+            <View style={[styles.badge, { backgroundColor: colors.error }]}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
             </View>
+          ) : null}
+        </HeaderActionButton>
 
-            <View style={[styles.logoWrapper, Shadows.small]}>
-              <Image
-                source={require("@/assets/images/logo.png")}
-                style={styles.logo}
-                contentFit="contain"
-              />
-            </View>
-          </View>
-        </>
-      ) : (
-        <>
-          <View style={styles.brandSection}>
-            <View style={[styles.logoWrapper, Shadows.small]}>
-              <Image
-                source={require("@/assets/images/logo.png")}
-                style={styles.logo}
-                contentFit="contain"
-              />
-            </View>
+        <HeaderActionButton
+          accessibilityLabel={
+            isDark
+              ? isRTL
+                ? "تفعيل الوضع الفاتح"
+                : "Switch to light mode"
+              : isRTL
+                ? "تفعيل الوضع الداكن"
+                : "Switch to dark mode"
+          }
+          onPress={onToggleTheme}
+          backgroundColor={colors.surfaceHighlight}
+        >
+          <NativeIcon
+            name={isDark ? "sun" : "moon"}
+            size={20}
+            color={isDark ? colors.warning : colors.primary}
+          />
+        </HeaderActionButton>
 
-            <View style={{ flexShrink: 1 }}>
-              <Text
-                style={[
-                  styles.greeting,
-                  { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
-                ]}
-              >
-                {homeGreeting}
-              </Text>
-              <Text
-                style={[
-                  styles.brandName,
-                  { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
-                ]}
-              >
-                {homeBrand}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.actionsSection}>
-            <HeaderActionButton
-              accessibilityLabel={isRTL ? "الإشعارات" : "Notifications"}
-              onPress={onOpenNotifications}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <NativeIcon name="notification" size={20} color={colors.text} />
-              {unreadCount > 0 ? (
-                <View style={[styles.badge, { backgroundColor: colors.error }]}>
-                  <Text style={styles.badgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
-                </View>
-              ) : null}
-            </HeaderActionButton>
-
-            <HeaderActionButton
-              accessibilityLabel={
-                isDark
-                  ? isRTL
-                    ? "تفعيل الوضع الفاتح"
-                    : "Switch to light mode"
-                  : isRTL
-                    ? "تفعيل الوضع الداكن"
-                    : "Switch to dark mode"
-              }
-              onPress={onToggleTheme}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <NativeIcon
-                name={isDark ? "sun" : "moon"}
-                size={20}
-                color={isDark ? colors.warning : colors.primary}
-              />
-            </HeaderActionButton>
-
-            <HeaderActionButton
-              accessibilityLabel={isRTL ? "تغيير اللغة" : "Change language"}
-              onPress={onToggleLanguage}
-              backgroundColor={colors.surfaceHighlight}
-            >
-              <Text style={[styles.languageText, { color: colors.primary }]}>
-                {language === "ar" ? "EN" : "ع"}
-              </Text>
-            </HeaderActionButton>
-          </View>
-        </>
-      )}
+        <HeaderActionButton
+          accessibilityLabel={isRTL ? "تغيير اللغة" : "Change language"}
+          onPress={onToggleLanguage}
+          backgroundColor={colors.surfaceHighlight}
+        >
+          <Text style={[styles.languageText, { color: colors.primary }]}>
+            {language === "ar" ? "EN" : "ع"}
+          </Text>
+        </HeaderActionButton>
+      </View>
     </View>
   );
 
@@ -240,7 +160,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
     gap: Spacing.m,
   },
   logoWrapper: {

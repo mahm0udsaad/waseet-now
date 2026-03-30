@@ -10,7 +10,6 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ChevronRight } from "lucide-react-native";
 import FadeInView from "@/components/ui/FadeInView";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -126,24 +125,11 @@ export default function TaqibAdDetailsScreen() {
           headerBackVisible: false,
           headerBackTitleVisible: false,
           headerBackButtonDisplayMode: "minimal",
-          headerLeft: isRTL
-            ? () => (
-                <View style={styles.iconButton}>
-                  <NativeIcon name="share" size={20} color={colors.text} style={{ opacity: 0.35 }} />
-                </View>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <View style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} style={{ opacity: 0.35 }} />
-                </View>
-              )
-            : () => (
-                <View style={styles.iconButton}>
-                  <NativeIcon name="share" size={20} color={colors.text} style={{ opacity: 0.35 }} />
-                </View>
-              ),
+          headerRight: () => (
+            <View style={styles.iconButton}>
+              <NativeIcon name="share" size={20} color={colors.text} style={{ opacity: 0.35 }} />
+            </View>
+          ),
         }}
       />
       <StatusBar style="light" />
@@ -261,23 +247,9 @@ export default function TaqibAdDetailsScreen() {
       <Stack.Screen
         options={{
           title: isRTL ? "تفاصيل الإعلان" : "Ad Details",
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackButtonDisplayMode: "minimal",
-          headerLeft: isRTL
-            ? () => (
-                <Pressable onPress={handleShare} style={styles.iconButton}>
-                  <NativeIcon name="share" size={20} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : () => (
+          headerRight: () => (
             <Pressable onPress={handleShare} style={styles.iconButton}>
               <NativeIcon name="share" size={20} color={colors.text} />
             </Pressable>

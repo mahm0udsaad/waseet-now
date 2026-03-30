@@ -27,7 +27,6 @@ import { useThemeStore } from '@/utils/theme/store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 
@@ -598,11 +597,10 @@ export default function RootLayout() {
       <View style={{ flex: 1 }}>
           <InAppToast />
           <Stack
-            screenOptions={({ navigation }) => ({
+            screenOptions={{
               headerShown: false,
               gestureEnabled: true,
               headerBackButtonDisplayMode: 'minimal',
-              headerBackVisible: !isRTL,
               headerShadowVisible: false,
               headerTintColor: colors.text,
               headerStyle: {
@@ -612,30 +610,10 @@ export default function RootLayout() {
                 color: colors.text,
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               },
-              headerTitleAlign: isRTL ? 'right' : 'left',
-              headerRightContainerStyle: isRTL ? { paddingHorizontal: 8 } : undefined,
-              headerRight:
-                isRTL && navigation.canGoBack()
-                  ? () => (
-                      <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => ({
-                          width: 34,
-                          height: 34,
-                          borderRadius: 17,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: pressed ? 0.9 : 1,
-                        })}
-                      >
-                        <ChevronRight size={22} color={colors.text} />
-                      </Pressable>
-                    )
-                  : undefined,
               contentStyle: {
                 backgroundColor: colors.background,
               },
-            })}
+            }}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
@@ -706,7 +684,6 @@ export default function RootLayout() {
                 headerShown: true,
                 title: isRTL ? 'طلب ضامن' : 'Create Damin',
                 headerLargeTitle: false,
-                headerBackVisible: !isRTL,
                 headerBackButtonDisplayMode: 'minimal',
                 headerBackTitleVisible: false,
                 headerBackTitle: '',

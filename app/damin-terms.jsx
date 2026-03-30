@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
-import { CheckCircle2, ChevronRight, Circle } from "lucide-react-native";
+import { CheckCircle2, Circle } from "lucide-react-native";
 import FadeInView from "@/components/ui/FadeInView";
 
 import { useTheme } from "@/utils/theme/store";
@@ -109,15 +109,6 @@ export default function DaminTermsScreen() {
           headerShown: true,
           headerLargeTitle: false,
           title: isRTL ? "الشروط والأحكام" : "Terms & Conditions",
-          headerBackVisible: !isRTL,
-          headerLeft: undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         }}
       />
       <StatusBar style={colors.statusBar} />
