@@ -6,7 +6,7 @@ import {
   subscribeToMessages,
   sendMessage as supabaseSendMessage,
 } from "@/utils/supabase/chat";
-import { getSupabaseUser } from "@/utils/supabase/client";
+import { getSupabaseUser, supabase } from "@/utils/supabase/client";
 import { markConversationNotificationsRead } from "@/utils/supabase/notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
@@ -108,7 +108,7 @@ export function useChatConversation(params, t, isRTL) {
 
     const fetchOtherUserProfile = async () => {
       try {
-        const { supabase } = await import("@/utils/supabase/client");
+
 
         // Get all members of this conversation
         const { data: members, error: membersError } = await supabase
@@ -172,7 +172,7 @@ export function useChatConversation(params, t, isRTL) {
 
     const fetchAdContext = async () => {
       try {
-        const { supabase } = await import("@/utils/supabase/client");
+
 
         // Pull ad info via conversations.ad_id FK -> ads
         const { data, error } = await supabase

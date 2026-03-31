@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { sendMessage as sendChatMessage } from "@/utils/supabase/chat";
-import { checkPaymobStatus } from "@/utils/paymob";
+import { checkPaymobStatus, createPaymobIntention } from "@/utils/paymob";
 import {
   confirmDaminCardPayment,
+  getDaminOrderForChat,
   submitDaminPayment,
   updateDaminOrderMetadata,
   uploadTransferReceipt as uploadDaminTransferReceipt,
 } from "@/utils/supabase/daminOrders";
+import { getSupabaseSession } from "@/utils/supabase/client";
+import {
+  getOrdersForConversation,
+  submitOrderBankTransfer,
+  updateOrderStatus,
+  uploadOrderTransferReceipt,
+} from "@/utils/supabase/orders";
 import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
 
 /**
@@ -121,7 +129,6 @@ export function useChatPayments({
           }
 
           try {
-            const { getDaminOrderForChat } = await import("@/utils/supabase/daminOrders");
             const updated = await getDaminOrderForChat(convId || conversationId);
             setDaminOrder(updated);
           } catch {}
@@ -179,7 +186,6 @@ export function useChatPayments({
           }
 
           try {
-            const { updateOrderStatus } = await import("@/utils/supabase/orders");
             await updateOrderStatus(orderId, "payment_verified");
           } catch (statusErr) {
             console.warn("[RegularPay] Failed to update order status:", statusErr);
@@ -212,7 +218,6 @@ export function useChatPayments({
           }
 
           try {
-            const { getOrdersForConversation } = await import("@/utils/supabase/orders");
             const updated = await getOrdersForConversation(convId || conversationId);
             setOrdersForChat(updated);
           } catch {}
@@ -244,9 +249,6 @@ export function useChatPayments({
 
     setCardPayLoading(true);
     try {
-      const { getSupabaseSession } = await import("@/utils/supabase/client");
-      const { createPaymobIntention } = await import("@/utils/paymob");
-
       const session = await getSupabaseSession();
       const user = session?.user;
       const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || "";
@@ -330,7 +332,6 @@ export function useChatPayments({
         }
 
         try {
-          const { getDaminOrderForChat } = await import("@/utils/supabase/daminOrders");
           const updated = await getDaminOrderForChat(conversationId);
           setDaminOrder(updated);
         } catch {}
@@ -340,7 +341,6 @@ export function useChatPayments({
           isRTL ? "تم إرسال الدفع. سيتم التحقق والتأكيد قريباً." : "Payment submitted. It will be verified and confirmed soon."
         );
       } else {
-        const { submitOrderBankTransfer, uploadOrderTransferReceipt } = await import("@/utils/supabase/orders");
         const orderId = ctx.orderId;
 
         let receiptUrl = null;
