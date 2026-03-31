@@ -1,1 +1,2 @@
-export { default } from "../taqib-ad-details";
+import TaqibAdDetails from "../taqib-ad-details";
+export default TaqibAdDetails;

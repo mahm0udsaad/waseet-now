@@ -1,1 +1,2 @@
-export { default } from "../tanazul-details";
+import TanazulDetails from "../tanazul-details";
+export default TanazulDetails;
