@@ -29,6 +29,7 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -45,11 +46,18 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const err = this.state.error;
+      const errMsg = err?.message || String(err || 'Unknown error');
+      const errStack = err?.stack || '';
       return (
         <View style={errorStyles.container}>
           <Text style={errorStyles.emoji}>⚠️</Text>
           <Text style={errorStyles.title}>حدث خطأ غير متوقع</Text>
           <Text style={errorStyles.subtitle}>An unexpected error occurred</Text>
+          <ScrollView style={errorStyles.debugBox} contentContainerStyle={errorStyles.debugContent}>
+            <Text style={errorStyles.debugText}>{errMsg}</Text>
+            <Text style={errorStyles.debugStack}>{errStack}</Text>
+          </ScrollView>
           <Pressable
             onPress={() => this.setState({ hasError: false, error: null })}
             style={errorStyles.button}
@@ -73,7 +81,19 @@ const errorStyles = StyleSheet.create({
   },
   emoji: { fontSize: 48, marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#F2F5FA', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#9AA4B2', marginBottom: 24, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: '#9AA4B2', marginBottom: 12, textAlign: 'center' },
+  debugBox: {
+    maxHeight: 200,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.24)',
+    borderRadius: 12,
+    backgroundColor: '#020617',
+    marginBottom: 16,
+  },
+  debugContent: { padding: 12 },
+  debugText: { color: '#FEE2E2', fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  debugStack: { color: '#94A3B8', fontSize: 11, lineHeight: 16 },
   button: {
     backgroundColor: '#D83A3A',
     paddingHorizontal: 32,
@@ -390,6 +410,19 @@ export default function RootLayout() {
     setGlobalFontFamily(getPreferredFontFamily(isRTL));
   }, [isRTL]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.style.direction = dir;
+
+    if (document.body) {
+      document.body.setAttribute('dir', dir);
+      document.body.style.direction = dir;
+    }
+  }, [isRTL]);
+
   // Defer ALL notification setup until the app is fully ready.
   // expo-notifications TurboModule throws ObjC exceptions on iOS 26 during early startup,
   // crashing Hermes before JS error handlers can catch them.
@@ -597,10 +630,11 @@ export default function RootLayout() {
       <View style={{ flex: 1 }}>
           <InAppToast />
           <Stack
-            screenOptions={{
+            screenOptions={({ navigation }) => ({
               headerShown: false,
               gestureEnabled: true,
               headerBackButtonDisplayMode: 'minimal',
+              headerBackVisible: !isRTL,
               headerShadowVisible: false,
               headerTintColor: colors.text,
               headerStyle: {
@@ -610,10 +644,21 @@ export default function RootLayout() {
                 color: colors.text,
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               },
+              headerLeft: isRTL && navigation.canGoBack()
+                ? () => (
+                    <Pressable
+                      onPress={() => navigation.goBack()}
+                      hitSlop={8}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
+                    >
+                      <ChevronRight size={24} color={colors.text} />
+                    </Pressable>
+                  )
+                : undefined,
               contentStyle: {
                 backgroundColor: colors.background,
               },
-            }}
+            })}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
