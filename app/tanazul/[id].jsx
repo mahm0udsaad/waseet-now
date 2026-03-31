@@ -1,2 +1,1 @@
-import TanazulDetails from "../tanazul-details";
-export default TanazulDetails;
+module.exports = require("../tanazul-details");

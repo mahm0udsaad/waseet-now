@@ -1,2 +1,1 @@
-import TaqibAdDetails from "../taqib-ad-details";
-export default TaqibAdDetails;
+module.exports = require("../taqib-ad-details");

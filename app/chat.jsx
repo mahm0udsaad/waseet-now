@@ -1,2 +1,1 @@
-import ChatScreen from "./(tabs)/chats/chat";
-export default ChatScreen;
+module.exports = require("./(tabs)/chats/chat");
