@@ -3,7 +3,7 @@ import HomeFixedHeader, { FIXED_HEADER_HEIGHT } from "@/components/HomeFixedHead
 import { NativeIcon } from "@/components/native/NativeIcon";
 import PromotionalBanners from "@/components/PromotionalBanners";
 import { BorderRadius, Shadows, Spacing } from "@/constants/theme";
-import { getRTLStartAlign, getRTLTextAlign, pickRTLValue, useLanguage } from "@/utils/i18n/store";
+import { pickRTLValue, useLanguage } from "@/utils/i18n/store";
 import { showToast, useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { fetchMyNotifications } from "@/utils/supabase/notifications";
 import { useTheme } from "@/utils/theme/store";
@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const [isHeaderBlurred, setIsHeaderBlurred] = useState(false);
   const insets = useSafeAreaInsets();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { language, toggleLanguage, isRTL, rowDirection } = useLanguage();
+  const { language, toggleLanguage, isRTL } = useLanguage();
   const unreadCount = useInAppNotificationsStore((s) => s.unreadCount);
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,7 +124,7 @@ export default function HomeScreen() {
         <PromotionalBanners key={`home-banners-${bannersRefreshKey}`} />
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {isRTL ? "خدماتنا" : "Our Services"}
           </Text>
           <View style={styles.servicesGrid}>
@@ -139,7 +139,6 @@ export default function HomeScreen() {
                       backgroundColor: colors.surface,
                       transform: [{ scale: pressed ? 0.96 : 1 }],
                       borderColor: colors.border,
-                      flexDirection: rowDirection,
                     },
                     Shadows.small
                   ]}
@@ -147,9 +146,9 @@ export default function HomeScreen() {
                   <View style={[styles.serviceIconBox, { backgroundColor: service.color + '15' }]}>
                     <NativeIcon name={service.icon} size={28} color={service.color} />
                   </View>
-                  <View style={[styles.serviceInfo, { alignItems: getRTLStartAlign(isRTL) }]}>
+                  <View style={styles.serviceInfo}>
                     <Text style={[styles.serviceTitle, { color: colors.text }]}>{service.title}</Text>
-                    <Text style={[styles.serviceSubtitle, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]} numberOfLines={2}>
+                    <Text style={[styles.serviceSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
                       {service.subtitle}
                     </Text>
                   </View>
@@ -218,6 +217,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   serviceCard: {
+    flexDirection: 'row',
     alignItems: 'center',
     padding: Spacing.m,
     borderRadius: BorderRadius.xl,
@@ -238,10 +238,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
+    writingDirection: 'rtl',
   },
   serviceSubtitle: {
     fontSize: 13,
     lineHeight: 18,
+    writingDirection: 'rtl',
   },
   arrowCircle: {
     width: 32,

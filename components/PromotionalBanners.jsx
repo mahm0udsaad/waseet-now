@@ -1,4 +1,4 @@
-import { getRTLStartAlign, getRTLTextAlign, useLanguage } from "@/utils/i18n/store";
+import { useLanguage } from "@/utils/i18n/store";
 import {
   DEFAULT_HOME_SLIDERS,
   getHomeSliders,
@@ -27,7 +27,7 @@ export default function PromotionalBanners() {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [cards, setCards] = useState(DEFAULT_HOME_SLIDERS);
   const { colors } = useTheme();
-  const { isRTL, rowDirection } = useLanguage();
+  const { isRTL } = useLanguage();
   const contentWidth = Math.min(width, 760);
   const cardWidth = Math.max(contentWidth - 40, 280);
   const slideGap = 12;
@@ -167,7 +167,7 @@ export default function PromotionalBanners() {
               <View style={[styles.promoCircle, { bottom: -20, left: -30, width: 80, height: 80 }]} />
 
               <View style={styles.promoContent}>
-                <View style={[styles.promoHeader, { flexDirection: rowDirection }]}>
+                <View style={[styles.promoHeader, { flexDirection: 'row' }]}>
                   <View style={styles.promoBadge}>
                     <Text style={styles.promoBadgeText}>{card.badge}</Text>
                   </View>
@@ -176,9 +176,9 @@ export default function PromotionalBanners() {
                   </View>
                 </View>
 
-                <View style={{ alignItems: getRTLStartAlign(isRTL) }}>
-                  <Text style={[styles.promoTitle, { textAlign: getRTLTextAlign(isRTL) }]}>{card.title}</Text>
-                  <Text style={[styles.promoSubtitle, { textAlign: getRTLTextAlign(isRTL) }]}>{card.subtitle}</Text>
+                <View>
+                  <Text style={styles.promoTitle}>{card.title}</Text>
+                  <Text style={styles.promoSubtitle}>{card.subtitle}</Text>
                 </View>
               </View>
             </View>
@@ -186,7 +186,7 @@ export default function PromotionalBanners() {
         ))}
       </Animated.ScrollView>
 
-      <View style={[styles.pagination, { flexDirection: rowDirection }]}>
+      <View style={[styles.pagination, { flexDirection: 'row' }]}>
         {promotionalCards.map((_, index) => (
           <View
             key={index}
