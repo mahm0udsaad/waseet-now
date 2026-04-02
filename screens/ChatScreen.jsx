@@ -758,7 +758,7 @@ export default function ChatScreen() {
                 onPress={openReceiptSheet}
                 style={[styles.headerReceiptButton, { backgroundColor: colors.primaryLight }]}
               >
-                <Receipt size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{isRTL ? "إصدار فاتورة" : "Receipt"}</Text>
               </Pressable>
             )}
           </View>
@@ -858,7 +858,6 @@ export default function ChatScreen() {
                 onPress={openReceiptSheet}
                 style={[styles.compactActionBtn, { backgroundColor: colors.primaryLight }]}
               >
-                <Receipt size={14} color={colors.primary} />
                 <Text style={[styles.compactActionText, { color: colors.primary }]}>{isRTL ? "إصدار فاتورة" : "Receipt"}</Text>
               </Pressable>
             )}
@@ -1975,6 +1974,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   receiptTextInput: {
+    flex: 1,
     paddingVertical: 14,
     fontSize: 15,
   },
