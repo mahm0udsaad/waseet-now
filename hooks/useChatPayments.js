@@ -38,6 +38,8 @@ export function useChatPayments({
   const [selectedPaymentContext, setSelectedPaymentContext] = useState(null);
   const selectedPaymentContextRef = useRef(null);
   const lastHandledPayResultRef = useRef(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const openPaymentFlow = usePaymentFlowStore((state) => state.openPaymentFlow);
 
   // ── Handle return from Paymob checkout (damin) ──────────────────────
@@ -104,7 +106,8 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = (messages || []).some((m) =>
+              const currentMessages = messagesRef.current || [];
+              const alreadySent = currentMessages.some((m) =>
                 (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
@@ -153,7 +156,7 @@ export function useChatPayments({
     };
 
     handleDaminPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
+  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, router]);
 
   // ── Handle return from Paymob checkout (regular) ────────────────────
   useEffect(() => {
@@ -195,7 +198,8 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = (messages || []).some((m) =>
+              const currentMessages = messagesRef.current || [];
+              const alreadySent = currentMessages.some((m) =>
                 (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
@@ -244,7 +248,7 @@ export function useChatPayments({
     };
 
     handleRegularPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
+  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, router]);
 
   // ── Card payment handler ────────────────────────────────────────────
   const handleCardPayment = useCallback(async (paymentMethod = "card") => {
