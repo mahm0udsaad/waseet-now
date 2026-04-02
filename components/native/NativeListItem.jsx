@@ -127,14 +127,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: hairlineWidth,
   },
   leftContainer: {
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
   },
   rightContainer: {
-    marginLeft: spacing.md,
+    marginStart: spacing.md,
   },
   title: {
     ...typography.body,

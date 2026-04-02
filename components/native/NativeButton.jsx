@@ -191,10 +191,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   iconLeft: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   iconRight: {
-    marginLeft: spacing.sm,
+    marginStart: spacing.sm,
   },
 });
 

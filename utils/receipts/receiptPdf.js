@@ -3,7 +3,7 @@ import {
   COMMISSION_CONFIG,
   calculateCommission,
 } from "@/constants/commissionConfig";
-import { getRTLRowDirection, pickRTLValue } from "@/utils/i18n/store";
+import { pickRTLValue } from "@/utils/i18n/store";
 
 /**
  * Generate HTML for a professional receipt PDF (black & white)
@@ -190,7 +190,7 @@ function generateReceiptHTML(receiptData, isRTL = true) {
           margin-bottom: 28px;
           padding-bottom: 16px;
           border-bottom: 1px solid #ddd;
-          flex-direction: ${getRTLRowDirection(isRTL)};
+          flex-direction: row;
         }
         .meta-item {}
         .meta-label {
@@ -266,7 +266,7 @@ function generateReceiptHTML(receiptData, isRTL = true) {
         .signatures {
           display: flex;
           gap: 24px;
-          flex-direction: ${getRTLRowDirection(isRTL)};
+          flex-direction: row;
         }
         .sig-block {
           flex: 1;

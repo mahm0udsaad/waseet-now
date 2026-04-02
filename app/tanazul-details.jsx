@@ -1,4 +1,4 @@
-import { useTranslation, getRTLTextAlign, getRTLStartAlign, pickRTLValue } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { fetchAdById } from "@/utils/supabase/ads";
 import { getSupabaseUser } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
@@ -7,7 +7,6 @@ import { SkeletonGroup } from "@/components/ui/Skeleton";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { BlurView } from "expo-blur";
-import { ChevronRight } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View, Share } from "react-native";
 import FadeInView from "@/components/ui/FadeInView";
@@ -30,7 +29,7 @@ export default function TanazulDetailsScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const [adData, setAdData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -134,30 +133,12 @@ export default function TanazulDetailsScreen() {
       <Stack.Screen
         options={{
           title: isRTL ? "تفاصيل التنازل" : "Tanazul Details",
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackButtonDisplayMode: "minimal",
-          headerLeft: isRTL
-            ? () => (
-                <Pressable onPress={handleShare} style={styles.iconButton}>
-                  <NativeIcon name="share" size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <View style={{ flexDirection: "row" }}>
-                  <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                </View>
-              )
-            : () => (
-            <View style={{ flexDirection: "row" }}>
-              <Pressable onPress={handleShare} style={styles.iconButton}>
-                <NativeIcon name="share" size={22} color={colors.text} />
-              </Pressable>
-            </View>
+          headerRight: () => (
+            <Pressable onPress={handleShare} style={styles.iconButton}>
+              <NativeIcon name="share" size={22} color={colors.text} />
+            </Pressable>
           ),
         }}
       />
@@ -173,20 +154,20 @@ export default function TanazulDetailsScreen() {
           spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.medium]}
         >
-          <View style={[styles.heroRow, { flexDirection: rowDirection }]}>
+          <View style={styles.heroRow}>
             <View style={[styles.professionIcon, { backgroundColor: professionConfig.color + '15' }]}>
               <NativeIcon name={professionConfig.icon} size={32} color={professionConfig.color} />
             </View>
-            <View style={{ flex: 1, marginHorizontal: 14, alignItems: getRTLStartAlign(isRTL) }}>
-              <Text style={[styles.professionTitle, { color: colors.text }]}>{professionLabel}</Text>
-              <View style={[styles.metaRow, { flexDirection: rowDirection }]}>
+            <View style={{ flex: 1, marginHorizontal: 14, alignItems: 'flex-start' }}>
+              <Text style={[styles.professionTitle, { color: colors.text, writingDirection }]}>{professionLabel}</Text>
+              <View style={styles.metaRow}>
                 <NativeIcon name="pin" size={13} color={colors.textSecondary} />
                 <Text style={[styles.metaText, { color: colors.textSecondary }]}>
                   {adData.location || (isRTL ? "غير محدد" : "Unknown")}
                 </Text>
               </View>
               {dateFormatted ? (
-                <View style={[styles.metaRow, { flexDirection: rowDirection, marginTop: 2 }]}>
+                <View style={[styles.metaRow, { marginTop: 2 }]}>
                   <NativeIcon name="time" size={13} color={colors.textMuted} />
                   <Text style={[styles.metaText, { color: colors.textMuted }]}>{dateFormatted}</Text>
                 </View>
@@ -196,13 +177,13 @@ export default function TanazulDetailsScreen() {
 
           {/* Price Banner */}
           <View style={[styles.priceBanner, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '20' }]}>
-            <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <NativeIcon name="money" size={20} color={colors.primary} />
-              <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>
+              <Text style={[styles.priceLabel, { color: colors.textSecondary, writingDirection }]}>
                 {isRTL ? "مبلغ التنازل" : "Transfer Amount"}
               </Text>
             </View>
-            <Text style={[styles.priceValue, { color: colors.primary }]}>{priceFormatted}</Text>
+            <Text style={[styles.priceValue, { color: colors.primary, writingDirection }]}>{priceFormatted}</Text>
           </View>
         </FadeInView>
 
@@ -212,9 +193,9 @@ export default function TanazulDetailsScreen() {
           spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
         >
-          <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.sectionHeader}>
             <NativeIcon name="user" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? "بيانات العامل" : "Worker Details"}
             </Text>
           </View>
@@ -226,7 +207,6 @@ export default function TanazulDetailsScreen() {
               value={meta.nationality || "-"}
               colors={colors}
               isRTL={isRTL}
-              rowDirection={rowDirection}
             />
             <DetailRow
               icon="calendar"
@@ -234,7 +214,6 @@ export default function TanazulDetailsScreen() {
               value={meta.age ? `${meta.age} ${isRTL ? "سنة" : "yrs"}` : "-"}
               colors={colors}
               isRTL={isRTL}
-              rowDirection={rowDirection}
             />
             <DetailRow
               icon="user"
@@ -242,7 +221,6 @@ export default function TanazulDetailsScreen() {
               value={genderLabel}
               colors={colors}
               isRTL={isRTL}
-              rowDirection={rowDirection}
             />
           </View>
         </FadeInView>
@@ -253,9 +231,9 @@ export default function TanazulDetailsScreen() {
           spring
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
         >
-          <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.sectionHeader}>
             <NativeIcon name="document" size={18} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? "معلومات العقد" : "Contract Info"}
             </Text>
           </View>
@@ -267,7 +245,6 @@ export default function TanazulDetailsScreen() {
               value={meta.contractDuration || "-"}
               colors={colors}
               isRTL={isRTL}
-              rowDirection={rowDirection}
             />
             <DetailRow
               icon="history"
@@ -275,7 +252,6 @@ export default function TanazulDetailsScreen() {
               value={meta.previousTransfers || "0"}
               colors={colors}
               isRTL={isRTL}
-              rowDirection={rowDirection}
               highlight={parseInt(meta.previousTransfers) > 2 ? "warning" : null}
             />
           </View>
@@ -288,13 +264,13 @@ export default function TanazulDetailsScreen() {
             spring
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
           >
-            <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
+            <View style={styles.sectionHeader}>
               <NativeIcon name="document" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
                 {isRTL ? "ملاحظات إضافية" : "Additional Notes"}
               </Text>
             </View>
-            <Text style={[styles.descriptionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
               {adData.description}
             </Text>
           </FadeInView>
@@ -307,12 +283,12 @@ export default function TanazulDetailsScreen() {
         style={[styles.floatingBarWrapper, { bottom: insets.bottom + Spacing.m }]}
       >
         <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={styles.floatingBar}>
-          <View style={[styles.barContent, { flexDirection: rowDirection }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.barLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <View style={styles.barContent}>
+            <View style={{ flex: 1, alignItems: 'flex-start' }}>
+              <Text style={[styles.barLabel, { color: colors.textSecondary, writingDirection }]}>
                 {isRTL ? "مبلغ التنازل" : "Transfer Amount"}
               </Text>
-              <Text style={[styles.barPrice, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.barPrice, { color: colors.primary, writingDirection }]}>
                 {priceFormatted}
               </Text>
             </View>
@@ -338,19 +314,19 @@ export default function TanazulDetailsScreen() {
   );
 }
 
-const DetailRow = ({ icon, label, value, colors, isRTL, rowDirection, highlight }) => (
-  <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
+const DetailRow = ({ icon, label, value, colors, isRTL, highlight }) => (
+  <View style={styles.detailRow}>
     <View style={[styles.detailIconWrap, { backgroundColor: colors.background }]}>
       <NativeIcon name={icon} size={16} color={colors.primary} />
     </View>
-    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
       {label}
     </Text>
     <View style={{ flex: 1 }} />
     <Text
       style={[
         styles.detailValue,
-        { color: highlight === "warning" ? colors.warning : colors.text, textAlign: pickRTLValue(isRTL, 'left', 'right') },
+        { color: highlight === "warning" ? colors.warning : colors.text },
       ]}
     >
       {value}
@@ -386,6 +362,7 @@ const styles = StyleSheet.create({
 
   // Hero
   heroRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   professionIcon: {
@@ -401,6 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   metaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 1,
@@ -430,6 +408,7 @@ const styles = StyleSheet.create({
 
   // Section
   sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: Spacing.m,
@@ -444,6 +423,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   detailRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
@@ -471,8 +451,8 @@ const styles = StyleSheet.create({
   // Floating bar
   floatingBarWrapper: {
     position: 'absolute',
-    left: Spacing.m,
-    right: Spacing.m,
+    start: Spacing.m,
+    end: Spacing.m,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     ...Shadows.large,
@@ -481,6 +461,7 @@ const styles = StyleSheet.create({
     padding: Spacing.m,
   },
   barContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },

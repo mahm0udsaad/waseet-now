@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { NativeFormRow } from './NativeFormRow';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { typography } from '@/utils/native/typography';
 import { spacing } from '@/utils/native/layout';
 
 /**
  * NativeFormTextField - iOS Settings-style text input row
- * 
+ *
  * @param {Object} props
  * @param {string} props.label - Input label
  * @param {string} props.value - Input value
@@ -32,51 +32,53 @@ export function NativeFormTextField({
   isLast = false,
   required = false,
   editable = true,
+  suffix,
   style,
   ...textInputProps
 }) {
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { writingDirection } = useTranslation();
 
   return (
-    <NativeFormRow 
+    <NativeFormRow
       isLast={isLast}
       minHeight={multiline ? (style?.minHeight || 100) : 44}
       style={multiline && styles.multilineRow}
     >
-      <View style={[
-        styles.container, 
-        multiline ? styles.multilineContainer : { flexDirection: getRTLRowDirection(isRTL) }
-      ]}>
+      <View style={[styles.container, multiline && styles.multilineContainer]}>
         <Text style={[
-          styles.label, 
-          { color: colors.text },
-          multiline 
-            ? { textAlign: getRTLTextAlign(isRTL), marginBottom: spacing.xs }
-            : { marginEnd: spacing.md, marginStart: 0 }
+          styles.label,
+          multiline && styles.multilineLabel,
+          { color: colors.text, writingDirection },
         ]}>
           {label}
           {required && <Text style={{ color: colors.error }}> *</Text>}
         </Text>
-        
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          multiline={multiline}
-          numberOfLines={numberOfLines}
-          editable={editable}
-          textAlign={getRTLTextAlign(isRTL)}
-          style={[
-            styles.input,
-            multiline && styles.multilineInput,
-            { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' },
-            !editable && { opacity: 0.5 },
-            style,
-          ]}
-          {...textInputProps}
-        />
+
+        <View style={styles.inputRow}>
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textMuted}
+            multiline={multiline}
+            numberOfLines={numberOfLines}
+            editable={editable}
+            style={[
+              styles.input,
+              multiline && styles.multilineInput,
+              { color: colors.text, textAlign: writingDirection === 'rtl' ? 'right' : 'left', writingDirection },
+              !editable && { opacity: 0.5 },
+              style,
+            ]}
+            {...textInputProps}
+          />
+          {suffix && (
+            <View style={[styles.suffixBadge, { backgroundColor: colors.backgroundSecondary }]}>
+              <Text style={[styles.suffixText, { color: colors.textSecondary }]}>{suffix}</Text>
+            </View>
+          )}
+        </View>
       </View>
     </NativeFormRow>
   );
@@ -100,6 +102,15 @@ const styles = StyleSheet.create({
     ...typography.body,
     marginEnd: spacing.md,
   },
+  multilineLabel: {
+    maxWidth: '100%',
+    marginBottom: spacing.xs,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   input: {
     ...typography.body,
     flex: 1,
@@ -109,7 +120,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlignVertical: 'top',
   },
+  suffixBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginStart: spacing.sm,
+  },
+  suffixText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
 
 export default NativeFormTextField;
-

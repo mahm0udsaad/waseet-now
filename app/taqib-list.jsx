@@ -17,10 +17,37 @@ import React, { useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import FadeInView from "@/components/ui/FadeInView";
 
+const RTL_ISOLATE_START = "\u2067";
+const RTL_ISOLATE_END = "\u2069";
+const RTL_MARK = "\u200F";
+const BIDI_CONTROL_CHARS = /[\u200E\u200F\u061C\u202A-\u202E\u2066-\u2069]/g;
+
+function formatDisplayText(value, isRTL) {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+
+  const cleanedValue = value
+    .replace(BIDI_CONTROL_CHARS, "")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .trim();
+
+  if (!isRTL) {
+    return cleanedValue;
+  }
+
+  const rtlPunctuationSafeText = cleanedValue
+    .replace(/\(/g, `${RTL_MARK}(${RTL_MARK}`)
+    .replace(/\)/g, `${RTL_MARK})${RTL_MARK}`);
+
+  return `${RTL_ISOLATE_START}${rtlPunctuationSafeText}${RTL_ISOLATE_END}`;
+}
+
 export default function TaqibListScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection, textAlign } = useTranslation();
+  const { isRTL } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +81,7 @@ export default function TaqibListScreen() {
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
+  const screenTitle = isRTL ? "إعلانات التعقيب" : "Taqib Ads";
 
   const renderListSkeleton = () => (
     <SkeletonGroup style={{ paddingTop: 6, paddingBottom: 10 }}>
@@ -68,13 +96,13 @@ export default function TaqibListScreen() {
             },
           ]}
         >
-          <View style={[styles.adContent, { flexDirection: rowDirection }]}>
-            <Skeleton width={36} height={36} radius={12} />
+          <View style={styles.adContent}>
+            <Skeleton width={56} height={56} radius={16} />
             <View style={styles.adTextContainer}>
               <Skeleton height={16} radius={8} width="70%" />
               <Skeleton height={12} radius={8} width="92%" style={{ marginTop: 10 }} />
             </View>
-            <Skeleton width={56} height={56} radius={16} />
+            <Skeleton width={36} height={36} radius={12} />
           </View>
         </View>
       ))}
@@ -88,40 +116,27 @@ export default function TaqibListScreen() {
           headerShown: true,
           headerLargeTitle: false,
           headerTitleAlign: "center",
-          title: isRTL ? "إعلانات التعقيب" : "Taqib Ads",
+          title: screenTitle,
+          headerTitle: () => (
+            <View style={styles.headerTitleWrapper}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.headerTitleText,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                {screenTitle}
+              </Text>
+            </View>
+          ),
           headerBackButtonDisplayMode: "minimal",
-          headerBackVisible: !isRTL,
           headerBackTitleVisible: false,
           headerBackTitle: "",
-          headerLeftContainerStyle: styles.headerSideContainer,
           headerRightContainerStyle: styles.headerSideContainer,
-          headerLeft: isRTL
-            ? () => (
-                <Pressable
-                  testID="taqib-add-btn"
-                  onPress={() => router.push("/create-taqib")}
-                  style={({ pressed }) => [
-                    styles.headerAddButton,
-                    { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
-                  ]}
-                >
-                  <Plus size={18} color="#fff" />
-                  <Text style={styles.headerAddButtonText}>
-                    {isRTL ? "إضافة إعلان" : "Add Ad"}
-                  </Text>
-                </Pressable>
-              )
-            : undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable
-                  onPress={() => router.back()}
-                  style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
-                >
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : () => (
+          headerRight: () => (
             <Pressable
               testID="taqib-add-btn"
               onPress={() => router.push("/create-taqib")}
@@ -143,22 +158,22 @@ export default function TaqibListScreen() {
 
         {/* Search Bar */}
         <FadeInView delay={200} style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                flexDirection: rowDirection,
-              },
-            ]}
-          >
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  flexDirection: "row",
+                },
+              ]}
+            >
             <Search size={20} color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
               testID="taqib-search-input"
               placeholder={isRTL ? "بحث عن مكتب أو خدمة..." : "Search office or service..."}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, textAlign }]}
+              style={[styles.searchInput, { color: colors.text, writingDirection: 'rtl' }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -186,9 +201,9 @@ export default function TaqibListScreen() {
             }
             ListEmptyComponent={
               error ? (
-                <Text style={{ color: colors.error, textAlign, marginBottom: 12 }}>{error}</Text>
+                <Text style={{ color: colors.error, writingDirection: 'rtl', marginBottom: 12 }}>{error}</Text>
               ) : (
-                <Text style={{ color: colors.textMuted, textAlign }}>
+                <Text style={{ color: colors.textMuted, writingDirection: 'rtl' }}>
                   {isRTL ? "لا توجد إعلانات" : "No ads yet"}
                 </Text>
               )
@@ -207,7 +222,52 @@ export default function TaqibListScreen() {
                     },
                   ]}
                 >
-                  <View style={[styles.adContent, { flexDirection: rowDirection }]}>
+                  {(() => {
+                    const titleText = formatDisplayText(ad.title || "", isRTL);
+                    const descriptionText = formatDisplayText(
+                      ad.description || (isRTL ? "لا يوجد وصف" : "No description"),
+                      isRTL
+                    );
+
+                    return (
+                  <View style={[styles.adContent, { flexDirection: "row" }]}>
+                    <View style={[styles.adIconBox, { backgroundColor: colors.primary }]}>
+                      <Building2 size={28} color="#fff" />
+                    </View>
+                    <View
+                      style={[
+                        styles.adTextContainer,
+                        {
+                          alignItems: "flex-start",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.adTitle,
+                          {
+                            color: colors.text,
+                            writingDirection: "rtl",
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {titleText}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.adDescription,
+                          {
+                            color: colors.textSecondary,
+                            writingDirection: "rtl",
+                          },
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {descriptionText}
+                      </Text>
+                    </View>
                     <Pressable style={[styles.adArrow, { backgroundColor: colors.surfaceSecondary }]}>
                       {isRTL ? (
                         <ChevronLeft size={20} color={colors.primary} />
@@ -215,22 +275,9 @@ export default function TaqibListScreen() {
                         <ChevronRight size={20} color={colors.primary} />
                       )}
                     </Pressable>
-                    <View style={styles.adTextContainer}>
-                      <Text style={[styles.adTitle, { color: colors.text, textAlign }]}>
-                        {ad.title}
-                      </Text>
-                      <Text
-                        style={[styles.adDescription, { color: colors.textSecondary, textAlign }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {ad.description || (isRTL ? "لا يوجد وصف" : "No description")}
-                      </Text>
-                    </View>
-                    <View style={[styles.adIconBox, { backgroundColor: colors.primary }]}>
-                      <Building2 size={28} color="#fff" />
-                    </View>
                   </View>
+                    );
+                  })()}
                 </Pressable>
               </FadeInView>
             )}
@@ -256,6 +303,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchBar: {
+    flexDirection: "row",
     alignItems: "center",
     borderRadius: 14,
     paddingHorizontal: 12,
@@ -294,13 +342,22 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "700",
-    marginLeft: 6,
+    marginStart: 6,
   },
   headerRightContainer: {
     paddingHorizontal: 4,
   },
   headerSideContainer: {
     paddingHorizontal: 8,
+  },
+  headerTitleWrapper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: "700",
   },
   headerBackButton: {
     width: 34,
@@ -318,6 +375,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   adContent: {
+    flexDirection: "row",
     alignItems: "center",
   },
   adIconBox: {
@@ -329,6 +387,7 @@ const styles = StyleSheet.create({
   },
   adTextContainer: {
     flex: 1,
+    minWidth: 0,
     marginHorizontal: 14,
   },
   adTitle: {

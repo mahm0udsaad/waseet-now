@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativePressable } from './NativePressable';
 import { NativeIcon } from './NativeIcon';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLStartAlign, getRTLEndAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { typography } from '@/utils/native/typography';
 import { spacing } from '@/utils/native/layout';
 import { useRouter } from 'expo-router';
@@ -63,23 +63,20 @@ export function NativeHeader({
       {...blurProps}
     >
       <View style={[
-        styles.content, 
-        !transparent && styles.contentWithBorder, 
-        { 
-          borderBottomColor: colors.border,
-          flexDirection: getRTLRowDirection(isRTL)
-        }
+        styles.content,
+        !transparent && styles.contentWithBorder,
+        { borderBottomColor: colors.border }
       ]}>
-        {/* Left Action (Back button) */}
-        <View style={[styles.leftAction, { alignItems: getRTLStartAlign(isRTL) }]}>
+        {/* Start Action (Back button) */}
+        <View style={styles.leftAction}>
           {showBack && (
             <NativePressable
               onPress={handleBack}
               haptic="tap"
-              style={[styles.backButton, { flexDirection: getRTLRowDirection(isRTL) }]}
+              style={styles.backButton}
             >
               <NativeIcon
-                name={isRTL ? "right" : "back"}
+                name="right"
                 size="md"
                 color={colors.primary}
               />
@@ -105,8 +102,8 @@ export function NativeHeader({
           </Text>
         </View>
 
-        {/* Right Action */}
-        <View style={[styles.rightAction, { alignItems: getRTLEndAlign(isRTL) }]}>
+        {/* End Action */}
+        <View style={styles.rightAction}>
           {rightAction}
         </View>
       </View>

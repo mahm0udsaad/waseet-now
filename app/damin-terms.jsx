@@ -4,11 +4,11 @@ import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
-import { CheckCircle2, ChevronRight, Circle } from "lucide-react-native";
+import { CheckCircle2, Circle } from "lucide-react-native";
 import FadeInView from "@/components/ui/FadeInView";
 
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { NativeButton } from "@/components/native";
 import { createDaminOrder } from "@/utils/supabase/daminOrders";
 import { hapticFeedback } from "@/utils/native/haptics";
@@ -109,15 +109,6 @@ export default function DaminTermsScreen() {
           headerShown: true,
           headerLargeTitle: false,
           title: isRTL ? "الشروط والأحكام" : "Terms & Conditions",
-          headerBackVisible: !isRTL,
-          headerLeft: undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={() => router.back()} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         }}
       />
       <StatusBar style={colors.statusBar} />
@@ -132,10 +123,10 @@ export default function DaminTermsScreen() {
           delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? "خدمة الضامن (ضامن)" : "Damin Guarantee Service"}
           </Text>
-          <Text style={[styles.paragraph, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.paragraph, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
             {isRTL
               ? "خدمة الضامن هي نظام ضمان للمدفوعات بين طرفين (الدافع والمستفيد). تحمي هذه الخدمة كلا الطرفين من خلال الاحتفاظ بالأموال حتى اكتمال الخدمة."
               : "The Damin service is a payment guarantee system between two parties (payer and beneficiary). This service protects both parties by holding funds until service completion."}
@@ -147,17 +138,17 @@ export default function DaminTermsScreen() {
           delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? "عمولة المنصة" : "Platform Commission"}
           </Text>
           <View style={[styles.highlightBox, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}>
-            <Text style={[styles.highlightText, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.highlightText, { color: colors.primary, writingDirection: 'rtl' }]}>
               {isRTL
                 ? `عمولة ثابتة ${commissionText} فقط - بدون ضرائب إضافية`
                 : `Fixed ${commissionText} commission only - No additional taxes`}
             </Text>
           </View>
-          <Text style={[styles.paragraph, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.paragraph, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
             {isRTL
               ? `يتم احتساب عمولة المنصة بنسبة ${commissionText} فقط من قيمة الخدمة. لا توجد ضرائب أو رسوم إضافية. العمولة غير قابلة للتفاوض.`
               : `The platform charges a ${commissionText} commission on the service value only. No additional taxes or fees. The commission is non-negotiable.`}
@@ -169,7 +160,7 @@ export default function DaminTermsScreen() {
           delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? "سير العمل" : "Workflow"}
           </Text>
           <View style={styles.workflowList}>
@@ -195,7 +186,7 @@ export default function DaminTermsScreen() {
                 en: "5. After service completion and verification, funds are transferred to the provider"
               }
             ].map((item, index) => (
-              <Text key={index} style={[styles.workflowItem, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text key={index} style={[styles.workflowItem, { color: colors.text, writingDirection: 'rtl' }]}>
                 {isRTL ? item.ar : item.en}
               </Text>
             ))}
@@ -207,10 +198,10 @@ export default function DaminTermsScreen() {
           delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? "تأكيد مطلوب" : "Confirmation Required"}
           </Text>
-          <Text style={[styles.paragraph, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.paragraph, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
             {isRTL
               ? "لن يتقدم الطلب دون تأكيد كلا الطرفين. إذا رفض أي طرف، سيتم إلغاء الطلب. يمكن لأي طرف رفض المشاركة قبل إيداع الأموال."
               : "The order will not progress without confirmation from both parties. If either party rejects, the order will be cancelled. Either party can reject participation before fund deposit."}
@@ -222,10 +213,10 @@ export default function DaminTermsScreen() {
           delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? "حل النزاعات" : "Dispute Resolution"}
           </Text>
-          <Text style={[styles.paragraph, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.paragraph, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
             {isRTL
               ? "في حالة حدوث نزاع، سيتم الاحتفاظ بالأموال في الحساب الضامن حتى يتم حل المشكلة. يمكنك الاتصال بالدعم للمساعدة في حل النزاعات."
               : "In case of a dispute, funds will be held in escrow until the issue is resolved. You can contact support for assistance with dispute resolution."}
@@ -237,14 +228,14 @@ export default function DaminTermsScreen() {
       <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 10) + 10, backgroundColor: colors.background }]}>
         <Pressable
           onPress={toggleAccepted}
-          style={[styles.checkboxContainer, { flexDirection: getRTLRowDirection(isRTL) }]}
+          style={[styles.checkboxContainer, { flexDirection: 'row' }]}
         >
           {accepted ? (
             <CheckCircle2 size={24} color={colors.primary} />
           ) : (
             <Circle size={24} color={colors.textMuted} />
           )}
-          <Text style={[styles.checkboxText, { color: colors.text, marginLeft: isRTL ? 0 : 12, marginRight: isRTL ? 12 : 0 }]}>
+          <Text style={[styles.checkboxText, { color: colors.text, marginStart: 12 }]}>
             {isRTL
               ? `أوافق على الشروط والأحكام وعمولة المنصة ${commissionText}`
               : `I accept the terms and conditions and the ${commissionText} platform commission`}

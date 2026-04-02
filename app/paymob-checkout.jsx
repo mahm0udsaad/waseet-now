@@ -1,32 +1,31 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   ActivityIndicator,
-  AppState,
-  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  ArrowLeft,
   ArrowRight,
   RefreshCw,
   CheckCircle2,
   XCircle,
   Clock,
-  ExternalLink,
 } from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
+import { WebView } from "react-native-webview";
 
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { pollPaymobStatus, checkPaymobStatus } from "@/utils/paymob";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { sendMessage } from "@/utils/supabase/chat";
 import { ORDER_STATUSES } from "@/utils/supabase/orders";
+
+const RETURN_URL_BASE = "https://www.wasitalan.com/paymob/return";
 
 export default function PaymobCheckoutScreen() {
   const router = useRouter();
@@ -37,66 +36,61 @@ export default function PaymobCheckoutScreen() {
 
   const { checkoutUrl, paymentId, orderId, conversationId, amount, isDamin } = params;
 
-  const [launchingBrowser, setLaunchingBrowser] = useState(false);
-  const [browserError, setBrowserError] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [result, setResult] = useState(null);
 
   const verificationStarted = useRef(false);
-  const appState = useRef(AppState.currentState);
-  const checkoutOpenedRef = useRef(false);
 
-  const openCheckoutInBrowser = useCallback(async () => {
-    if (!checkoutUrl) {
-      setBrowserError(true);
-      return false;
-    }
+  /** Intercept Paymob return URL to detect payment completion */
+  const handleNavigationChange = useCallback(
+    (navState) => {
+      const { url } = navState;
+      if (!url || !url.startsWith(RETURN_URL_BASE)) return;
 
-    setBrowserError(false);
-    setLaunchingBrowser(true);
+      // Paymob redirected to our return URL — payment flow is done
+      // Extract query params for immediate status hints
+      try {
+        const params = new URL(url).searchParams;
+        const success = params.get("success");
+        const pending = params.get("pending");
 
-    try {
-      await Linking.openURL(String(checkoutUrl));
-      checkoutOpenedRef.current = true;
-      return true;
-    } catch (error) {
-      console.error("Failed to open Paymob checkout:", error);
-      setBrowserError(true);
-      return false;
-    } finally {
-      setLaunchingBrowser(false);
-    }
-  }, [checkoutUrl]);
+        if (success === "true") {
+          setResult({ status: "succeeded" });
+          hapticFeedback.confirm();
+          return;
+        }
+        if (success === "false") {
+          setResult({ status: "failed", reason: params.get("message") || undefined });
+          hapticFeedback.warning();
+          return;
+        }
+      } catch {}
 
-  useEffect(() => {
-    if (checkoutOpenedRef.current) return;
-    openCheckoutInBrowser();
-  }, [openCheckoutInBrowser]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (nextState) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextState === "active" &&
-        paymentId &&
-        !result &&
-        !verifying
-      ) {
-        checkPaymobStatus(paymentId)
-          .then(({ status }) => {
-            if (["succeeded", "failed", "canceled"].includes(status)) {
-              setResult({ status });
-            }
-          })
-          .catch(() => {});
+      // Fallback: start polling if we can't determine from URL
+      if (!verificationStarted.current) {
+        verificationStarted.current = true;
+        startVerification();
       }
-      appState.current = nextState;
-    });
-    return () => sub.remove();
-  }, [paymentId, result, verifying]);
+    },
+    [startVerification]
+  );
+
+  /** Also intercept via request (before page loads) for faster detection */
+  const handleShouldStartLoad = useCallback(
+    (event) => {
+      const { url } = event;
+      if (url && url.startsWith(RETURN_URL_BASE)) {
+        handleNavigationChange({ url });
+        return false; // Block navigation to return URL
+      }
+      return true;
+    },
+    [handleNavigationChange]
+  );
 
   const startVerification = useCallback(async () => {
-    if (verificationStarted.current) return;
+    if (verificationStarted.current && verifying) return;
     verificationStarted.current = true;
     setVerifying(true);
 
@@ -113,7 +107,7 @@ export default function PaymobCheckoutScreen() {
     } finally {
       setVerifying(false);
     }
-  }, [paymentId]);
+  }, [paymentId, verifying]);
 
   const handleUserClose = useCallback(() => {
     if (result) {
@@ -222,13 +216,27 @@ export default function PaymobCheckoutScreen() {
       }
     }
 
-    router.navigate({
-      pathname: "/damin-order-details",
-      params: {
-        id: orderId,
-        payResult: payResultJson,
-      },
-    });
+    // Route back based on order type
+    if (isDamin === "true") {
+      router.navigate({
+        pathname: "/damin-order-details",
+        params: {
+          id: orderId,
+          payResult: payResultJson,
+        },
+      });
+    } else if (conversationId) {
+      router.replace({
+        pathname: "/chat",
+        params: {
+          id: conversationId,
+          payResult: payResultJson,
+          orderId,
+        },
+      });
+    } else {
+      router.back();
+    }
   }, [result, paymentId, orderId, conversationId, amount, isDamin, router, isRTL]);
 
   const handleRetryCheck = useCallback(() => {
@@ -237,6 +245,7 @@ export default function PaymobCheckoutScreen() {
     startVerification();
   }, [startVerification]);
 
+  // ── Result Screen ──
   if (result) {
     const isSuccess = result.status === "succeeded";
     const isFailed = result.status === "failed";
@@ -328,6 +337,7 @@ export default function PaymobCheckoutScreen() {
     );
   }
 
+  // ── Verifying Screen ──
   if (verifying) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
@@ -347,13 +357,14 @@ export default function PaymobCheckoutScreen() {
     );
   }
 
+  // ── Embedded WebView Checkout ──
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <StatusBar style={colors.statusBar} />
 
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={handleUserClose} style={styles.headerButton}>
-          {isRTL ? <ArrowRight size={24} color={colors.text} /> : <ArrowLeft size={24} color={colors.text} />}
+          <ArrowRight size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isRTL ? "الدفع" : "Payment"}
@@ -361,58 +372,28 @@ export default function PaymobCheckoutScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.resultContainer}>
-        <View style={[styles.resultIcon, { backgroundColor: `${colors.primary}20` }]}>
-          {launchingBrowser ? (
-            <ActivityIndicator size="large" color={colors.primary} />
-          ) : (
-            <ExternalLink size={42} color={colors.primary} />
-          )}
-        </View>
-
-        <Text style={[styles.resultTitle, { color: colors.text }]}>
-          {launchingBrowser
-            ? (isRTL ? "جاري فتح صفحة الدفع..." : "Opening checkout...")
-            : (isRTL ? "تم فتح صفحة الدفع" : "Checkout Opened")}
-        </Text>
-
-        <Text style={[styles.resultSubtitle, { color: colors.textSecondary }]}>
-          {browserError
-            ? (isRTL
-                ? "تعذر فتح صفحة الدفع. حاول مرة أخرى."
-                : "The checkout page could not be opened. Please try again.")
-            : (isRTL
-                ? "تم تحويلك إلى صفحة Paymob في نافذة كاملة. أكمل الدفع هناك ثم عُد إلى التطبيق لتأكيد العملية."
-                : "You were redirected to Paymob in a full browser window. Complete the payment there, then return to the app to confirm it.")}
-        </Text>
-
-        <Pressable
-          onPress={openCheckoutInBrowser}
-          disabled={launchingBrowser}
-          style={[styles.primaryButton, { backgroundColor: colors.primary, opacity: launchingBrowser ? 0.7 : 1 }]}
-        >
-          {launchingBrowser ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <ExternalLink size={18} color="#fff" />
-              <Text style={styles.primaryButtonText}>
-                {isRTL ? "فتح صفحة الدفع" : "Open Checkout"}
-              </Text>
-            </>
-          )}
-        </Pressable>
-
-        <Pressable
-          onPress={handleRetryCheck}
-          style={[styles.secondaryButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-        >
-          <RefreshCw size={18} color={colors.text} />
-          <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-            {isRTL ? "تحققت من الدفع" : "I've Completed Payment"}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            {isRTL ? "جاري تحميل صفحة الدفع..." : "Loading checkout..."}
           </Text>
-        </Pressable>
-      </View>
+        </View>
+      )}
+
+      <WebView
+        source={{ uri: String(checkoutUrl) }}
+        style={{ flex: 1, opacity: loading ? 0 : 1 }}
+        onLoadEnd={() => setLoading(false)}
+        onNavigationStateChange={handleNavigationChange}
+        onShouldStartLoadWithRequest={handleShouldStartLoad}
+        javaScriptEnabled
+        domStorageEnabled
+        startInLoadingState={false}
+        scalesPageToFit
+        allowsInlineMediaPlayback
+        mixedContentMode="compatibility"
+      />
     </View>
   );
 }
@@ -439,6 +420,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    top: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
   },
   resultContainer: {
     flex: 1,
@@ -475,37 +467,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     marginBottom: 16,
-  },
-  primaryButton: {
-    minWidth: 220,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    gap: 8,
-    marginBottom: 12,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    minWidth: 220,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 8,
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
   },
   retryButtonText: {
     color: "#fff",

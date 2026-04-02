@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import {
   ChevronDown,
   ChevronUp,
@@ -22,14 +22,14 @@ function FAQItem({ question, answer, colors, isRTL }) {
 
   return (
     <Pressable onPress={() => setOpen(!open)} style={styles.faqItem}>
-      <View style={[styles.faqHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-        <Text style={[styles.faqQuestion, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+      <View style={[styles.faqHeader, { flexDirection: 'row' }]}>
+        <Text style={[styles.faqQuestion, { color: colors.text, writingDirection: 'rtl' }]}>
           {question}
         </Text>
         <Chevron size={18} color={colors.textMuted} />
       </View>
       {open && (
-        <Text style={[styles.faqAnswer, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+        <Text style={[styles.faqAnswer, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
           {answer}
         </Text>
       )}
@@ -58,11 +58,11 @@ export default function HelpScreen() {
       >
         {/* FAQ Section */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <HelpCircle size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {t.profile.faq}
             </Text>
           </View>
@@ -81,11 +81,11 @@ export default function HelpScreen() {
 
         {/* Contact Section */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Mail size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {t.profile.contactUs}
             </Text>
           </View>
@@ -94,15 +94,15 @@ export default function HelpScreen() {
             onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
             style={({ pressed }) => [
               styles.contactRow,
-              { flexDirection: getRTLRowDirection(isRTL), opacity: pressed ? 0.6 : 1 },
+              { flexDirection: 'row', opacity: pressed ? 0.6 : 1 },
             ]}
           >
             <Mail size={16} color={colors.textSecondary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contactLabel, { color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection: 'rtl' }]}>
                 {t.profile.contactEmail}
               </Text>
-              <Text style={[styles.contactValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.contactValue, { color: colors.text, writingDirection: 'rtl' }]}>
                 {SUPPORT_EMAIL}
               </Text>
             </View>
@@ -114,15 +114,15 @@ export default function HelpScreen() {
             onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE}`)}
             style={({ pressed }) => [
               styles.contactRow,
-              { flexDirection: getRTLRowDirection(isRTL), opacity: pressed ? 0.6 : 1 },
+              { flexDirection: 'row', opacity: pressed ? 0.6 : 1 },
             ]}
           >
             <Phone size={16} color={colors.textSecondary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contactLabel, { color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection: 'rtl' }]}>
                 {t.profile.contactPhone}
               </Text>
-              <Text style={[styles.contactValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.contactValue, { color: colors.text, writingDirection: 'rtl' }]}>
                 {SUPPORT_PHONE}
               </Text>
             </View>
@@ -131,16 +131,16 @@ export default function HelpScreen() {
 
         {/* About Section */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Info size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {t.profile.aboutApp}
             </Text>
           </View>
-          <View style={[styles.aboutRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <Text style={[styles.aboutLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <View style={[styles.aboutRow, { flexDirection: 'row' }]}>
+            <Text style={[styles.aboutLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
               {t.profile.appVersion}
             </Text>
             <Text style={[styles.aboutValue, { color: colors.text }]}>

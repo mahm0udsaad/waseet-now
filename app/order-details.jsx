@@ -25,7 +25,7 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { useOrder } from '@/hooks/useOrders';
 import { confirmOrderCompletion } from '@/utils/supabase/orders';
 import { getSupabaseSession } from '@/utils/supabase/client';
@@ -39,14 +39,13 @@ const InfoRow = ({ icon: Icon, label, value, colors, isRTL, onPress }) => (
     disabled={!onPress}
     style={[
       styles.infoRow,
-      { flexDirection: getRTLRowDirection(isRTL) },
       onPress && { opacity: 0.8 }
     ]}
   >
     <View style={[styles.infoIconContainer, { backgroundColor: colors.primary + '15' }]}>
       <Icon size={20} color={colors.primary} />
     </View>
-    <View style={[styles.infoContent, { alignItems: getRTLStartAlign(isRTL) }]}>
+    <View style={styles.infoContent}>
       <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}</Text>
       <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
     </View>
@@ -128,7 +127,7 @@ export default function OrderDetailsScreen() {
     return (
       <LinearGradient colors={gradientColors} style={styles.container}>
         <StatusBar style={colors.statusBar} />
-        <View style={[styles.header, { paddingTop: insets.top + 10, flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <Pressable
             onPress={() => router.back()}
             style={[styles.backButton, { backgroundColor: colors.surface }]}
@@ -177,7 +176,7 @@ export default function OrderDetailsScreen() {
     return (
       <LinearGradient colors={gradientColors} style={styles.container}>
         <StatusBar style={colors.statusBar} />
-        <View style={[styles.header, { paddingTop: insets.top + 10, flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <Pressable
             onPress={() => router.back()}
             style={[styles.backButton, { backgroundColor: colors.surface }]}
@@ -268,7 +267,7 @@ export default function OrderDetailsScreen() {
       <StatusBar style={colors.statusBar} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Pressable
           onPress={() => router.back()}
           style={[styles.backButton, { backgroundColor: colors.surface }]}
@@ -295,7 +294,7 @@ export default function OrderDetailsScreen() {
           delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <View style={[styles.cardHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.orderIdLabel, { color: colors.textSecondary }]}>
                 {isRTL ? 'رقم الطلب' : 'Order ID'}
@@ -313,7 +312,7 @@ export default function OrderDetailsScreen() {
           delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'تفاصيل الإعلان' : 'Ad Details'}
           </Text>
           <InfoRow
@@ -325,10 +324,10 @@ export default function OrderDetailsScreen() {
           />
           {order.ad?.description && (
             <View style={[styles.descriptionContainer, { marginTop: 12 }]}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                 {isRTL ? 'الوصف' : 'Description'}
               </Text>
-              <Text style={[styles.descriptionText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.descriptionText, { color: colors.text, writingDirection: 'rtl' }]}>
                 {order.ad.description}
               </Text>
             </View>
@@ -340,7 +339,7 @@ export default function OrderDetailsScreen() {
           delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'التفاصيل المالية' : 'Financial Details'}
           </Text>
           <InfoRow
@@ -371,7 +370,7 @@ export default function OrderDetailsScreen() {
             delay={350}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? 'حالة الدفع والضمان' : 'Payment & Escrow Status'}
             </Text>
 
@@ -416,7 +415,7 @@ export default function OrderDetailsScreen() {
                     ? 'تم استلام الدفع وهو محجوز بشكل آمن. سيتم إطلاق الأموال إلى محفظتك عند اكتمال الطلب وتأكيده من قبل المشتري.'
                     : 'Payment has been received and is securely held. Funds will be released to your wallet when the order is completed and confirmed by the buyer.'}
                 </Text>
-                <View style={[styles.escrowAmountRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                <View style={styles.escrowAmountRow}>
                   <Text style={[styles.escrowAmountLabel, { color: colors.textSecondary }]}>
                     {isRTL ? 'المبلغ المحجوز' : 'Held Amount'}
                   </Text>
@@ -445,7 +444,7 @@ export default function OrderDetailsScreen() {
           delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'المشاركون' : 'Participants'}
           </Text>
           <InfoRow
@@ -469,7 +468,7 @@ export default function OrderDetailsScreen() {
           delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'التاريخ' : 'Timeline'}
           </Text>
           <InfoRow
@@ -487,20 +486,20 @@ export default function OrderDetailsScreen() {
             delay={550}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? 'تأكيد اكتمال الخدمة' : 'Service Completion'}
             </Text>
 
             {/* Confirmation Status */}
             <View style={styles.confirmationStatusContainer}>
               {/* Buyer confirmation status */}
-              <View style={[styles.confirmationRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+              <View style={styles.confirmationRow}>
                 {buyerConfirmed ? (
                   <CheckCircle size={20} color="#10B981" />
                 ) : (
                   <Clock size={20} color="#F59E0B" />
                 )}
-                <Text style={[styles.confirmationText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                <Text style={[styles.confirmationText, { color: colors.text, writingDirection: 'rtl' }]}>
                   {isRTL ? 'المشتري' : 'Buyer'}: {buyerConfirmed
                     ? (isRTL ? 'تم التأكيد' : 'Confirmed')
                     : (isRTL ? 'بانتظار التأكيد' : 'Pending')}
@@ -508,13 +507,13 @@ export default function OrderDetailsScreen() {
               </View>
 
               {/* Seller confirmation status */}
-              <View style={[styles.confirmationRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+              <View style={styles.confirmationRow}>
                 {sellerConfirmed ? (
                   <CheckCircle size={20} color="#10B981" />
                 ) : (
                   <Clock size={20} color="#F59E0B" />
                 )}
-                <Text style={[styles.confirmationText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                <Text style={[styles.confirmationText, { color: colors.text, writingDirection: 'rtl' }]}>
                   {isRTL ? (order.ad?.type === 'tanazul' ? 'المتنازل' : 'البائع') : 'Seller'}: {sellerConfirmed
                     ? (isRTL ? 'تم التأكيد' : 'Confirmed')
                     : (isRTL ? 'بانتظار التأكيد' : 'Pending')}
@@ -597,6 +596,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
     paddingBottom: 10,
     justifyContent: 'space-between',
@@ -627,6 +627,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -662,6 +663,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   infoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
     gap: 12,
@@ -675,6 +677,7 @@ const styles = StyleSheet.create({
   },
   infoContent: {
     flex: 1,
+    alignItems: 'flex-start',
   },
   infoLabel: {
     fontSize: 12,
@@ -767,6 +770,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   escrowAmountRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 12,
@@ -795,6 +799,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   confirmationRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },

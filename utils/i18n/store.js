@@ -1,8 +1,12 @@
 import { create } from 'zustand';
+import { I18nManager, Platform } from 'react-native';
 import { getLocales } from 'expo-localization';
 import * as SecureStore from 'expo-secure-store';
 
+// App language direction is handled in initLanguage and setLanguage based on user preference.
+
 const LANGUAGE_KEY = 'app-language';
+const RTL_RELOAD_KEY = 'rtl-reload-pending';
 const SUPPORTED_LANGUAGES = ['ar', 'en'];
 const FALLBACK_LANGUAGE = 'ar';
 
@@ -11,10 +15,11 @@ const getDeviceLocale = () => getLocales()?.[0] ?? null;
 const normalizeLanguage = (language) =>
   typeof language === 'string' && SUPPORTED_LANGUAGES.includes(language) ? language : null;
 
+// Arabic-first: only use saved preference, otherwise always default to Arabic.
+// Device locale is intentionally NOT used — the app must behave identically
+// regardless of the user's device language setting.
 const resolvePreferredLanguage = (savedLanguage) =>
-  normalizeLanguage(savedLanguage) ??
-  normalizeLanguage(getDeviceLocale()?.languageCode) ??
-  FALLBACK_LANGUAGE;
+  normalizeLanguage(savedLanguage) ?? FALLBACK_LANGUAGE;
 
 // Arabic translations
 const ar = {
@@ -342,26 +347,31 @@ const en = {
 
 const translations = { ar, en };
 
-// RTL is handled purely in JS via flexDirection — no native I18nManager dependency.
-// This avoids the iOS 26 crash caused by I18nManager.forceRTL + expo-updates ErrorRecovery.
-export const getRTLRowDirection = (isRTL) => {
-  return isRTL ? 'row-reverse' : 'row';
+const syncWebDocumentDirection = (language) => {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+  // Arabic-first: always RTL on web too.
+  document.documentElement.setAttribute('dir', 'rtl');
+  document.documentElement.setAttribute('lang', language);
+  document.documentElement.style.direction = 'rtl';
+
+  if (document.body) {
+    document.body.setAttribute('dir', 'rtl');
+    document.body.setAttribute('lang', language);
+    document.body.style.direction = 'rtl';
+  }
 };
 
-export const getRTLInverseRowDirection = (isRTL) => {
-  return isRTL ? 'row' : 'row-reverse';
-};
-
-export const getRTLTextAlign = (isRTL) => (isRTL ? 'right' : 'left');
-
+// Content-level helper: use for things like choosing a chevron icon direction,
+// NOT for layout properties (flexDirection, margins, etc.) which I18nManager
+// handles automatically after forceRTL + reload.
 export const pickRTLValue = (isRTL, rtlValue, ltrValue) => (isRTL ? rtlValue : ltrValue);
-
-export const getRTLStartAlign = (isRTL) => (isRTL ? 'flex-end' : 'flex-start');
-
-export const getRTLEndAlign = (isRTL) => (isRTL ? 'flex-start' : 'flex-end');
 
 const getDirectionSnapshot = (language) => {
   const locale = getDeviceLocale();
+  // isRTL reflects the content language (Arabic = RTL text).
+  // NOTE: The *layout* is always RTL (forceRTL at module level), but this
+  // flag drives content decisions (which text to show, date formatting, etc.).
   const isRTL = language === 'ar';
 
   return {
@@ -369,104 +379,105 @@ const getDirectionSnapshot = (language) => {
     isRTL,
     t: translations[language],
     locale: locale?.languageTag ?? null,
-    localeTextDirection: locale?.textDirection ?? (isRTL ? 'rtl' : 'ltr'),
-    rowDirection: getRTLRowDirection(isRTL),
-    textAlign: getRTLTextAlign(isRTL),
-    writingDirection: isRTL ? 'rtl' : 'ltr',
-    startAlign: getRTLStartAlign(isRTL),
-    endAlign: getRTLEndAlign(isRTL),
-    backIcon: isRTL ? 'forward' : 'back',
+    localeTextDirection: 'rtl',
+    writingDirection: 'rtl',
   };
+};
+
+// Reload the JS bundle so forceRTL takes effect.
+const reloadForRTL = async () => {
+  try {
+    const Updates = await import('expo-updates');
+    await Updates.reloadAsync();
+  } catch {
+    // In dev or when Updates is unavailable, fall back to DevSettings.
+    try {
+      const RN = require('react-native');
+      RN.DevSettings?.reload?.();
+    } catch { /* direction change will take effect on next manual restart */ }
+  }
 };
 
 export const useLanguageStore = create((set, get) => ({
   ...getDirectionSnapshot(FALLBACK_LANGUAGE),
-  
+
   setLanguage: async (language) => {
     const nextLanguage = resolvePreferredLanguage(language);
-    const nextSnapshot = getDirectionSnapshot(nextLanguage);
     await SecureStore.setItemAsync(LANGUAGE_KEY, nextLanguage);
-    set(nextSnapshot);
+    syncWebDocumentDirection(nextLanguage);
+
+    if (Platform.OS !== 'web') {
+      const isArabic = nextLanguage === 'ar';
+      I18nManager.allowRTL(isArabic);
+      I18nManager.forceRTL(isArabic);
+      if (I18nManager.isRTL !== isArabic) {
+        setTimeout(reloadForRTL, 100);
+      }
+    }
+
+    set(getDirectionSnapshot(nextLanguage));
     return { restarted: false };
   },
-  
+
   toggleLanguage: async () => {
     const currentLang = get().language;
     const newLang = currentLang === 'ar' ? 'en' : 'ar';
     return get().setLanguage(newLang);
   },
-  
+
   initLanguage: async () => {
     try {
       const savedLang = await SecureStore.getItemAsync(LANGUAGE_KEY);
-      const initialSnapshot = getDirectionSnapshot(resolvePreferredLanguage(savedLang));
-      set(initialSnapshot);
+      const language = resolvePreferredLanguage(savedLang);
+      syncWebDocumentDirection(language);
+
+      if (Platform.OS !== 'web') {
+        const isArabic = language === 'ar';
+        I18nManager.allowRTL(isArabic);
+        I18nManager.forceRTL(isArabic);
+
+        if (I18nManager.isRTL !== isArabic) {
+          const alreadyReloading = await SecureStore.getItemAsync(RTL_RELOAD_KEY);
+          if (alreadyReloading !== 'true') {
+            await SecureStore.setItemAsync(RTL_RELOAD_KEY, 'true');
+            await reloadForRTL();
+            return;
+          }
+          await SecureStore.deleteItemAsync(RTL_RELOAD_KEY);
+        } else {
+          await SecureStore.deleteItemAsync(RTL_RELOAD_KEY);
+        }
+      }
+
+      set(getDirectionSnapshot(language));
     } catch (error) {
       console.log('Error loading language:', error);
     }
   },
 }));
 
-export const useLanguage = () => {
-  const {
-    language,
-    isRTL,
-    t,
-    locale,
-    localeTextDirection,
-    rowDirection,
-    textAlign,
-    writingDirection,
-    startAlign,
-    endAlign,
-    backIcon,
-    setLanguage,
-    toggleLanguage,
-  } = useLanguageStore();
+// Individual selectors — components subscribe only to what they need.
+export const useIsRTL = () => useLanguageStore((s) => s.isRTL);
+export const useT = () => useLanguageStore((s) => s.t);
 
-  return {
-    language,
-    isRTL,
-    t,
-    locale,
-    localeTextDirection,
-    rowDirection,
-    textAlign,
-    writingDirection,
-    startAlign,
-    endAlign,
-    backIcon,
-    setLanguage,
-    toggleLanguage,
-  };
+export const useLanguage = () => {
+  const language = useLanguageStore((s) => s.language);
+  const isRTL = useLanguageStore((s) => s.isRTL);
+  const t = useLanguageStore((s) => s.t);
+  const locale = useLanguageStore((s) => s.locale);
+  const localeTextDirection = useLanguageStore((s) => s.localeTextDirection);
+  const writingDirection = useLanguageStore((s) => s.writingDirection);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
+  const toggleLanguage = useLanguageStore((s) => s.toggleLanguage);
+  return { language, isRTL, t, locale, localeTextDirection, writingDirection, setLanguage, toggleLanguage };
 };
 
 export const useTranslation = () => {
-  const {
-    t,
-    language,
-    isRTL,
-    locale,
-    localeTextDirection,
-    rowDirection,
-    textAlign,
-    writingDirection,
-    startAlign,
-    endAlign,
-    backIcon,
-  } = useLanguageStore();
-
-  return {
-    t,
-    language,
-    isRTL,
-    locale,
-    localeTextDirection,
-    rowDirection,
-    textAlign,
-    writingDirection,
-    startAlign,
-    endAlign,
-    backIcon,
-  };
+  const t = useLanguageStore((s) => s.t);
+  const language = useLanguageStore((s) => s.language);
+  const isRTL = useLanguageStore((s) => s.isRTL);
+  const locale = useLanguageStore((s) => s.locale);
+  const localeTextDirection = useLanguageStore((s) => s.localeTextDirection);
+  const writingDirection = useLanguageStore((s) => s.writingDirection);
+  return { t, language, isRTL, locale, localeTextDirection, writingDirection };
 };

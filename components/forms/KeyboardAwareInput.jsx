@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import FadeInView from "@/components/ui/FadeInView";
 import { Check } from "lucide-react-native";
-import { getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
 
 const KeyboardAwareInput = memo(({
   icon: Icon,
@@ -31,11 +30,11 @@ const KeyboardAwareInput = memo(({
 
   return (
     <FadeInView style={styles.inputContainer}>
-      <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+      <Text style={[styles.inputLabel, { color: colors.text }]}>
         {label}
       </Text>
       <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={[styles.inputContent, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.inputContent}>
           <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
             <Icon size={18} color={colors.primary} />
           </View>
@@ -45,7 +44,7 @@ const KeyboardAwareInput = memo(({
               styles.textInput,
               {
                 color: colors.text,
-                textAlign: getRTLTextAlign(isRTL),
+                writingDirection: 'rtl',
                 minHeight: multiline ? 100 : undefined,
               },
             ]}
@@ -106,6 +105,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   inputContent: {
+    flexDirection: "row",
     alignItems: "flex-start",
     padding: 14,
     gap: 12,

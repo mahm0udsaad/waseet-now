@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert, Pressable, Linking } from 'r
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { supabase } from '@/utils/supabase/client';
 import { deleteAllMyPushTokens } from '@/utils/supabase/pushTokens';
 import {
@@ -39,7 +39,7 @@ function ActionRow({
       style={({ pressed }) => [
         styles.actionRow,
         {
-          flexDirection: getRTLRowDirection(isRTL),
+          flexDirection: 'row',
           opacity: disabled ? 0.5 : pressed ? 0.7 : 1,
         },
       ]}
@@ -52,15 +52,15 @@ function ActionRow({
       >
         <Icon size={18} color={danger ? colors.error : colors.primary} />
       </View>
-      <View style={[styles.actionContent, { alignItems: getRTLStartAlign(isRTL) }]}>
-        <Text style={[styles.actionTitle, { color: danger ? colors.error : colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+      <View style={[styles.actionContent, { alignItems: 'flex-start' }]}>
+        <Text style={[styles.actionTitle, { color: danger ? colors.error : colors.text, writingDirection: 'rtl' }]}>
           {title}
         </Text>
         {subtitle ? (
           <Text
             style={[
               styles.actionSubtitle,
-              { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.textSecondary, writingDirection: 'rtl' },
             ]}
           >
             {subtitle}
@@ -222,11 +222,11 @@ export default function SecurityScreen() {
       >
         {/* Privacy Docs */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Lock size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? 'مستندات الخصوصية' : 'Privacy Documents'}
             </Text>
           </View>
@@ -251,11 +251,11 @@ export default function SecurityScreen() {
 
         {/* Account Security */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Shield size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? 'أمان الحساب' : 'Account Security'}
             </Text>
           </View>
@@ -283,11 +283,11 @@ export default function SecurityScreen() {
 
         {/* Data Controls */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.sectionHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Download size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? 'البيانات والخصوصية' : 'Data & Privacy'}
             </Text>
           </View>
@@ -308,7 +308,7 @@ export default function SecurityScreen() {
               {
                 backgroundColor: colors.error + '15',
                 opacity: pressed || deleting ? 0.6 : 1,
-                flexDirection: getRTLRowDirection(isRTL),
+                flexDirection: 'row',
               },
             ]}
           >

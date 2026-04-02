@@ -1,5 +1,5 @@
 import { AppFlatList, AppScrollView } from '@/components/layout';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { useTheme } from '@/utils/theme/store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -8,7 +8,7 @@ import {
   ArrowUpCircle,
   CheckCircle,
   Clock,
-  DollarSign,
+  Wallet,
   XCircle,
 } from 'lucide-react-native';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -133,7 +133,6 @@ export default function WalletTransactionsScreen() {
               backgroundColor: colors.surface,
               borderColor: colors.border,
               opacity: pressed ? 0.8 : 1,
-              flexDirection: getRTLRowDirection(isRTL),
             },
           ]}
         >
@@ -141,15 +140,15 @@ export default function WalletTransactionsScreen() {
             <TypeIcon size={24} color={typeColor} />
           </View>
 
-          <View style={[styles.transactionContent, { alignItems: getRTLStartAlign(isRTL) }]}>
+          <View style={styles.transactionContent}>
             <Text
-              style={[styles.transactionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.transactionTitle, { color: colors.text, writingDirection: 'rtl' }]}
               numberOfLines={1}
             >
               {item.title}
             </Text>
-            <View style={[styles.transactionMeta, { flexDirection: getRTLRowDirection(isRTL) }]}>
-              <View style={[styles.statusContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+            <View style={styles.transactionMeta}>
+              <View style={styles.statusContainer}>
                 <StatusIcon size={14} color={statusConfig.color} />
                 <Text style={[styles.transactionStatus, { color: statusConfig.color }]}>
                   {statusConfig.label}
@@ -203,8 +202,8 @@ export default function WalletTransactionsScreen() {
           <View style={[styles.summaryIconContainer, { backgroundColor: '#10B981' + '20' }]}>
             <ArrowDownCircle size={20} color="#10B981" />
           </View>
-          <View style={[styles.summaryTextContainer, { alignItems: getRTLStartAlign(isRTL) }]}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <View style={styles.summaryTextContainer}>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
               {isRTL ? 'إجمالي الدخل' : 'Total Income'}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
@@ -217,8 +216,8 @@ export default function WalletTransactionsScreen() {
           <View style={[styles.summaryIconContainer, { backgroundColor: '#3B82F6' + '20' }]}>
             <ArrowUpCircle size={20} color="#3B82F6" />
           </View>
-          <View style={[styles.summaryTextContainer, { alignItems: getRTLStartAlign(isRTL) }]}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+          <View style={styles.summaryTextContainer}>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
               {isRTL ? 'إجمالي المسحوبات' : 'Total Withdrawn'}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
@@ -242,9 +241,14 @@ export default function WalletTransactionsScreen() {
         ) : null}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <DollarSign size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            <View style={[styles.emptyIconCircle, { backgroundColor: colors.surfaceSecondary || colors.border + '40' }]}>
+              <Wallet size={36} color={colors.textMuted} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
               {isRTL ? 'لا توجد معاملات' : 'No transactions yet'}
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
+              {isRTL ? 'ستظهر معاملاتك هنا عند إجراء أي عملية' : 'Your transactions will appear here'}
             </Text>
           </View>
         )}
@@ -259,6 +263,7 @@ const styles = StyleSheet.create({
   },
   summaryBanner: {
     marginHorizontal: 20,
+    marginTop: 8,
     marginBottom: 16,
     borderRadius: 16,
     borderWidth: 1,
@@ -282,6 +287,7 @@ const styles = StyleSheet.create({
   summaryTextContainer: {
     flex: 1,
     gap: 2,
+    alignItems: 'flex-start',
   },
   summaryLabel: {
     fontSize: 11,
@@ -298,6 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   transactionCard: {
+    flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
     borderWidth: 1,
@@ -315,6 +322,7 @@ const styles = StyleSheet.create({
   transactionContent: {
     flex: 1,
     gap: 4,
+    alignItems: 'flex-start',
   },
   transactionTitle: {
     fontSize: 15,
@@ -322,11 +330,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   transactionMeta: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
   },
   statusContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
@@ -344,15 +354,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     minWidth: 100,
-    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 100,
     gap: 12,
   },
-  emptyText: {
-    fontSize: 16,
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  emptySubtitle: {
+    fontSize: 14,
   },
 });

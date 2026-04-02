@@ -1,5 +1,5 @@
 import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { KeyboardDoneButton } from "@/components/forms/KeyboardAwareInput";
 import { Building2, Camera, CheckCircle2, ChevronDown, ChevronUp, Copy, CreditCard, ImageIcon, Trash2, X } from "lucide-react-native";
@@ -35,7 +35,6 @@ export default function PaymentModal({ onClose }) {
   const { isRTL } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const rowDirection = getRTLRowDirection(isRTL);
   const amount = usePaymentFlowStore((state) => state.amount);
   const initialPhone = usePaymentFlowStore((state) => state.initialPhone);
   const onPaymentSubmitted = usePaymentFlowStore((state) => state.onPaymentSubmitted);
@@ -212,10 +211,10 @@ export default function PaymentModal({ onClose }) {
         >
           {/* Amount Card */}
           <View style={[styles.amountCard, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
-            <Text style={[styles.amountLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.amountLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
               {isRTL ? "المبلغ الإجمالي" : "Total Amount"}
             </Text>
-            <Text style={[styles.amountValue, { color: colors.primary, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.amountValue, { color: colors.primary, writingDirection: 'rtl' }]}>
               {amount.toLocaleString()} {isRTL ? "ر.س" : "SAR"}
             </Text>
           </View>
@@ -241,18 +240,18 @@ export default function PaymentModal({ onClose }) {
                 backgroundColor: colors.surface,
                 borderColor: onCardPayment ? '#000' : colors.border,
                 opacity: pressed ? 0.7 : 1,
-                flexDirection: rowDirection,
+                flexDirection: 'row',
               }
             ]}
           >
-            <View style={[styles.iconContainer, { backgroundColor: '#000', marginRight: 0, marginLeft: 0 }]}>
+            <View style={[styles.iconContainer, { backgroundColor: '#000', marginStart: 0, marginEnd: 0 }]}>
               <Smartphone size={24} color="#fff" />
             </View>
-            <View style={[styles.optionContent, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-              <Text style={[styles.optionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <View style={[styles.optionContent, { alignItems: 'flex-start' }]}>
+              <Text style={[styles.optionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
                 Apple Pay
               </Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                 {isRTL ? "دفع فوري وآمن بلمسة واحدة" : "Instant & secure payment"}
               </Text>
             </View>
@@ -280,18 +279,18 @@ export default function PaymentModal({ onClose }) {
                 backgroundColor: colors.surface,
                 borderColor: onCardPayment ? colors.primary : colors.border,
                 opacity: pressed ? 0.7 : 1,
-                flexDirection: rowDirection,
+                flexDirection: 'row',
               }
             ]}
           >
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20', marginRight: 0, marginLeft: 0 }]}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20', marginStart: 0, marginEnd: 0 }]}>
               <CreditCard size={24} color={colors.primary} />
             </View>
-            <View style={[styles.optionContent, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-              <Text style={[styles.optionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <View style={[styles.optionContent, { alignItems: 'flex-start' }]}>
+              <Text style={[styles.optionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
                 {isRTL ? "بطاقة ائتمان/خصم" : "Credit/Debit Card"}
               </Text>
-              <Text style={[styles.optionDesc, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.optionDesc, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                 Visa • Mastercard • Mada
               </Text>
             </View>
@@ -324,22 +323,22 @@ export default function PaymentModal({ onClose }) {
                 {
                   backgroundColor: colors.surface,
                   borderColor: expandedBankTransfer ? colors.primary : colors.border,
-                  flexDirection: rowDirection,
+                  flexDirection: 'row',
                 }
               ]}
             >
-              <View style={[styles.iconContainer, { backgroundColor: colors.primary, marginRight: 0, marginLeft: 0 }]}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.primary, marginStart: 0, marginEnd: 0 }]}>
                 <Building2 size={24} color="#fff" />
               </View>
-              <View style={[styles.optionContent, { alignItems: isRTL ? "flex-end" : "flex-start" }]}>
-                <Text style={[styles.optionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <View style={[styles.optionContent, { alignItems: 'flex-start' }]}>
+                <Text style={[styles.optionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
                   {isRTL ? "تحويل بنكي" : "Bank Transfer"}
                 </Text>
-                <Text style={[styles.optionDesc, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                <Text style={[styles.optionDesc, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                   {isRTL ? "يتم القبول خلال يوم عمل" : "Processed within 1 day"}
                 </Text>
               </View>
-              <View style={{ flexDirection: rowDirection, alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={[styles.availableBadge, { backgroundColor: colors.success + '20' }]}>
                   <Text style={[styles.availableText, { color: colors.success }]}>
                     {isRTL ? "متاح" : "Available"}
@@ -358,11 +357,11 @@ export default function PaymentModal({ onClose }) {
               <View style={[styles.expandedContent, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
                 {/* Amount to Transfer */}
                 <View style={[styles.amountTransferCard, { backgroundColor: colors.primary }]}>
-                  <Text style={[styles.amountTransferLabel, { color: 'rgba(255,255,255,0.8)', textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.amountTransferLabel, { color: 'rgba(255,255,255,0.8)', writingDirection: 'rtl' }]}>
                     {isRTL ? "المبلغ المطلوب تحويله" : "Amount to Transfer"}
                   </Text>
-                  <View style={[styles.amountTransferRow, { flexDirection: rowDirection }]}>
-                    <Text style={[styles.amountTransferValue, { color: '#fff', textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.amountTransferRow]}>
+                    <Text style={[styles.amountTransferValue, { color: '#fff', writingDirection: 'rtl' }]}>
                       {amount.toLocaleString()} {isRTL ? "ر.س" : "SAR"}
                     </Text>
                     <View style={[styles.copyButtonWhite, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
@@ -377,85 +376,85 @@ export default function PaymentModal({ onClose }) {
                   </View>
                 </View>
 
-                <Text style={[styles.bankSectionTitle, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                <Text style={[styles.bankSectionTitle, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                   {isRTL ? "معلومات الحساب البنكي" : "Bank Account Information"}
                 </Text>
 
                 {/* Bank Details Cards */}
                 <View style={[styles.detailCard, { backgroundColor: colors.surfaceSecondary }]}>
-                  <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "اسم البنك" : "Bank Name"}
                     </Text>
                     <CopyButton text="alrajhi bank" fieldName="bank" small />
                   </View>
-                  <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                     {isRTL ? "مصرف الراجحي" : "alrajhi bank"}
                   </Text>
                 </View>
 
                 <View style={[styles.detailCard, { backgroundColor: colors.surfaceSecondary }]}>
-                  <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "اسم الحساب" : "Account Name"}
                     </Text>
                     <CopyButton text="Waseet Alan Est." fieldName="account" small />
                   </View>
-                  <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                     {isRTL ? "مؤسسة وسيط الان" : "Waseet Alan Est."}
                   </Text>
                 </View>
 
                 <View style={[styles.detailCard, { backgroundColor: colors.surfaceSecondary }]}>
-                  <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "رقم الحساب الجاري" : "Account Number"}
                     </Text>
                     <CopyButton text="64600-001-0006087777004" fieldName="accountNumber" small />
                   </View>
-                  <Text style={[styles.detailValue, { color: colors.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', writingDirection: 'rtl' }]}>
                     64600-001-0006087777004
                   </Text>
                 </View>
 
                 <View style={[styles.detailCard, { backgroundColor: colors.surfaceSecondary }]}>
-                  <View style={[styles.detailRow, { flexDirection: rowDirection }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       IBAN
                     </Text>
                     <CopyButton text="SA2380000646608017777004" fieldName="iban" small />
                   </View>
-                  <Text style={[styles.detailValue, { color: colors.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', writingDirection: 'rtl' }]}>
                     SA23 8000 0646 6080 1777 7004
                   </Text>
                 </View>
 
                 {/* Instructions */}
                 <View style={[styles.instructionsCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Text style={[styles.instructionsTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.instructionsTitle, { color: colors.text, writingDirection: 'rtl' }]}>
                     {isRTL ? "📋 التعليمات" : "📋 Instructions"}
                   </Text>
-                  <View style={[styles.instructionItem, { flexDirection: rowDirection }]}>
+                  <View style={[styles.instructionItem]}>
                     <View style={[styles.instructionBullet, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.instructionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.instructionText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "قم بتحويل المبلغ المذكور أعلاه بالضبط" : "Transfer the exact amount shown above"}
                     </Text>
                   </View>
-                  <View style={[styles.instructionItem, { flexDirection: rowDirection }]}>
+                  <View style={[styles.instructionItem]}>
                     <View style={[styles.instructionBullet, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.instructionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.instructionText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "اكتب رقم جوالك في خانة البيان عند التحويل" : "Write your phone number in the transfer narrative"}
                     </Text>
                   </View>
-                  <View style={[styles.instructionItem, { flexDirection: rowDirection }]}>
+                  <View style={[styles.instructionItem]}>
                     <View style={[styles.instructionBullet, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.instructionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.instructionText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "قم بإرفاق إيصال التحويل البنكي" : "Attach your bank transfer receipt"}
                     </Text>
                   </View>
-                  <View style={[styles.instructionItem, { flexDirection: rowDirection }]}>
+                  <View style={[styles.instructionItem]}>
                     <View style={[styles.instructionBullet, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.instructionText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.instructionText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "سيتم تأكيد الدفع خلال يوم عمل واحد" : "Payment confirmed within 1 working day"}
                     </Text>
                   </View>
@@ -464,10 +463,10 @@ export default function PaymentModal({ onClose }) {
                 {/* Phone Number Input for Transfer Narrative */}
                 {onPaymentSubmitted && (
                   <View style={styles.phoneInputSection}>
-                    <Text style={[styles.phoneInputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.phoneInputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
                       {isRTL ? "رقم الجوال المستخدم في التحويل" : "Phone Number Used in Transfer"}
                     </Text>
-                    <Text style={[styles.phoneInputHint, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.phoneInputHint, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL
                         ? "أدخل رقم جوالك الذي استخدمته في خانة البيان عند التحويل لتسريع المعالجة"
                         : "Enter the phone number you wrote in the transfer narrative for faster processing"}
@@ -478,7 +477,7 @@ export default function PaymentModal({ onClose }) {
                     }]}>
                       <TextInput
                         testID="payment-phone-input"
-                        style={[styles.phoneInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                        style={[styles.phoneInput, { color: colors.text, writingDirection: 'rtl' }]}
                         placeholder={isRTL ? "05xxxxxxxx" : "05xxxxxxxx"}
                         placeholderTextColor={colors.textMuted}
                         value={phoneNumber}
@@ -491,7 +490,7 @@ export default function PaymentModal({ onClose }) {
                       />
                     </View>
                     {phoneError && (
-                      <Text style={[styles.phoneErrorText, { color: colors.error || '#EF4444', textAlign: getRTLTextAlign(isRTL) }]}>
+                      <Text style={[styles.phoneErrorText, { color: colors.error || '#EF4444', writingDirection: 'rtl' }]}>
                         {isRTL ? "يرجى إدخال رقم الجوال" : "Please enter your phone number"}
                       </Text>
                     )}
@@ -501,10 +500,10 @@ export default function PaymentModal({ onClose }) {
                 {/* Receipt Image Upload */}
                 {onPaymentSubmitted && (
                   <View style={styles.receiptSection}>
-                    <Text style={[styles.phoneInputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.phoneInputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
                       {isRTL ? "إرفاق إيصال التحويل" : "Attach Transfer Receipt"}
                     </Text>
-                    <Text style={[styles.phoneInputHint, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.phoneInputHint, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL
                         ? "قم بتصوير أو اختيار صورة إيصال التحويل البنكي لتسريع التحقق"
                         : "Take a photo or choose your bank transfer receipt for faster verification"}
@@ -522,7 +521,7 @@ export default function PaymentModal({ onClose }) {
                         </Pressable>
                       </View>
                     ) : (
-                      <View style={[styles.receiptButtons, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                      <View style={styles.receiptButtons}>
                         <Pressable
                           onPress={takeReceiptPhoto}
                           disabled={bankTransferSubmitting}
@@ -877,6 +876,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   receiptButtons: {
+    flexDirection: 'row',
     gap: 10,
     marginTop: 8,
   },

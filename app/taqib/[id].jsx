@@ -1,1 +1,1 @@
-export { default } from "../taqib-ad-details";
+module.exports = require("../taqib-ad-details");

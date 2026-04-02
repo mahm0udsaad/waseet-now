@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { sendMessage as sendChatMessage } from "@/utils/supabase/chat";
-import { checkPaymobStatus } from "@/utils/paymob";
+import { checkPaymobStatus, createPaymobIntention } from "@/utils/paymob";
 import {
   confirmDaminCardPayment,
+  getDaminOrderForChat,
   submitDaminPayment,
   updateDaminOrderMetadata,
   uploadTransferReceipt as uploadDaminTransferReceipt,
 } from "@/utils/supabase/daminOrders";
+import { getSupabaseSession } from "@/utils/supabase/client";
+import {
+  getOrdersForConversation,
+  submitOrderBankTransfer,
+  updateOrderStatus,
+  uploadOrderTransferReceipt,
+} from "@/utils/supabase/orders";
 import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
 
 /**
@@ -30,6 +38,8 @@ export function useChatPayments({
   const [selectedPaymentContext, setSelectedPaymentContext] = useState(null);
   const selectedPaymentContextRef = useRef(null);
   const lastHandledPayResultRef = useRef(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const openPaymentFlow = usePaymentFlowStore((state) => state.openPaymentFlow);
 
   // ── Handle return from Paymob checkout (damin) ──────────────────────
@@ -39,10 +49,10 @@ export function useChatPayments({
     const handleDaminPayReturn = async () => {
       try {
         const payResult = JSON.parse(params.payResult);
-        const payResultKey = `${payResult?.paymentId || "no-payment-id"}:${payResult?.status || "unknown"}`;
+        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+        const payResultKey = `damin:${orderId}:${payResult?.paymentId || "no-payment-id"}:${payResult?.status || "unknown"}`;
         if (lastHandledPayResultRef.current === payResultKey) return;
         lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
         const paymobPaymentId = payResult?.paymentId;
         const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
 
@@ -96,8 +106,9 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
+              const currentMessages = messagesRef.current || [];
+              const alreadySent = currentMessages.some((m) =>
+                (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
               );
@@ -121,30 +132,31 @@ export function useChatPayments({
           }
 
           try {
-            const { getDaminOrderForChat } = await import("@/utils/supabase/daminOrders");
             const updated = await getDaminOrderForChat(convId || conversationId);
             setDaminOrder(updated);
-          } catch {}
+          } catch (refreshErr) {
+            console.warn("[DaminPay] Failed to refresh damin order:", refreshErr);
+          }
 
           Alert.alert(
             isRTL ? "تم الدفع بنجاح" : "Payment Successful",
             isRTL ? "تم تأكيد الدفع تلقائياً." : "Payment has been automatically confirmed."
           );
-          router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
         } else if (payResult.status === "failed") {
           Alert.alert(
             isRTL ? "فشل الدفع" : "Payment Failed",
             payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
           );
-          router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
         }
       } catch (outerErr) {
         console.error("[DaminPay] handleDaminPayReturn error:", outerErr);
+      } finally {
+        router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
       }
     };
 
     handleDaminPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
+  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, router]);
 
   // ── Handle return from Paymob checkout (regular) ────────────────────
   useEffect(() => {
@@ -153,10 +165,10 @@ export function useChatPayments({
     const handleRegularPayReturn = async () => {
       try {
         const payResult = JSON.parse(params.payResult);
-        const payResultKey = `regular:${payResult?.paymentId || "no-id"}:${payResult?.status || "unknown"}`;
+        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+        const payResultKey = `regular:${orderId}:${payResult?.paymentId || "no-id"}:${payResult?.status || "unknown"}`;
         if (lastHandledPayResultRef.current === payResultKey) return;
         lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
         const paymobPaymentId = payResult?.paymentId;
         const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
 
@@ -179,7 +191,6 @@ export function useChatPayments({
           }
 
           try {
-            const { updateOrderStatus } = await import("@/utils/supabase/orders");
             await updateOrderStatus(orderId, "payment_verified");
           } catch (statusErr) {
             console.warn("[RegularPay] Failed to update order status:", statusErr);
@@ -187,8 +198,9 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
+              const currentMessages = messagesRef.current || [];
+              const alreadySent = currentMessages.some((m) =>
+                (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
               );
@@ -212,30 +224,31 @@ export function useChatPayments({
           }
 
           try {
-            const { getOrdersForConversation } = await import("@/utils/supabase/orders");
             const updated = await getOrdersForConversation(convId || conversationId);
             setOrdersForChat(updated);
-          } catch {}
+          } catch (refreshErr) {
+            console.warn("[RegularPay] Failed to refresh orders:", refreshErr);
+          }
 
           Alert.alert(
             isRTL ? "تم الدفع بنجاح" : "Payment Successful",
             isRTL ? "تم تأكيد الدفع." : "Payment has been confirmed."
           );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
         } else if (payResult.status === "failed") {
           Alert.alert(
             isRTL ? "فشل الدفع" : "Payment Failed",
             payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
           );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
         }
       } catch (outerErr) {
         console.error("[RegularPay] handleRegularPayReturn error:", outerErr);
+      } finally {
+        router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
       }
     };
 
     handleRegularPayReturn();
-  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, messages, router]);
+  }, [params.payResult, params.isDamin, params.orderId, params.id, params.amount, conversationId, isRTL, router]);
 
   // ── Card payment handler ────────────────────────────────────────────
   const handleCardPayment = useCallback(async (paymentMethod = "card") => {
@@ -244,9 +257,6 @@ export function useChatPayments({
 
     setCardPayLoading(true);
     try {
-      const { getSupabaseSession } = await import("@/utils/supabase/client");
-      const { createPaymobIntention } = await import("@/utils/paymob");
-
       const session = await getSupabaseSession();
       const user = session?.user;
       const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || "";
@@ -330,7 +340,6 @@ export function useChatPayments({
         }
 
         try {
-          const { getDaminOrderForChat } = await import("@/utils/supabase/daminOrders");
           const updated = await getDaminOrderForChat(conversationId);
           setDaminOrder(updated);
         } catch {}
@@ -340,7 +349,6 @@ export function useChatPayments({
           isRTL ? "تم إرسال الدفع. سيتم التحقق والتأكيد قريباً." : "Payment submitted. It will be verified and confirmed soon."
         );
       } else {
-        const { submitOrderBankTransfer, uploadOrderTransferReceipt } = await import("@/utils/supabase/orders");
         const orderId = ctx.orderId;
 
         let receiptUrl = null;

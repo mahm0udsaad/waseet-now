@@ -1,7 +1,7 @@
 import CountryPickerModal from "@/components/CountryPickerModal";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { COUNTRIES, getCountryName } from "@/utils/countries";
-import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { supabase } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import { Image } from "expo-image";
@@ -30,7 +30,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
 
   const [method, setMethod] = useState(null); // 'phone'
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // default: Saudi Arabia
@@ -133,7 +133,7 @@ export default function RegisterScreen() {
       </View>
 
       {/* Sign In Link */}
-      <View style={[styles.footerLink, { flexDirection: rowDirection }]}>
+      <View style={styles.footerLink}>
         <Text style={[styles.footerText, { color: colors.textSecondary }]}>
           {isRTL ? "لديك حساب بالفعل؟ " : "Already have an account? "}
         </Text>
@@ -178,7 +178,6 @@ export default function RegisterScreen() {
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              flexDirection: rowDirection,
             },
           ]}
         >
@@ -193,7 +192,6 @@ export default function RegisterScreen() {
               styles.countrySelector,
               {
                 backgroundColor: pressed ? colors.surfaceSecondary : "transparent",
-                flexDirection: rowDirection,
               },
             ]}
           >
@@ -205,7 +203,7 @@ export default function RegisterScreen() {
           <TextInput
             style={[
               styles.phoneInput,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.text, writingDirection: 'rtl' },
             ]}
             placeholder={"XXXXXXXXXX"}
             placeholderTextColor={colors.textMuted}
@@ -253,7 +251,7 @@ export default function RegisterScreen() {
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
           {/* Header */}
-          <View style={[styles.header, { flexDirection: rowDirection }]}>
+          <View style={styles.header}>
             <Pressable
               onPress={() => {
                 if (method) {
@@ -301,6 +299,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
@@ -446,6 +445,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   phoneInputWrapper: {
+    flexDirection: "row",
     borderRadius: 16,
     borderWidth: 1.5,
     alignItems: "center",

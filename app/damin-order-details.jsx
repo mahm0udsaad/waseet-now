@@ -8,6 +8,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,12 +29,11 @@ import {
   UserCheck,
   Briefcase,
   AlertTriangle,
-  ChevronRight,
 } from 'lucide-react-native';
 import FadeInView from "@/components/ui/FadeInView";
 
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { usePaymentFlowStore } from '@/utils/payments/paymentFlowStore';
 import { NativeButton } from '@/components/native';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
@@ -56,13 +57,13 @@ import { showToast } from '@/utils/notifications/inAppStore';
 import { checkPaymobStatus, createPaymobIntention } from '@/utils/paymob';
 
 const InfoRow = ({ icon: Icon, label, value, colors, isRTL }) => (
-  <View style={[styles.infoRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+  <View style={styles.infoRow}>
     <View style={[styles.infoIconContainer, { backgroundColor: colors.primary + '15' }]}>
       <Icon size={20} color={colors.primary} />
     </View>
-    <View style={[styles.infoContent, { alignItems: getRTLStartAlign(isRTL) }]}>
-      <Text style={[styles.infoLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>{value}</Text>
+    <View style={styles.infoContent}>
+      <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: colors.text, writingDirection: 'rtl' }]}>{value}</Text>
     </View>
   </View>
 );
@@ -98,7 +99,7 @@ const StatusBadge = ({ status, colors, isRTL }) => {
   const { color, label } = getStatusInfo();
 
   return (
-    <View style={[styles.statusBadge, { backgroundColor: color + '20', flexDirection: getRTLRowDirection(isRTL) }]}>
+    <View style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
       <View style={[styles.statusDot, { backgroundColor: color }]} />
       <Text style={[styles.statusText, { color: color }]}>{label}</Text>
     </View>
@@ -110,8 +111,8 @@ const ProgressStepper = ({ status, colors, isRTL }) => {
   const steps = [
     { key: 'created', label: isRTL ? 'إنشاء' : 'Created', icon: FileText },
     { key: 'both_confirmed', label: isRTL ? 'تأكيد' : 'Confirmed', icon: UserCheck },
-    { key: 'payment_submitted', label: isRTL ? 'الدفع' : 'Paid', icon: Banknote },
-    { key: 'under_review', label: isRTL ? 'تنفيذ' : 'Active', icon: Briefcase },
+    { key: 'payment_submitted', label: isRTL ? 'الدفع' : 'Payment', icon: Banknote },
+    { key: 'awaiting_completion', label: isRTL ? 'تنفيذ' : 'Active', icon: Briefcase },
     { key: 'completed', label: isRTL ? 'مكتمل' : 'Done', icon: CheckCircle2 },
   ];
 
@@ -120,7 +121,7 @@ const ProgressStepper = ({ status, colors, isRTL }) => {
   const getStepIndex = () => {
     if (isCancelled) return -1;
     if (status === 'created' || status === 'pending_confirmations') return 0;
-    if (status === 'both_confirmed') return 1;
+    if (status === 'both_confirmed' || status === 'awaiting_payment') return 1;
     if (status === 'payment_submitted') return 2;
     if (status === 'awaiting_completion') return 3;
     if (status === 'completion_requested') return 3;
@@ -131,7 +132,7 @@ const ProgressStepper = ({ status, colors, isRTL }) => {
 
   return (
     <View style={styles.stepperContainer}>
-      <View style={[styles.stepperRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={styles.stepperRow}>
         {steps.map((step, idx) => {
           const isPast = !isCancelled && idx < activeStepIndex;
           const isCurrent = !isCancelled && idx === activeStepIndex;
@@ -141,7 +142,7 @@ const ProgressStepper = ({ status, colors, isRTL }) => {
           return (
             <View key={step.key} style={styles.stepItem}>
               {/* Line Connector */}
-              <View style={[styles.stepLineContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+              <View style={styles.stepLineContainer}>
                 <View style={[styles.stepLine, { 
                   backgroundColor: (isPast || isCurrent) ? colors.primary : colors.border,
                   opacity: idx === 0 ? 0 : 1 
@@ -201,6 +202,8 @@ export default function DaminOrderDetailsScreen() {
   const [chatLoading, setChatLoading] = useState(false);
   const [userPhone, setUserPhone] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
   const lastHandledPayResultRef = useRef(null);
   const openPaymentFlow = usePaymentFlowStore((state) => state.openPaymentFlow);
 
@@ -434,7 +437,15 @@ export default function DaminOrderDetailsScreen() {
           });
           router.setParams({ payResult: undefined });
         }
-      } catch {}
+      } catch (err) {
+        console.error("[DaminOrderDetails] handlePayResult error:", err);
+        showToast({
+          type: 'error',
+          title: isRTL ? 'خطأ' : 'Error',
+          message: isRTL ? 'حدث خطأ أثناء معالجة نتيجة الدفع.' : 'An error occurred processing the payment result.',
+        });
+        router.setParams({ payResult: undefined });
+      }
     };
 
     handlePayResult();
@@ -502,8 +513,8 @@ export default function DaminOrderDetailsScreen() {
       }
     }
 
-    // Both confirmed: creator (= payer / business man) should pay
-    if (order.status === 'both_confirmed') {
+    // Both confirmed or awaiting payment: creator (= payer / business man) should pay
+    if (order.status === 'both_confirmed' || order.status === 'awaiting_payment') {
       if (userRole === 'creator' || userRole === 'payer') {
         return { type: 'pay_now' };
       }
@@ -831,49 +842,43 @@ export default function DaminOrderDetailsScreen() {
   };
 
   const handleOpenDispute = () => {
-    Alert.prompt(
-      isRTL ? 'فتح نزاع' : 'Open a Dispute',
-      isRTL ? 'يرجى كتابة سبب النزاع:' : 'Please describe the reason for the dispute:',
-      [
-        { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        {
-          text: isRTL ? 'إرسال' : 'Submit',
-          style: 'destructive',
-          onPress: async (reason) => {
-            if (!reason?.trim()) {
-              showToast({
-                type: 'warning',
-                title: isRTL ? 'مطلوب' : 'Required',
-                message: isRTL ? 'يرجى كتابة سبب النزاع' : 'Please provide a dispute reason',
-              });
-              return;
-            }
-            hapticFeedback.warning();
-            setActionLoading(true);
-            try {
-              await submitDaminDispute(id, reason.trim());
-              showToast({
-                type: 'success',
-                title: isRTL ? 'تم فتح النزاع' : 'Dispute Opened',
-                message: isRTL ? 'تم إرسال النزاع وسيتم مراجعته من قبل الإدارة.' : 'Your dispute has been submitted and will be reviewed by admin.',
-              });
-              await loadOrder();
-            } catch (err) {
-              console.error('Failed to submit dispute:', err);
-              showToast({
-                type: 'error',
-                title: isRTL ? 'خطأ' : 'Error',
-                message: err?.message || (isRTL ? 'فشل فتح النزاع' : 'Failed to open dispute'),
-              });
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-    );
+    setDisputeReason('');
+    setDisputeModalVisible(true);
+  };
+
+  const handleSubmitDispute = async () => {
+    const reason = disputeReason.trim();
+    if (!reason) {
+      showToast({
+        type: 'warning',
+        title: isRTL ? 'مطلوب' : 'Required',
+        message: isRTL ? 'يرجى كتابة سبب النزاع' : 'Please provide a dispute reason',
+      });
+      return;
+    }
+
+    hapticFeedback.warning();
+    setActionLoading(true);
+    try {
+      await submitDaminDispute(id, reason);
+      setDisputeModalVisible(false);
+      setDisputeReason('');
+      showToast({
+        type: 'success',
+        title: isRTL ? 'تم فتح النزاع' : 'Dispute Opened',
+        message: isRTL ? 'تم إرسال النزاع وسيتم مراجعته من قبل الإدارة.' : 'Your dispute has been submitted and will be reviewed by admin.',
+      });
+      await loadOrder();
+    } catch (err) {
+      console.error('Failed to submit dispute:', err);
+      showToast({
+        type: 'error',
+        title: isRTL ? 'خطأ' : 'Error',
+        message: err?.message || (isRTL ? 'فشل فتح النزاع' : 'Failed to open dispute'),
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // --- Render: Loading ---
@@ -885,22 +890,13 @@ export default function DaminOrderDetailsScreen() {
             headerShown: true,
             headerLargeTitle: false,
             title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-            headerBackVisible: !isRTL,
-            headerLeft: isRTL ? () => null : undefined,
-            headerRight: isRTL
-              ? () => (
-                  <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                )
-              : undefined,
           }}
         />
         <StatusBar style={colors.statusBar} />
         <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]} showsVerticalScrollIndicator={false}>
           <SkeletonGroup>
             {Array.from({ length: 4 }).map((_, idx) => (
-              <View key={`sk-${idx}`} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: getRTLStartAlign(isRTL) }]}>
+              <View key={`sk-${idx}`} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'flex-start' }]}>
                 <Skeleton height={14} radius={8} width="35%" />
                 <Skeleton height={22} radius={10} width="55%" style={{ marginTop: 10 }} />
                 <Skeleton height={14} radius={8} width="100%" style={{ marginTop: 16 }} />
@@ -922,15 +918,6 @@ export default function DaminOrderDetailsScreen() {
             headerShown: true,
             headerLargeTitle: false,
             title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-            headerBackVisible: !isRTL,
-            headerLeft: isRTL ? () => null : undefined,
-            headerRight: isRTL
-              ? () => (
-                  <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                    <ChevronRight size={22} color={colors.text} />
-                  </Pressable>
-                )
-              : undefined,
           }}
         />
         <StatusBar style={colors.statusBar} />
@@ -951,11 +938,8 @@ export default function DaminOrderDetailsScreen() {
 
   // --- Alert card renderer ---
   const renderAlertCard = () => {
-    const alertCardStyle = [
-      styles.alertCard, 
-      { flexDirection: getRTLRowDirection(isRTL) }
-    ];
-    const textAlignment = { textAlign: getRTLTextAlign(isRTL) };
+    const alertCardStyle = styles.alertCard;
+    const textAlignment = { writingDirection: 'rtl' };
 
     switch (actionContext.type) {
       case 'confirm_participation':
@@ -1087,8 +1071,8 @@ export default function DaminOrderDetailsScreen() {
     if (actionContext.type === 'confirm_participation') {
       return (
         <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 10) + 10, backgroundColor: colors.background }]}>
-          <View style={[styles.actionButtons, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <View style={{ flex: 1, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}>
+          <View style={styles.actionButtons}>
+            <View style={{ flex: 1, marginEnd: 8 }}>
               <NativeButton
                 title={isRTL ? 'رفض' : 'Reject'}
                 onPress={handleReject}
@@ -1097,7 +1081,7 @@ export default function DaminOrderDetailsScreen() {
                 icon="x"
               />
             </View>
-            <View style={{ flex: 1, marginLeft: isRTL ? 0 : 8, marginRight: isRTL ? 8 : 0 }}>
+            <View style={{ flex: 1, marginStart: 8 }}>
               <NativeButton
                 title={isRTL ? 'تأكيد' : 'Confirm'}
                 onPress={handleConfirm}
@@ -1153,7 +1137,7 @@ export default function DaminOrderDetailsScreen() {
             <Pressable
               onPress={handleOpenDispute}
               disabled={actionLoading}
-              style={[styles.disputeLink, { flexDirection: getRTLRowDirection(isRTL) }]}
+              style={styles.disputeLink}
             >
               <AlertTriangle size={16} color={colors.error} />
               <Text style={[styles.disputeLinkText, { color: colors.error }]}>
@@ -1197,7 +1181,7 @@ export default function DaminOrderDetailsScreen() {
             <Pressable
               onPress={handleOpenDispute}
               disabled={actionLoading}
-              style={[styles.disputeLink, { flexDirection: getRTLRowDirection(isRTL) }]}
+              style={styles.disputeLink}
             >
               <AlertTriangle size={16} color={colors.error} />
               <Text style={[styles.disputeLinkText, { color: colors.error }]}>
@@ -1233,7 +1217,7 @@ export default function DaminOrderDetailsScreen() {
             <Pressable
               onPress={handleOpenDispute}
               disabled={actionLoading}
-              style={[styles.disputeLink, { flexDirection: getRTLRowDirection(isRTL) }]}
+              style={styles.disputeLink}
             >
               <AlertTriangle size={16} color={colors.error} />
               <Text style={[styles.disputeLinkText, { color: colors.error }]}>
@@ -1255,18 +1239,82 @@ export default function DaminOrderDetailsScreen() {
           headerShown: true,
           headerLargeTitle: false,
           title: isRTL ? 'تفاصيل طلب الضامن' : 'Damin Order Details',
-          headerBackVisible: !isRTL,
-          headerLeft: isRTL ? () => null : undefined,
-          headerRight: isRTL
-            ? () => (
-                <Pressable onPress={handleBack} style={styles.headerBackButton}>
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         }}
       />
       <StatusBar style={colors.statusBar} />
+      <Modal
+        visible={disputeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!actionLoading) {
+            setDisputeModalVisible(false);
+          }
+        }}
+      >
+        <View style={styles.disputeModalOverlay}>
+          <View
+            style={[
+              styles.disputeModalCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.disputeModalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+              {isRTL ? 'فتح نزاع' : 'Open a Dispute'}
+            </Text>
+            <Text style={[styles.disputeModalBody, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+              {isRTL ? 'يرجى كتابة سبب النزاع:' : 'Please describe the reason for the dispute:'}
+            </Text>
+            <TextInput
+              value={disputeReason}
+              onChangeText={setDisputeReason}
+              editable={!actionLoading}
+              multiline
+              placeholder={isRTL ? 'اكتب سبب النزاع هنا' : 'Write the dispute reason here'}
+              placeholderTextColor={colors.textMuted}
+              textAlign={isRTL ? 'right' : 'left'}
+              textAlignVertical="top"
+              style={[
+                styles.disputeModalInput,
+                {
+                  color: colors.text,
+                  backgroundColor: colors.backgroundSecondary,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+            <View style={styles.disputeModalActions}>
+              <Pressable
+                onPress={() => {
+                  if (!actionLoading) {
+                    setDisputeModalVisible(false);
+                  }
+                }}
+                style={[
+                  styles.disputeSecondaryButton,
+                  { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
+                ]}
+              >
+                <Text style={[styles.disputeSecondaryButtonText, { color: colors.text }]}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSubmitDispute}
+                disabled={actionLoading}
+                style={[
+                  styles.disputePrimaryButton,
+                  { backgroundColor: colors.error, opacity: actionLoading ? 0.6 : 1 },
+                ]}
+              >
+                <Text style={styles.disputePrimaryButtonText}>
+                  {actionLoading ? (isRTL ? 'جارٍ الإرسال...' : 'Submitting...') : (isRTL ? 'إرسال' : 'Submit')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         style={styles.scrollView}
@@ -1288,8 +1336,8 @@ export default function DaminOrderDetailsScreen() {
           delay={100}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <View style={[styles.cardHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <View style={{ flex: 1, alignItems: getRTLStartAlign(isRTL) }}>
+          <View style={styles.cardHeader}>
+            <View style={{ flex: 1, alignItems: 'flex-start' }}>
               <Text style={[styles.orderIdLabel, { color: colors.textSecondary }]}>
                 {isRTL ? 'رقم الطلب' : 'Order ID'}
               </Text>
@@ -1319,10 +1367,10 @@ export default function DaminOrderDetailsScreen() {
           delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'تفاصيل الخدمة' : 'Service Details'}
           </Text>
-          <Text style={[styles.serviceDescription, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.serviceDescription, { color: colors.text, writingDirection: 'rtl' }]}>
             {order.service_type_or_details}
           </Text>
           {order.service_period_start && (
@@ -1338,13 +1386,13 @@ export default function DaminOrderDetailsScreen() {
           delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'المشاركون' : 'Participants'}
           </Text>
 
           <InfoRow icon={User} label={isRTL ? 'صاحب الطلب' : 'Order Owner'} value={order.payer_phone} colors={colors} isRTL={isRTL} />
           {order.payer_confirmed_at && (
-            <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120', flexDirection: getRTLRowDirection(isRTL), alignSelf: getRTLStartAlign(isRTL) }]}>
+            <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120' }]}>
               <CheckCircle2 size={16} color="#10B981" />
               <Text style={[styles.confirmedText, { color: '#10B981' }]}>
                 {isRTL ? 'تم التأكيد' : 'Confirmed'}
@@ -1356,7 +1404,7 @@ export default function DaminOrderDetailsScreen() {
 
           <InfoRow icon={User} label={isRTL ? 'مقدم الخدمة' : 'Service Provider'} value={order.beneficiary_phone} colors={colors} isRTL={isRTL} />
           {order.beneficiary_confirmed_at && (
-            <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120', flexDirection: getRTLRowDirection(isRTL), alignSelf: getRTLStartAlign(isRTL) }]}>
+            <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120' }]}>
               <CheckCircle2 size={16} color="#10B981" />
               <Text style={[styles.confirmedText, { color: '#10B981' }]}>
                 {isRTL ? 'تم التأكيد' : 'Confirmed'}
@@ -1370,7 +1418,7 @@ export default function DaminOrderDetailsScreen() {
           delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'التفاصيل المالية' : 'Financial Details'}
           </Text>
           <InfoRow icon={DollarSign} label={isRTL ? 'قيمة الخدمة' : 'Service Value'} value={`${order.service_value.toFixed(2)} SAR`} colors={colors} isRTL={isRTL} />
@@ -1379,14 +1427,14 @@ export default function DaminOrderDetailsScreen() {
           {/* Highlight total amount when payment is needed */}
           {order.status === 'both_confirmed' && (userRole === 'creator' || userRole === 'payer') && (
             <View style={[styles.highlightBox, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
-              <Text style={[styles.highlightText, { color: '#F59E0B', textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.highlightText, { color: '#F59E0B', writingDirection: 'rtl' }]}>
                 {isRTL ? `المبلغ المطلوب دفعه: ${order.total_amount.toFixed(2)} ر.س` : `Amount to Pay: ${order.total_amount.toFixed(2)} SAR`}
               </Text>
             </View>
           )}
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <View style={[styles.totalRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.totalRow}>
             <Text style={[styles.totalLabel, { color: colors.primary }]}>
               {isRTL ? 'الإجمالي' : 'Total'}
             </Text>
@@ -1401,7 +1449,7 @@ export default function DaminOrderDetailsScreen() {
           delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
             {isRTL ? 'التاريخ' : 'Timeline'}
           </Text>
           <InfoRow icon={Calendar} label={isRTL ? 'تاريخ الإنشاء' : 'Created'} value={formattedDate} colors={colors} isRTL={isRTL} />
@@ -1473,6 +1521,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   cardHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -1513,6 +1562,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   infoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
     gap: 12,
@@ -1526,6 +1576,7 @@ const styles = StyleSheet.create({
   },
   infoContent: {
     flex: 1,
+    alignItems: 'flex-start',
   },
   infoLabel: {
     fontSize: 12,
@@ -1565,6 +1616,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   totalRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 4,
@@ -1602,6 +1654,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   actionButtons: {
+    flexDirection: 'row',
     gap: 8,
   },
   chatButton: {
@@ -1636,6 +1689,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   stepperRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
@@ -1646,6 +1700,7 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   stepLineContainer: {
+    flexDirection: 'row',
     position: 'absolute',
     top: 15, // Center of 32px icon (16px) - 1px = 15px
     left: 0,
@@ -1685,6 +1740,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   disputeLink: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
@@ -1693,5 +1749,67 @@ const styles = StyleSheet.create({
   disputeLinkText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  disputeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  disputeModalCard: {
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+  },
+  disputeModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  disputeModalBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  disputeModalInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  disputeModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 16,
+  },
+  disputeSecondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disputeSecondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  disputePrimaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disputePrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

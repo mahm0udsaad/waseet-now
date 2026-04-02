@@ -1,4 +1,4 @@
-import { useTranslation, getRTLTextAlign, getRTLEndAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -26,7 +26,7 @@ export default function TaqibDetailsScreen() {
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const [isFavorited, setIsFavorited] = useState(false);
 
   // Mock data - in real app this would come from route params or API
@@ -135,7 +135,7 @@ export default function TaqibDetailsScreen() {
 
       <Pressable
         onPress={handleShare}
-        style={[styles.headerButton, { backgroundColor: colors.surface, marginLeft: 8 }]}
+        style={[styles.headerButton, { backgroundColor: colors.surface, marginStart: 8 }]}
       >
         <Share2 size={20} color={colors.textSecondary} />
       </Pressable>
@@ -160,16 +160,16 @@ export default function TaqibDetailsScreen() {
     return (
       <FadeInView delay={200} style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* Header with Category Icon and Status */}
-        <View style={[styles.mainCardHeader, { flexDirection: rowDirection }]}>
-          <View style={[styles.categoryRow, { flexDirection: rowDirection }]}>
+        <View style={styles.mainCardHeader}>
+          <View style={styles.categoryRow}>
             <View style={[styles.categoryIcon, { backgroundColor: colors.primary }]}>
               <CategoryIcon size={28} color="#fff" />
             </View>
             <View style={{ marginHorizontal: 16 }}>
-              <Text style={[styles.categoryTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.categoryTitle, { color: colors.text }]}>
                 {requestData.title}
               </Text>
-              <Text style={[styles.categorySubtitle, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+              <Text style={[styles.categorySubtitle, { color: colors.textSecondary }]}>
                 {requestData.category}
               </Text>
             </View>
@@ -198,7 +198,7 @@ export default function TaqibDetailsScreen() {
           <Text style={[styles.descriptionLabel, { color: colors.textSecondary }]}>
             {isRTL ? "الوصف" : "Description"}
           </Text>
-          <Text style={[styles.descriptionText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.descriptionText, { color: colors.text }]}>
             {requestData.description}
           </Text>
         </View>
@@ -248,7 +248,7 @@ export default function TaqibDetailsScreen() {
         {/* Progress Bar */}
         {requestData.status === "active" && (
           <View style={styles.progressContainer}>
-            <View style={[styles.progressHeader, { flexDirection: rowDirection }]}>
+            <View style={styles.progressHeader}>
               <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
                 {isRTL ? "التقدم" : "Progress"}
               </Text>
@@ -275,7 +275,7 @@ export default function TaqibDetailsScreen() {
 
   const renderDocumentsSection = () => (
     <FadeInView delay={300} style={[styles.documentsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={[styles.documentsHeader, { flexDirection: rowDirection }]}>
+      <View style={styles.documentsHeader}>
         <FileText size={20} color={colors.primary} />
         <Text style={[styles.documentsTitle, { color: colors.text }]}>
           {isRTL ? "الوثائق المطلوبة" : "Required Documents"}
@@ -284,11 +284,11 @@ export default function TaqibDetailsScreen() {
 
       <View style={styles.documentsList}>
         {requestData.documents.map((doc, index) => (
-          <View key={index} style={[styles.documentItem, { flexDirection: rowDirection }]}>
+          <View key={index} style={styles.documentItem}>
             <View style={[styles.documentIcon, { backgroundColor: colors.primaryLight }]}>
               <FileText size={14} color={colors.primary} />
             </View>
-            <Text style={[styles.documentText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.documentText, { color: colors.text }]}>
               {doc}
             </Text>
           </View>
@@ -316,7 +316,7 @@ export default function TaqibDetailsScreen() {
           </Text>
         </View>
 
-        <View style={{ alignItems: getRTLEndAlign(isRTL) }}>
+        <View style={{ alignItems: 'flex-end' }}>
           <Text style={styles.budgetValue}>
             {requestData.budget} {isRTL ? "ر.س" : "SAR"}
           </Text>
@@ -328,7 +328,7 @@ export default function TaqibDetailsScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtonsRow}>
-        <ScalePressable onPress={handleChat} style={{ flex: 1, marginLeft: 12 }}>
+        <ScalePressable onPress={handleChat} style={{ flex: 1, marginStart: 12 }}>
           <View style={styles.secondaryButton}>
             <MessageCircle size={18} color="#fff" />
             <Text style={styles.secondaryButtonText}>
@@ -338,7 +338,7 @@ export default function TaqibDetailsScreen() {
         </ScalePressable>
 
         {requestData.status === "pending" && (
-          <ScalePressable onPress={handleSubmitOffer} style={{ flex: 1, marginLeft: 12 }}>
+          <ScalePressable onPress={handleSubmitOffer} style={{ flex: 1, marginStart: 12 }}>
             <View style={styles.primaryButton}>
               <DollarSign size={18} color="#fff" />
               <Text style={styles.primaryButtonText}>
@@ -425,11 +425,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   mainCardHeader: {
+    flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 16,
   },
   categoryRow: {
+    flexDirection: "row",
     alignItems: "center",
     flex: 1,
   },
@@ -525,6 +527,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   progressHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
   },
@@ -553,6 +556,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   documentsHeader: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
     gap: 10,
@@ -565,6 +569,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   documentItem: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },

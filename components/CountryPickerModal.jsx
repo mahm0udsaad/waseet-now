@@ -1,6 +1,6 @@
 import { getCountryName, searchCountries } from "@/utils/countries";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { Search, X } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -27,7 +27,6 @@ function CountryItem({ country, isSelected, onSelect, isRTL, colors }) {
             : pressed
             ? colors.surfaceSecondary
             : "transparent",
-          flexDirection: getRTLRowDirection(isRTL),
         },
       ]}
     >
@@ -35,7 +34,7 @@ function CountryItem({ country, isSelected, onSelect, isRTL, colors }) {
       <Text
         style={[
           styles.countryName,
-          { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+          { color: colors.text },
         ]}
         numberOfLines={1}
       >
@@ -99,7 +98,6 @@ export default function CountryPickerModal({ visible, onClose, onSelect, selecte
             styles.header,
             {
               borderBottomColor: colors.border,
-              flexDirection: getRTLRowDirection(isRTL),
             },
           ]}
         >
@@ -122,7 +120,6 @@ export default function CountryPickerModal({ visible, onClose, onSelect, selecte
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              flexDirection: getRTLRowDirection(isRTL),
             },
           ]}
         >
@@ -130,7 +127,7 @@ export default function CountryPickerModal({ visible, onClose, onSelect, selecte
           <TextInput
             style={[
               styles.searchInput,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' },
+              { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' },
             ]}
             placeholder={isRTL ? "ابحث عن دولة..." : "Search country..."}
             placeholderTextColor={colors.textMuted}
@@ -169,6 +166,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,

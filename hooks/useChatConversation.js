@@ -6,7 +6,7 @@ import {
   subscribeToMessages,
   sendMessage as supabaseSendMessage,
 } from "@/utils/supabase/chat";
-import { getSupabaseUser } from "@/utils/supabase/client";
+import { getSupabaseUser, supabase } from "@/utils/supabase/client";
 import { markConversationNotificationsRead } from "@/utils/supabase/notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
@@ -34,7 +34,9 @@ export function useChatConversation(params, t, isRTL) {
     markConversationReadLocal(conversationId);
     markConversationNotificationsRead(conversationId).catch(() => {});
 
-    const data = await fetchMessages(conversationId);
+    const data = await fetchMessages(conversationId, {
+      onHydrated: (hydrated) => setMessages(hydrated),
+    });
     setMessages(data);
     setHasMore(data.length >= 30);
     return data;
@@ -102,66 +104,7 @@ export function useChatConversation(params, t, isRTL) {
     };
   }, [params.id, params.conversationId, params.ownerId, params.adId, isRTL, t.common.error]);
 
-  // Fetch other user's profile for the conversation
-  useEffect(() => {
-    if (!conversationId || !currentUserId) return;
-
-    const fetchOtherUserProfile = async () => {
-      try {
-        const { supabase } = await import("@/utils/supabase/client");
-
-        // Get all members of this conversation
-        const { data: members, error: membersError } = await supabase
-          .from("conversation_members")
-          .select("user_id")
-          .eq("conversation_id", conversationId);
-
-        if (membersError) {
-          console.error("Error fetching conversation members:", membersError);
-          return;
-        }
-
-        // Find the other user (not current user)
-        const otherUserId = (members || [])
-          .map((m) => m.user_id)
-          .find((id) => id !== currentUserId);
-
-        if (!otherUserId) {
-          console.warn("No other user found in conversation");
-          return;
-        }
-
-        // Fetch other user's profile
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("display_name, avatar_url")
-          .eq("user_id", otherUserId)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          return;
-        }
-
-        setOtherUserId(otherUserId);
-
-        if (profile) {
-          setOtherUserProfile({
-            displayName: profile.display_name || "User",
-            avatarUrl: profile.avatar_url,
-          });
-        } else {
-          console.warn("No profile data returned for user:", otherUserId);
-        }
-      } catch (error) {
-        console.error("Error fetching other user profile:", error);
-      }
-    };
-
-    fetchOtherUserProfile();
-  }, [conversationId, currentUserId]);
-
-  // Fetch ad context for this conversation (works even when opening from chat list)
+  // Fetch other user's profile + ad context in parallel
   useEffect(() => {
     if (!conversationId) {
       setAdContext(null);
@@ -170,11 +113,9 @@ export function useChatConversation(params, t, isRTL) {
 
     let isMounted = true;
 
+    // Fetch ad context
     const fetchAdContext = async () => {
       try {
-        const { supabase } = await import("@/utils/supabase/client");
-
-        // Pull ad info via conversations.ad_id FK -> ads
         const { data, error } = await supabase
           .from("conversations")
           .select(
@@ -183,10 +124,7 @@ export function useChatConversation(params, t, isRTL) {
           .eq("id", conversationId)
           .maybeSingle();
 
-        if (error) {
-          console.error("Error fetching conversation ad context:", error);
-          return;
-        }
+        if (error || !isMounted) return;
 
         const adId = data?.ad_id || null;
         const ad = data?.ads || null;
@@ -196,27 +134,65 @@ export function useChatConversation(params, t, isRTL) {
           return;
         }
 
-        if (!isMounted) return;
-
-        setAdContext({
-          adId,
-          ownerId: ad.owner_id || null,
-          title: ad.title || "",
-          description: ad.description || "",
-          price: ad.price ?? null,
-          metadata: ad.metadata || {},
-        });
+        if (isMounted) {
+          setAdContext({
+            adId,
+            ownerId: ad.owner_id || null,
+            title: ad.title || "",
+            description: ad.description || "",
+            price: ad.price ?? null,
+            metadata: ad.metadata || {},
+          });
+        }
       } catch (e) {
         console.error("Error fetching conversation ad context:", e);
       }
     };
 
-    fetchAdContext();
+    // Fetch other user's profile
+    const fetchOtherUserProfile = async () => {
+      if (!currentUserId) return;
+      try {
+        const { data: members, error: membersError } = await supabase
+          .from("conversation_members")
+          .select("user_id")
+          .eq("conversation_id", conversationId);
+
+        if (membersError || !isMounted) return;
+
+        const otherId = (members || [])
+          .map((m) => m.user_id)
+          .find((id) => id !== currentUserId);
+
+        if (!otherId) return;
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("display_name, avatar_url")
+          .eq("user_id", otherId)
+          .maybeSingle();
+
+        if (profileError || !isMounted) return;
+
+        setOtherUserId(otherId);
+        if (profile) {
+          setOtherUserProfile({
+            displayName: profile.display_name || "User",
+            avatarUrl: profile.avatar_url,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching other user profile:", error);
+      }
+    };
+
+    // Run both in parallel
+    Promise.all([fetchAdContext(), fetchOtherUserProfile()]);
 
     return () => {
       isMounted = false;
     };
-  }, [conversationId]);
+  }, [conversationId, currentUserId]);
 
   // Load messages + subscribe
   useEffect(() => {
@@ -292,6 +268,13 @@ export function useChatConversation(params, t, isRTL) {
       const older = await fetchMessages(conversationId, {
         limit: 30,
         before: oldest.created_at,
+        onHydrated: (hydrated) => {
+          setMessages((prev) => {
+            // Replace the older messages at the start with hydrated versions
+            const olderIds = new Set(hydrated.map((m) => m.id));
+            return [...hydrated, ...prev.filter((m) => !olderIds.has(m.id))];
+          });
+        },
       });
       if (older.length < 30) setHasMore(false);
       if (older.length > 0) {

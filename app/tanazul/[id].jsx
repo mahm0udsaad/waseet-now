@@ -1,1 +1,1 @@
-export { default } from "../tanazul-details";
+module.exports = require("../tanazul-details");

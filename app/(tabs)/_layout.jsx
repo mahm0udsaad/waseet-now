@@ -2,8 +2,6 @@ import ModernTabBar from '@/components/ui/ModernTabBar';
 import { useLanguage } from '@/utils/i18n/store';
 import { useTheme } from '@/utils/theme/store';
 import { Tabs } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
-import { Pressable } from 'react-native';
 
 function BottomTabBarWrapper({ state }) {
   const currentRoute = state.routes[state.index];
@@ -29,12 +27,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={({ navigation }) => ({
+      screenOptions={{
         headerShown: false,
         headerLargeTitle: true,
         headerShadowVisible: false,
         headerBackButtonDisplayMode: 'minimal',
-        headerBackVisible: !isRTL,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
@@ -50,29 +47,10 @@ export default function TabsLayout() {
           writingDirection: isRTL ? 'rtl' : 'ltr',
         },
         headerTitleAlign: 'center',
-        headerRightContainerStyle: isRTL ? { paddingHorizontal: 8 } : undefined,
-        headerRight:
-          isRTL && navigation.canGoBack()
-            ? () => (
-                <Pressable
-                  onPress={() => navigation.goBack()}
-                  style={({ pressed }) => ({
-                    width: 34,
-                    height: 34,
-                    borderRadius: 17,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: pressed ? 0.9 : 1,
-                  })}
-                >
-                  <ChevronRight size={22} color={colors.text} />
-                </Pressable>
-              )
-            : undefined,
         sceneStyle: {
           backgroundColor: colors.background,
         },
-      })}
+      }}
       tabBar={(props) => <BottomTabBarWrapper {...props} />}
     >
       <Tabs.Screen

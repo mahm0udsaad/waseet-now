@@ -19,7 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLStartAlign, getRTLTextAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import FadeInView from "@/components/ui/FadeInView";
 import { useOrders } from '@/hooks/useOrders';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
@@ -104,7 +104,7 @@ export default function MyOrdersScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const [activeFilter, setActiveFilter] = useState('all');
   const { orders, loading, refreshing, error, refetch } = useOrders();
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -239,8 +239,8 @@ export default function MyOrdersScreen() {
             </View>
           )}
           
-          <View style={[styles.cardHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-              <View style={[styles.headerLeft, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.cardHeader}>
+              <View style={styles.headerLeft}>
                   <Text style={[styles.orderId, { color: colors.textMuted }]}>{item.id.slice(0, 8)}</Text>
                   <View style={[styles.dot, { backgroundColor: colors.border }]} />
                   <Text style={[styles.orderDate, { color: colors.textMuted }]}>{formattedDate}</Text>
@@ -250,10 +250,10 @@ export default function MyOrdersScreen() {
           
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           
-          <View style={[styles.cardBody, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.cardBody}>
               <OrderIcon type={adType} colors={colors} />
-              <View style={[styles.cardContent, { alignItems: getRTLStartAlign(isRTL) }]}>
-                  <Text style={[styles.cardTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>{adTitle}</Text>
+              <View style={styles.cardContent}>
+                  <Text style={[styles.cardTitle, { color: colors.text, writingDirection: 'rtl' }]}>{adTitle}</Text>
                   <Text style={[styles.providerName, { color: colors.textSecondary }]}>
                     {isDaminOrder
                       ? (userRole === 'payer'
@@ -301,14 +301,15 @@ export default function MyOrdersScreen() {
           headerTitleAlign: 'center',
           title: isRTL ? 'طلباتي' : 'Orders',
           headerBackVisible: false,
-          headerRightContainerStyle: styles.headerSideContainer,
-          headerRight: () =>
+          headerLeftContainerStyle: styles.headerSideContainer,
+          headerLeft: () =>
             navigation.canGoBack() ? (
               <Pressable
                 onPress={() => router.back()}
-                style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
               >
-                <ChevronRight size={20} color={colors.text} />
+                <ChevronRight size={24} color={colors.text} />
               </Pressable>
             ) : null,
         }}
@@ -319,7 +320,7 @@ export default function MyOrdersScreen() {
         <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.filtersContainer, { paddingStart: 20, flexDirection: getRTLRowDirection(isRTL) }]}
+            contentContainerStyle={[styles.filtersContainer, { paddingStart: 20 }]}
         >
             {filters.map((filter) => (
                 <Pressable
@@ -388,8 +389,8 @@ export default function MyOrdersScreen() {
                       ]}
                       pointerEvents="none"
                     >
-                      <View style={[styles.cardHeader, { flexDirection: rowDirection }]}>
-                        <View style={[styles.headerLeft, { flexDirection: rowDirection }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.headerLeft}>
                           <Skeleton height={10} radius={6} width={64} />
                           <View style={[styles.dot, { backgroundColor: colors.border }]} />
                           <Skeleton height={10} radius={6} width={84} />
@@ -399,9 +400,9 @@ export default function MyOrdersScreen() {
 
                       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-                      <View style={[styles.cardBody, { flexDirection: rowDirection }]}>
+                      <View style={styles.cardBody}>
                         <Skeleton width={48} height={48} radius={12} />
-                        <View style={[styles.cardContent, { alignItems: getRTLStartAlign(isRTL) }]}>
+                        <View style={styles.cardContent}>
                           <Skeleton height={14} radius={8} width="75%" />
                           <Skeleton height={12} radius={8} width="40%" style={{ marginTop: 10 }} />
                           <Skeleton height={14} radius={8} width="45%" style={{ marginTop: 10 }} />
@@ -446,6 +447,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   filtersContainer: {
+    flexDirection: 'row',
     paddingBottom: 8,
   },
   filterChip: {
@@ -479,12 +481,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardHeader: {
+    flexDirection: 'row',
     padding: 12,
     paddingHorizontal: 16,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
@@ -523,6 +527,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardBody: {
+    flexDirection: 'row',
     padding: 16,
     alignItems: 'center',
     gap: 16,
@@ -537,6 +542,7 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
     gap: 4,
+    alignItems: 'flex-start',
   },
   cardTitle: {
     fontSize: 16,

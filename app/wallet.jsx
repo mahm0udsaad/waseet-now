@@ -20,7 +20,7 @@ import {
   TrendingDown,
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { showToast } from '@/utils/notifications/inAppStore';
 import FadeInView from "@/components/ui/FadeInView";
 import { Skeleton, SkeletonGroup } from '@/components/ui/Skeleton';
@@ -34,15 +34,18 @@ export default function WalletOverviewScreen() {
     String(process.env.EXPO_PUBLIC_ENABLE_WITHDRAWALS ?? 'true').toLowerCase() !== 'false';
 
   const [walletData, setWalletData] = useState(null);
+  const [walletError, setWalletError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadWallet = useCallback(async () => {
     try {
+      setWalletError(false);
       const data = await getWalletSummary();
       setWalletData(data);
     } catch (err) {
       console.error('Failed to load wallet:', err);
+      setWalletError(true);
       showToast({ id: 'wallet-load-error', title: isRTL ? 'خطأ' : 'Error', body: isRTL ? 'فشل تحميل المحفظة' : 'Failed to load wallet', type: 'error' });
     } finally {
       setLoading(false);
@@ -110,12 +113,13 @@ export default function WalletOverviewScreen() {
             {
               backgroundColor: bgColor,
               borderColor: colors.border,
-              opacity: pressed ? 0.8 : 1
+              opacity: pressed ? 0.8 : 1,
+              flexDirection: 'row',
             },
           ]}
         >
           <Icon size={20} color={iconColor} />
-          <Text style={[styles.actionButtonText, { color: textColor }]}>{label}</Text>
+          <Text style={[styles.actionButtonText, { color: textColor, writingDirection: 'rtl' }]}>{label}</Text>
         </Pressable>
       </FadeInView>
     );
@@ -142,11 +146,11 @@ export default function WalletOverviewScreen() {
     );
   }
 
-  const available = walletData?.available_balance || 0;
-  const escrow = walletData?.escrow_held || 0;
-  const totalEarned = walletData?.total_earned || 0;
-  const monthIncome = walletData?.this_month_income || 0;
-  const monthWithdrawn = walletData?.this_month_withdrawn || 0;
+  const available = walletData != null ? (walletData.available_balance ?? 0) : 0;
+  const escrow = walletData != null ? (walletData.escrow_held ?? 0) : 0;
+  const totalEarned = walletData != null ? (walletData.total_earned ?? 0) : 0;
+  const monthIncome = walletData != null ? (walletData.this_month_income ?? 0) : 0;
+  const monthWithdrawn = walletData != null ? (walletData.this_month_withdrawn ?? 0) : 0;
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
@@ -165,9 +169,9 @@ export default function WalletOverviewScreen() {
             colors={[colors.primary, colors.primary + 'DD']}
             style={styles.balanceGradient}
           >
-            <View style={[styles.balanceHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+            <View style={[styles.balanceHeader, { flexDirection: 'row' }]}>
               <WalletIcon size={28} color="#fff" />
-              <Text style={styles.balanceTitle}>
+              <Text style={[styles.balanceTitle, { writingDirection: 'rtl' }]}>
                 {isRTL ? 'الرصيد المتاح' : 'Available Balance'}
               </Text>
             </View>
@@ -175,9 +179,11 @@ export default function WalletOverviewScreen() {
               {formatCurrency(available)}
             </Text>
             <Text style={styles.balanceSubtext}>
-              {available > 0
-                ? (isRTL ? 'جاهز للسحب' : 'Ready to withdraw')
-                : (isRTL ? 'لا يوجد رصيد قابل للسحب' : 'No balance available')}
+              {walletError
+                ? (isRTL ? 'فشل تحميل الرصيد — اسحب للتحديث' : 'Failed to load — pull to refresh')
+                : available > 0
+                  ? (isRTL ? 'جاهز للسحب' : 'Ready to withdraw')
+                  : (isRTL ? 'لا يوجد رصيد قابل للسحب' : 'No balance available')}
             </Text>
           </LinearGradient>
         </FadeInView>
@@ -206,7 +212,7 @@ export default function WalletOverviewScreen() {
           delay={300}
           style={[styles.infoBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.infoBannerText, { color: colors.textSecondary }]}>
+          <Text style={[styles.infoBannerText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
             {isRTL
               ? 'المبالغ قيد الانتظار هي أموال محجوزة من المشترين وسيتم إصدارها عند اكتمال الطلب.'
               : 'Escrow amounts are funds held from buyers and will be released when orders are completed.'}
@@ -215,7 +221,7 @@ export default function WalletOverviewScreen() {
 
         {/* Actions Section */}
         <View style={styles.actionsSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {isRTL ? 'الإجراءات' : 'Actions'}
           </Text>
 
@@ -243,22 +249,22 @@ export default function WalletOverviewScreen() {
           delay={450}
           style={[styles.quickStatsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.quickStatsTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.quickStatsTitle, { color: colors.text }]}>
             {isRTL ? 'هذا الشهر' : 'This Month'}
           </Text>
           <View style={styles.quickStatRow}>
-            <View style={[styles.quickStat, { flexDirection: getRTLRowDirection(isRTL) }]}>
+            <View style={[styles.quickStat, { flexDirection: 'row' }]}>
               <TrendingUp size={16} color="#10B981" />
-              <Text style={[styles.quickStatLabel, { color: colors.textSecondary }]}>
+              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                 {isRTL ? 'الدخل' : 'Income'}
               </Text>
               <Text style={[styles.quickStatValue, { color: '#10B981' }]}>
                 +{formatCurrency(monthIncome)}
               </Text>
             </View>
-            <View style={[styles.quickStat, { flexDirection: getRTLRowDirection(isRTL) }]}>
+            <View style={[styles.quickStat, { flexDirection: 'row' }]}>
               <TrendingDown size={16} color="#EF4444" />
-              <Text style={[styles.quickStatLabel, { color: colors.textSecondary }]}>
+              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                 {isRTL ? 'المسحوبات' : 'Withdrawn'}
               </Text>
               <Text style={[styles.quickStatValue, { color: '#EF4444' }]}>
@@ -288,6 +294,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   balanceHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginBottom: 16,
@@ -390,6 +397,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickStat: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingVertical: 8,

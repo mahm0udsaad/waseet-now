@@ -17,6 +17,8 @@ import {
 } from '@/utils/notifications/push';
 import { getNotificationRoute } from '@/utils/notifications/routing';
 import { useInAppNotificationsListener } from '@/utils/notifications/useInAppNotificationsListener';
+import { usePendingDaminOrder } from '@/hooks/usePendingDaminOrder';
+import { usePendingDaminStore } from '@/utils/damin/pendingDaminStore';
 import { getMyProfile } from '@/utils/supabase/profile';
 import { getSupabaseSession, supabase } from '@/utils/supabase/client';
 import { upsertMyPushToken } from '@/utils/supabase/pushTokens';
@@ -25,9 +27,9 @@ import { useThemeStore } from '@/utils/theme/store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { ChevronRight } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -44,11 +46,18 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const err = this.state.error;
+      const errMsg = err?.message || String(err || 'Unknown error');
+      const errStack = err?.stack || '';
       return (
         <View style={errorStyles.container}>
           <Text style={errorStyles.emoji}>⚠️</Text>
           <Text style={errorStyles.title}>حدث خطأ غير متوقع</Text>
           <Text style={errorStyles.subtitle}>An unexpected error occurred</Text>
+          <ScrollView style={errorStyles.debugBox} contentContainerStyle={errorStyles.debugContent}>
+            <Text style={errorStyles.debugText}>{errMsg}</Text>
+            <Text style={errorStyles.debugStack}>{errStack}</Text>
+          </ScrollView>
           <Pressable
             onPress={() => this.setState({ hasError: false, error: null })}
             style={errorStyles.button}
@@ -72,7 +81,19 @@ const errorStyles = StyleSheet.create({
   },
   emoji: { fontSize: 48, marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#F2F5FA', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#9AA4B2', marginBottom: 24, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: '#9AA4B2', marginBottom: 12, textAlign: 'center' },
+  debugBox: {
+    maxHeight: 200,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.24)',
+    borderRadius: 12,
+    backgroundColor: '#020617',
+    marginBottom: 16,
+  },
+  debugContent: { padding: 12 },
+  debugText: { color: '#FEE2E2', fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  debugStack: { color: '#94A3B8', fontSize: 11, lineHeight: 16 },
   button: {
     backgroundColor: '#D83A3A',
     paddingHorizontal: 32,
@@ -160,7 +181,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -177,6 +198,10 @@ function withTimeout(task, timeoutMs, label) {
       reject(new Error(`${label} timed out after ${timeoutMs}ms`));
     }, timeoutMs);
   });
+
+  // Attach a no-op .catch to the original task so that if it rejects AFTER
+  // the timeout wins the race, the rejection doesn't become unhandled.
+  Promise.resolve(task).catch(() => {});
 
   return Promise.race([task, timeoutPromise]).finally(() => {
     clearTimeout(timeoutId);
@@ -242,9 +267,11 @@ function useProtectedRoute(canNavigate) {
         console.warn('[RootLayout] Failed to load profile completeness:', error);
         // Network/transient error — don't misroute to complete-profile.
         // If already on a public route or complete-profile, stay put; otherwise
-        // let the user through to the main app (profile will be re-checked later).
+        // let the user through (profile will be re-checked later).
+        // Don't force-navigate to /(tabs) — user may be on a deep-link route.
         if (isPublicRoute || isCompleteProfile) return;
-        routerRef.current.replace('/(tabs)');
+        // Only redirect to /(tabs) from signin/register; otherwise preserve
+        // the current route (could be a deep link like /tanazul-details).
         return;
       }
 
@@ -269,16 +296,37 @@ function useProtectedRoute(canNavigate) {
 
     let mounted = true;
 
-    // Get initial session
+    // Get initial session — with a hard timeout so a hanging getSession()
+    // can never block startup forever (e.g. AsyncStorage lock contention).
     const getInitialSession = async () => {
       try {
-        const currentSession = await getSupabaseSession();
+        const currentSession = await withTimeout(
+          getSupabaseSession(),
+          8000,
+          'getSupabaseSession',
+        );
         if (!mounted) return;
         await resolveRoute(currentSession);
       } catch (error) {
-        console.error('[RootLayout] Initial route resolution failed:', error);
+        console.warn('[RootLayout] Initial route resolution failed:', error?.message || error);
+        // Don't blindly navigate to /signin on timeout — the session may still
+        // be loading in the background.  Let onAuthStateChange handle the
+        // redirect once the real session state is known.  Only navigate to
+        // /signin if we can confirm there is genuinely no session.
         if (mounted) {
-          routerRef.current.replace('/signin');
+          try {
+            // Quick non-blocking check: if Supabase already has a session
+            // in memory (e.g. from a previous getSession call that resolved
+            // after our timeout), don't redirect to signin.
+            const { data } = await supabase.auth.getSession();
+            if (!data?.session) {
+              routerRef.current.replace('/signin');
+            }
+            // If there IS a session, let onAuthStateChange pick up routing.
+          } catch (_) {
+            // Even this fallback failed — still don't redirect; the 15s
+            // failsafe timeout will handle it.
+          }
         }
       } finally {
         if (mounted) {
@@ -338,8 +386,36 @@ export default function RootLayout() {
   const responseListener = useRef();
   const pendingNotificationRouteRef = useRef(null);
   const handledNotificationIdsRef = useRef(new Set());
+  const splashHiddenRef = useRef(false);
+  const splashHideInFlightRef = useRef(false);
   const startupReady = isReady && appReady && isAuthChecked;
   useInAppNotificationsListener(startupReady);
+  const {
+    pendingOrder: pendingDaminOrder,
+    onConfirm: onDaminConfirm,
+    onReject: onDaminReject,
+    refreshPending: refreshDaminPending,
+  } = usePendingDaminOrder(startupReady);
+
+  // When a pending Damin order is detected, populate the store and open the modal
+  const daminModalShownRef = useRef(null);
+  useEffect(() => {
+    if (!pendingDaminOrder) {
+      daminModalShownRef.current = null;
+      return;
+    }
+    // Avoid re-opening for the same order
+    if (daminModalShownRef.current === pendingDaminOrder.id) return;
+    daminModalShownRef.current = pendingDaminOrder.id;
+
+    usePendingDaminStore.getState().openPendingDamin({
+      order: pendingDaminOrder,
+      onConfirm: onDaminConfirm,
+      onReject: onDaminReject,
+      refreshPending: refreshDaminPending,
+    });
+    router.push('/damin-pending-modal');
+  }, [pendingDaminOrder, onDaminConfirm, onDaminReject, refreshDaminPending, router]);
 
   // Diagnose navigation readiness — log once when it changes
   useEffect(() => {
@@ -350,6 +426,19 @@ export default function RootLayout() {
   // Apply a better Arabic UI font globally (best-effort).
   useEffect(() => {
     setGlobalFontFamily(getPreferredFontFamily(isRTL));
+  }, [isRTL]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.setAttribute('dir', dir);
+    document.documentElement.style.direction = dir;
+
+    if (document.body) {
+      document.body.setAttribute('dir', dir);
+      document.body.style.direction = dir;
+    }
   }, [isRTL]);
 
   // Defer ALL notification setup until the app is fully ready.
@@ -479,10 +568,14 @@ export default function RootLayout() {
     if (startupReady) return; // Already started — no failsafe needed
 
     const failsafe = setTimeout(() => {
+      const flags = { isReady, appReady, isAuthChecked, navigationReady };
       console.error('[RootLayout] Startup timed out after 15s — forcing splash hide');
-      console.error('[RootLayout] Flags:', JSON.stringify({ isReady, appReady, isAuthChecked, navigationReady }));
+      console.error('[RootLayout] Flags:', JSON.stringify(flags));
+
       setStartupTimedOut(true);
-      SplashScreen.hideAsync().catch(() => {});
+
+      // Navigate to a safe fallback route so the user doesn't see a blank screen
+      try { router.replace('/signin'); } catch (_e) { /* ignore */ }
     }, 15000);
 
     return () => clearTimeout(failsafe);
@@ -514,9 +607,31 @@ export default function RootLayout() {
   }, [initiate, initTheme, initLanguage]);
 
   useEffect(() => {
-    if (fatalError || startupReady || startupTimedOut) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
+    if (!(fatalError || startupReady || startupTimedOut)) return;
+    if (splashHiddenRef.current || splashHideInFlightRef.current) return;
+
+    splashHideInFlightRef.current = true;
+
+    SplashScreen.hideAsync()
+      .then(() => {
+        splashHiddenRef.current = true;
+      })
+      .catch((error) => {
+        const message = String(error?.message || '');
+        if (message.includes('No native splash screen registered')) {
+          // iOS can report this after presenting another view controller (sheet/browser).
+          // At that point there is nothing left to hide, so treat it as already handled.
+          splashHiddenRef.current = true;
+          return;
+        }
+
+        if (__DEV__) {
+          console.warn('[RootLayout] SplashScreen.hideAsync failed:', error);
+        }
+      })
+      .finally(() => {
+        splashHideInFlightRef.current = false;
+      });
   }, [fatalError, startupReady, startupTimedOut]);
 
   useEffect(() => {
@@ -547,31 +662,23 @@ export default function RootLayout() {
                 color: colors.text,
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               },
-              headerTitleAlign: isRTL ? 'right' : 'left',
-              headerRightContainerStyle: isRTL ? { paddingHorizontal: 8 } : undefined,
-              headerRight:
-                isRTL && navigation.canGoBack()
-                  ? () => (
-                      <Pressable
-                        onPress={() => navigation.goBack()}
-                        style={({ pressed }) => ({
-                          width: 34,
-                          height: 34,
-                          borderRadius: 17,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: pressed ? 0.9 : 1,
-                        })}
-                      >
-                        <ChevronRight size={22} color={colors.text} />
-                      </Pressable>
-                    )
-                  : undefined,
+              headerLeft: isRTL && navigation.canGoBack()
+                ? () => (
+                    <Pressable
+                      onPress={() => navigation.goBack()}
+                      hitSlop={8}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
+                    >
+                      <ChevronRight size={24} color={colors.text} />
+                    </Pressable>
+                  )
+                : undefined,
               contentStyle: {
                 backgroundColor: colors.background,
               },
             })}
           >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="signin" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -640,7 +747,6 @@ export default function RootLayout() {
                 headerShown: true,
                 title: isRTL ? 'طلب ضامن' : 'Create Damin',
                 headerLargeTitle: false,
-                headerBackVisible: !isRTL,
                 headerBackButtonDisplayMode: 'minimal',
                 headerBackTitleVisible: false,
                 headerBackTitle: '',
@@ -711,11 +817,19 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="wallet-transactions"
-              options={{ headerShown: false }}
+              options={{
+                headerShown: true,
+                title: isRTL ? 'سجل المعاملات' : 'Transactions',
+                headerLargeTitle: false,
+              }}
             />
             <Stack.Screen
               name="wallet-withdraw"
-              options={{ headerShown: false }}
+              options={{
+                headerShown: true,
+                title: isRTL ? 'سحب الأموال' : 'Withdraw Funds',
+                headerLargeTitle: false,
+              }}
             />
             <Stack.Screen
               name="order-details"
@@ -743,6 +857,18 @@ export default function RootLayout() {
                 presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
                 headerShown: false,
                 title: isRTL ? 'الدفع' : 'Payment',
+              }}
+            />
+            <Stack.Screen
+              name="damin-pending-modal"
+              options={{
+                presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+                headerShown: false,
+                title: isRTL ? 'طلب ضمان' : 'Damin Request',
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 24,
+                sheetAllowedDetents: [0.65, 0.85],
+                sheetExpandsWhenScrolledToEdge: true,
               }}
             />
           </Stack>

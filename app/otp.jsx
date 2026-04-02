@@ -5,7 +5,7 @@ import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ArrowLeft, ArrowRight, CheckCircle2, RefreshCw, Shield } from "lucide-react-native";
+import { ArrowRight, CheckCircle2, RefreshCw, Shield } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,7 +50,7 @@ export default function OtpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const params = useLocalSearchParams();
 
   const phone = useMemo(() => {
@@ -173,12 +173,12 @@ export default function OtpScreen() {
       <StatusBar style={colors.statusBar} />
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <View style={[styles.mainContainer, { paddingTop: insets.top + 10 }]}>
-          <View style={[styles.header, { flexDirection: rowDirection }]}>
+          <View style={styles.header}>
             <Pressable
               onPress={() => router.back()}
               style={[styles.backButton, { backgroundColor: colors.surface }]}
             >
-              {isRTL ? <ArrowRight size={22} color={colors.text} /> : <ArrowLeft size={22} color={colors.text} />}
+              <ArrowRight size={22} color={colors.text} />
             </Pressable>
             <View style={styles.headerSpacer} />
           </View>
@@ -226,7 +226,7 @@ export default function OtpScreen() {
                 </Text>
               </Pressable>
 
-              <View style={[styles.resendRow, { flexDirection: rowDirection }]}>
+              <View style={styles.resendRow}>
                 <Text style={[styles.resendHint, { color: colors.textSecondary }]}>
                   {isRTL ? "لم يصلك الرمز؟" : "Didn't get a code?"}
                 </Text>
@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   mainContainer: { flex: 1, paddingHorizontal: 20 },
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
@@ -371,6 +372,7 @@ const styles = StyleSheet.create({
   },
 
   resendRow: {
+    flexDirection: "row",
     marginTop: 14,
     alignItems: "center",
     gap: 8,

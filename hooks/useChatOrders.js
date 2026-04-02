@@ -7,7 +7,13 @@ import {
   submitDaminDispute,
   getDaminOrderForChat,
 } from "@/utils/supabase/daminOrders";
-import { confirmOrderCompletion } from "@/utils/supabase/orders";
+import {
+  confirmOrderCompletion,
+  getOrdersForConversation,
+  subscribeToConversationOrders,
+  updateOrderStatus,
+  ORDER_STATUSES,
+} from "@/utils/supabase/orders";
 import { showToast } from "@/utils/notifications/inAppStore";
 
 // Re-export for convenience (getDaminOrderForChat is also used directly by chat.jsx)
@@ -28,7 +34,6 @@ export function useChatOrders({ conversationId, messages, isRTL }) {
 
     const load = async () => {
       try {
-        const { getOrdersForConversation, subscribeToConversationOrders } = await import("@/utils/supabase/orders");
         const orders = await getOrdersForConversation(conversationId);
         setOrdersForChat(orders);
 
@@ -224,7 +229,6 @@ export function useChatOrders({ conversationId, messages, isRTL }) {
     if (!orderDisputeOrderId || !orderDisputeReason.trim()) return;
     setOrderDisputeLoading(true);
     try {
-      const { updateOrderStatus, ORDER_STATUSES } = await import("@/utils/supabase/orders");
       await updateOrderStatus(orderDisputeOrderId, ORDER_STATUSES.DISPUTED);
       const disputeMsg = isRTL
         ? `⚠️ تم رفع نزاع على الطلب.\nالسبب: ${orderDisputeReason.trim()}`
@@ -301,7 +305,6 @@ export function useChatOrders({ conversationId, messages, isRTL }) {
     );
     tasks.push((async () => {
       try {
-        const { getOrdersForConversation } = await import("@/utils/supabase/orders");
         const orders = await getOrdersForConversation(conversationId);
         setOrdersForChat(orders);
       } catch (err) {

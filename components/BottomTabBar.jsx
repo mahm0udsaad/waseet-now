@@ -71,7 +71,7 @@ export default function BottomTabBar({ activeTab }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const chatUnread = useChatUnreadStore((s) => s.totalUnread);
 
   const tabs = useMemo(
@@ -171,7 +171,7 @@ export default function BottomTabBar({ activeTab }) {
       ]}
       {...blurProps}
     >
-      <View style={[styles.content, { flexDirection: rowDirection }]}>
+      <View style={styles.content}>
         {tabs.map((tab) => renderTab(tab))}
       </View>
     </Container>
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   badge: {
     position: "absolute",
     top: 4,
-    right: 4,
+    end: 4,
     width: 10,
     height: 10,
     borderRadius: 5,

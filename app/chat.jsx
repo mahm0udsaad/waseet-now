@@ -1,2 +1,2 @@
-export { default } from "./(tabs)/chats/chat";
-
+import ChatScreen from "@/screens/ChatScreen";
+export default ChatScreen;

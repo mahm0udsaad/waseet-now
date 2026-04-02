@@ -1,6 +1,11 @@
 import { ensureSupabaseSession } from "@/utils/supabase/client";
 
-const API_URL = (process.env.EXPO_PUBLIC_API_URL || "").replace(/\/+$/, "");
+const DEFAULT_API_URL = "https://www.wasitalan.com";
+const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  process.env.EXPO_PUBLIC_BASE_URL ||
+  DEFAULT_API_URL
+).replace(/\/+$/, "");
 const PUBLIC_KEY = process.env.EXPO_PUBLIC_PAYMOB_PUBLIC_KEY || "";
 
 /**
@@ -46,6 +51,9 @@ class PaymobError extends Error {
  */
 export async function createPaymobIntention({ amountSar, customer, metadata, paymentMethod = 'card' }) {
   if (!API_URL) throw new PaymobError("API URL is not configured", "CONFIG_ERROR");
+  if (!amountSar || Number(amountSar) <= 0 || isNaN(Number(amountSar))) {
+    throw new PaymobError("Invalid payment amount: must be a positive number", "INVALID_AMOUNT");
+  }
 
   const session = await ensureSupabaseSession();
   const token = session.access_token;
