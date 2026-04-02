@@ -753,6 +753,14 @@ export default function ChatScreen() {
                 )}
               </View>
             </View>
+            {isAdOwner && (
+              <Pressable
+                onPress={openReceiptSheet}
+                style={[styles.headerReceiptButton, { backgroundColor: colors.primaryLight }]}
+              >
+                <Receipt size={16} color={colors.primary} />
+              </Pressable>
+            )}
           </View>
         ) : null}
 
@@ -844,6 +852,16 @@ export default function ChatScreen() {
                 </View>
               </View>
             </Pressable>
+
+            {isAdOwner && (
+              <Pressable
+                onPress={openReceiptSheet}
+                style={[styles.compactActionBtn, { backgroundColor: colors.primaryLight }]}
+              >
+                <Receipt size={14} color={colors.primary} />
+                <Text style={[styles.compactActionText, { color: colors.primary }]}>{isRTL ? "إصدار فاتورة" : "Receipt"}</Text>
+              </Pressable>
+            )}
 
             {daminOrder.available_actions?.length > 0 && (
               <View style={[styles.combinedContextActions, { flexDirection: 'row' }]}>
