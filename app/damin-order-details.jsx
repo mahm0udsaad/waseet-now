@@ -8,6 +8,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -200,6 +202,8 @@ export default function DaminOrderDetailsScreen() {
   const [chatLoading, setChatLoading] = useState(false);
   const [userPhone, setUserPhone] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [disputeModalVisible, setDisputeModalVisible] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
   const lastHandledPayResultRef = useRef(null);
   const openPaymentFlow = usePaymentFlowStore((state) => state.openPaymentFlow);
 
@@ -838,49 +842,43 @@ export default function DaminOrderDetailsScreen() {
   };
 
   const handleOpenDispute = () => {
-    Alert.prompt(
-      isRTL ? 'فتح نزاع' : 'Open a Dispute',
-      isRTL ? 'يرجى كتابة سبب النزاع:' : 'Please describe the reason for the dispute:',
-      [
-        { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        {
-          text: isRTL ? 'إرسال' : 'Submit',
-          style: 'destructive',
-          onPress: async (reason) => {
-            if (!reason?.trim()) {
-              showToast({
-                type: 'warning',
-                title: isRTL ? 'مطلوب' : 'Required',
-                message: isRTL ? 'يرجى كتابة سبب النزاع' : 'Please provide a dispute reason',
-              });
-              return;
-            }
-            hapticFeedback.warning();
-            setActionLoading(true);
-            try {
-              await submitDaminDispute(id, reason.trim());
-              showToast({
-                type: 'success',
-                title: isRTL ? 'تم فتح النزاع' : 'Dispute Opened',
-                message: isRTL ? 'تم إرسال النزاع وسيتم مراجعته من قبل الإدارة.' : 'Your dispute has been submitted and will be reviewed by admin.',
-              });
-              await loadOrder();
-            } catch (err) {
-              console.error('Failed to submit dispute:', err);
-              showToast({
-                type: 'error',
-                title: isRTL ? 'خطأ' : 'Error',
-                message: err?.message || (isRTL ? 'فشل فتح النزاع' : 'Failed to open dispute'),
-              });
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-    );
+    setDisputeReason('');
+    setDisputeModalVisible(true);
+  };
+
+  const handleSubmitDispute = async () => {
+    const reason = disputeReason.trim();
+    if (!reason) {
+      showToast({
+        type: 'warning',
+        title: isRTL ? 'مطلوب' : 'Required',
+        message: isRTL ? 'يرجى كتابة سبب النزاع' : 'Please provide a dispute reason',
+      });
+      return;
+    }
+
+    hapticFeedback.warning();
+    setActionLoading(true);
+    try {
+      await submitDaminDispute(id, reason);
+      setDisputeModalVisible(false);
+      setDisputeReason('');
+      showToast({
+        type: 'success',
+        title: isRTL ? 'تم فتح النزاع' : 'Dispute Opened',
+        message: isRTL ? 'تم إرسال النزاع وسيتم مراجعته من قبل الإدارة.' : 'Your dispute has been submitted and will be reviewed by admin.',
+      });
+      await loadOrder();
+    } catch (err) {
+      console.error('Failed to submit dispute:', err);
+      showToast({
+        type: 'error',
+        title: isRTL ? 'خطأ' : 'Error',
+        message: err?.message || (isRTL ? 'فشل فتح النزاع' : 'Failed to open dispute'),
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // --- Render: Loading ---
@@ -1244,6 +1242,79 @@ export default function DaminOrderDetailsScreen() {
         }}
       />
       <StatusBar style={colors.statusBar} />
+      <Modal
+        visible={disputeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!actionLoading) {
+            setDisputeModalVisible(false);
+          }
+        }}
+      >
+        <View style={styles.disputeModalOverlay}>
+          <View
+            style={[
+              styles.disputeModalCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.disputeModalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+              {isRTL ? 'فتح نزاع' : 'Open a Dispute'}
+            </Text>
+            <Text style={[styles.disputeModalBody, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+              {isRTL ? 'يرجى كتابة سبب النزاع:' : 'Please describe the reason for the dispute:'}
+            </Text>
+            <TextInput
+              value={disputeReason}
+              onChangeText={setDisputeReason}
+              editable={!actionLoading}
+              multiline
+              placeholder={isRTL ? 'اكتب سبب النزاع هنا' : 'Write the dispute reason here'}
+              placeholderTextColor={colors.textMuted}
+              textAlign={isRTL ? 'right' : 'left'}
+              textAlignVertical="top"
+              style={[
+                styles.disputeModalInput,
+                {
+                  color: colors.text,
+                  backgroundColor: colors.backgroundSecondary,
+                  borderColor: colors.border,
+                },
+              ]}
+            />
+            <View style={styles.disputeModalActions}>
+              <Pressable
+                onPress={() => {
+                  if (!actionLoading) {
+                    setDisputeModalVisible(false);
+                  }
+                }}
+                style={[
+                  styles.disputeSecondaryButton,
+                  { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
+                ]}
+              >
+                <Text style={[styles.disputeSecondaryButtonText, { color: colors.text }]}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSubmitDispute}
+                disabled={actionLoading}
+                style={[
+                  styles.disputePrimaryButton,
+                  { backgroundColor: colors.error, opacity: actionLoading ? 0.6 : 1 },
+                ]}
+              >
+                <Text style={styles.disputePrimaryButtonText}>
+                  {actionLoading ? (isRTL ? 'جارٍ الإرسال...' : 'Submitting...') : (isRTL ? 'إرسال' : 'Submit')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         style={styles.scrollView}
@@ -1678,5 +1749,67 @@ const styles = StyleSheet.create({
   disputeLinkText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  disputeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  disputeModalCard: {
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+  },
+  disputeModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  disputeModalBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  disputeModalInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  disputeModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 16,
+  },
+  disputeSecondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disputeSecondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  disputePrimaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disputePrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

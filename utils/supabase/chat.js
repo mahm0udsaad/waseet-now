@@ -11,30 +11,28 @@ async function buildSignedUrl(path) {
 }
 
 async function hydrateAttachments(attachments = []) {
-  const hydrated = [];
-  for (const attachment of attachments) {
-    try {
-      // Handle receipt attachments (use pdf_path for signing)
-      if (attachment.type === "receipt" && attachment.pdf_path) {
-        const signedUrl = await buildSignedUrl(attachment.pdf_path);
-        hydrated.push({ ...attachment, signedUrl, path: attachment.pdf_path });
-        continue;
-      }
+  return Promise.all(
+    attachments.map(async (attachment) => {
+      try {
+        // Handle receipt attachments (use pdf_path for signing)
+        if (attachment.type === "receipt" && attachment.pdf_path) {
+          const signedUrl = await buildSignedUrl(attachment.pdf_path);
+          return { ...attachment, signedUrl, path: attachment.pdf_path };
+        }
 
-      // Never rely on stored signed URLs (they expire). If we have a storage path, we always (re)sign.
-      if (!attachment?.path || (attachment.type !== "image" && attachment.type !== "file")) {
-        hydrated.push(attachment);
-        continue;
+        // Never rely on stored signed URLs (they expire). If we have a storage path, we always (re)sign.
+        if (!attachment?.path || (attachment.type !== "image" && attachment.type !== "file")) {
+          return attachment;
+        }
+        const signedUrl = await buildSignedUrl(attachment.path);
+        return { ...attachment, signedUrl };
+      } catch (e) {
+        // If signing fails (e.g. network issue), pass attachment through without a signed URL
+        console.warn("[hydrateAttachments] Failed to sign attachment, skipping:", e?.message);
+        return attachment;
       }
-      const signedUrl = await buildSignedUrl(attachment.path);
-      hydrated.push({ ...attachment, signedUrl });
-    } catch (e) {
-      // If signing fails (e.g. network issue), pass attachment through without a signed URL
-      console.warn("[hydrateAttachments] Failed to sign attachment, skipping:", e?.message);
-      hydrated.push(attachment);
-    }
-  }
-  return hydrated;
+    })
+  );
 }
 
 // 10 MB limit for chat attachments
@@ -270,18 +268,18 @@ export async function fetchConversations() {
       bestByKey.set(key, row);
       continue;
     }
-    const existingTime = new Date(existing.lastMessageAt || existing.created_at || 0).getTime();
-    const nextTime = new Date(row.lastMessageAt || row.created_at || 0).getTime();
+    const existingTime = Date.parse(existing.lastMessageAt || existing.created_at) || 0;
+    const nextTime = Date.parse(row.lastMessageAt || row.created_at) || 0;
     if (nextTime >= existingTime) bestByKey.set(key, row);
   }
   for (const v of bestByKey.values()) deduped.push(v);
 
-  deduped.sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+  deduped.sort((a, b) => (Date.parse(b.lastMessageAt) || 0) - (Date.parse(a.lastMessageAt) || 0));
 
   return deduped;
 }
 
-export async function fetchMessages(conversationId, { limit = 30, before } = {}) {
+export async function fetchMessages(conversationId, { limit = 30, before, onHydrated } = {}) {
   await ensureSupabaseSession();
   let query = supabase
     .from("messages")
@@ -297,15 +295,20 @@ export async function fetchMessages(conversationId, { limit = 30, before } = {})
   const { data, error } = await query;
   if (error) throw error;
 
-  const hydrated = await Promise.all(
-    (data || []).map(async (message) => ({
-      ...message,
-      attachments: await hydrateAttachments(message.attachments || []),
-    }))
-  );
+  // Return messages immediately (newest at bottom for UI)
+  const messages = (data || []).reverse();
 
-  // newest at bottom for UI
-  return hydrated.reverse();
+  // Hydrate signed URLs in the background if callback provided
+  if (onHydrated) {
+    Promise.all(
+      messages.map(async (message) => ({
+        ...message,
+        attachments: await hydrateAttachments(message.attachments || []),
+      }))
+    ).then(onHydrated).catch((e) => console.warn("[fetchMessages] Background hydration failed:", e?.message));
+  }
+
+  return messages;
 }
 
 export async function sendMessage(conversationId, content, attachments = [], { replyToId } = {}) {

@@ -102,13 +102,14 @@ export default function ChatsListScreen() {
   }, [currentUserId]);
 
   // A5: Single realtime channel for all new messages, filtered client-side
-  const conversationIdsSet = React.useMemo(
-    () => new Set((conversations || []).map((c) => c.id).filter(Boolean)),
-    [conversations]
-  );
+  // Use a ref so the subscription handler always sees the latest IDs without re-subscribing
+  const conversationIdsRef = useRef(new Set());
+  React.useMemo(() => {
+    conversationIdsRef.current = new Set((conversations || []).map((c) => c.id).filter(Boolean));
+  }, [conversations]);
 
   useEffect(() => {
-    if (!currentUserId || conversationIdsSet.size === 0) return;
+    if (!currentUserId) return;
 
     // Remove previous channel if exists
     if (messageChannelRef.current) {
@@ -124,8 +125,8 @@ export default function ChatsListScreen() {
         (payload) => {
           const message = payload.new;
           const convId = message?.conversation_id;
-          // Client-side filter: only our conversations
-          if (!convId || !conversationIdsSet.has(convId)) return;
+          // Client-side filter: only our conversations (reads latest set via ref)
+          if (!convId || !conversationIdsRef.current.has(convId)) return;
 
           setConversations((prev) => {
             const list = Array.isArray(prev) ? [...prev] : [];
@@ -164,7 +165,7 @@ export default function ChatsListScreen() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationIdsSet.size, currentUserId]);
+  }, [currentUserId]);
 
   const getLastMessagePreview = useCallback((msg) => {
     if (!msg) return '';
@@ -180,6 +181,18 @@ export default function ChatsListScreen() {
       payment_receipt: isRTL ? '✅ تم الدفع' : '✅ Payment Received',
     };
     return previews[att.type] || (isRTL ? '📩 مرفق' : '📩 Attachment');
+  }, [isRTL]);
+
+  const formatTime = useCallback((iso) => {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleTimeString(
+        isRTL ? "ar-SA-u-ca-gregory-nu-latn" : "en-US",
+        { hour: '2-digit', minute: '2-digit' }
+      );
+    } catch {
+      return '';
+    }
   }, [isRTL]);
 
   const filteredChats = useMemo(
@@ -236,24 +249,16 @@ export default function ChatsListScreen() {
           <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>{item.name || `${t.chat.title} ${item.id.slice(0, 5)}`}</Text>
-              {item.orderStatus && (() => {
-                const s = item.orderStatus;
-                const isPaid = ['payment_verified', 'paid', 'in_progress', 'completion_requested', 'completed'].includes(s);
-                const isPending = ['awaiting_admin_transfer_approval', 'payment_submitted'].includes(s);
-                if (!isPaid && !isPending) return null;
-                const badgeColor = isPaid ? '#10B981' : '#F59E0B';
-                const label = isPaid
-                  ? (isRTL ? 'مدفوع' : 'Paid')
-                  : (isRTL ? 'بانتظار' : 'Pending');
-                return (
-                  <View style={{ backgroundColor: badgeColor + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '700' }}>{label}</Text>
-                  </View>
-                );
-              })()}
+              {item.orderStatus && (
+                ['payment_verified', 'paid', 'in_progress', 'completion_requested', 'completed'].includes(item.orderStatus)
+                  ? <View style={[styles.statusBadge, { backgroundColor: '#10B98120' }]}><Text style={[styles.statusBadgeText, { color: '#10B981' }]}>{isRTL ? 'مدفوع' : 'Paid'}</Text></View>
+                  : ['awaiting_admin_transfer_approval', 'payment_submitted'].includes(item.orderStatus)
+                    ? <View style={[styles.statusBadge, { backgroundColor: '#F59E0B20' }]}><Text style={[styles.statusBadgeText, { color: '#F59E0B' }]}>{isRTL ? 'بانتظار' : 'Pending'}</Text></View>
+                    : null
+              )}
             </View>
             <Text style={[styles.chatTime, { color: colors.textMuted }]}>
-              {item.lastMessage?.created_at ? new Date(item.lastMessage.created_at).toLocaleTimeString(isRTL ? "ar-SA-u-ca-gregory-nu-latn" : "en-US", { hour: '2-digit', minute: '2-digit' }) : ''}
+              {formatTime(item.lastMessage?.created_at)}
             </Text>
           </View>
           
@@ -289,7 +294,7 @@ export default function ChatsListScreen() {
       </Pressable>
     </View>
   );
-  }, [colors, isRTL, t, handleChatPress, getLastMessagePreview]);
+  }, [colors, isRTL, t, handleChatPress, getLastMessagePreview, formatTime]);
 
   const Separator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -430,6 +435,10 @@ export default function ChatsListScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           estimatedItemSize={96}
+          initialNumToRender={12}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          updateCellsBatchingPeriod={50}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -553,6 +562,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   separator: {
     height: 1,

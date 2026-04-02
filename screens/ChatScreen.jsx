@@ -488,7 +488,7 @@ export default function ChatScreen() {
         const existing = receiptMap.get(rid);
 
         if (!existing ||
-            new Date(msg.created_at) > new Date(existing.created_at) ||
+            Date.parse(msg.created_at) > Date.parse(existing.created_at) ||
             (receiptAttachment.status === 'final' && existing.attachments?.find(a => a.receipt_id === rid)?.status !== 'final')) {
           receiptMap.set(rid, msg);
         }
@@ -497,13 +497,13 @@ export default function ChatScreen() {
       }
     }
 
-    if (receiptMap.size === 0) return result; // Already sorted, no receipt dedup needed
+    if (receiptMap.size === 0) return result;
 
     for (const msg of receiptMap.values()) {
       result.push(msg);
     }
 
-    return result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return result.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
   }, [messages]);
 
   // Animated styles
@@ -988,6 +988,11 @@ export default function ChatScreen() {
               ListHeaderComponent={loadingMore ? <ActivityIndicator style={{ padding: 10 }} /> : null}
               refreshing={hasMore ? refreshing : false}
               onRefresh={hasMore ? loadOlderMessages : undefined}
+              initialNumToRender={15}
+              maxToRenderPerBatch={10}
+              windowSize={11}
+              removeClippedSubviews={Platform.OS !== "ios"}
+              updateCellsBatchingPeriod={50}
             />
           )}
 
