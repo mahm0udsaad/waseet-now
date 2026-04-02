@@ -14,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, CheckCheck, ChevronRight, Search } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { fetchConversations, subscribeToConversationMembership } from '@/utils/supabase/chat';
 import { supabase, getSupabaseUser } from '@/utils/supabase/client';
 import { useChatUnreadStore } from '@/utils/chat/unreadStore';
@@ -24,7 +24,7 @@ export default function ChatsListScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors, isDark } = useTheme();
-  const { t, isRTL, rowDirection } = useTranslation();
+  const { t, isRTL } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [conversations, setConversations] = useState([]);
@@ -66,7 +66,8 @@ export default function ChatsListScreen() {
   const loadConversations = async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
-    } else {
+    } else if (conversations.length === 0) {
+      // Only show skeleton on first load — subsequent focus reloads are silent
       setLoading(true);
     }
     try {
@@ -220,7 +221,7 @@ export default function ChatsListScreen() {
           styles.chatItem,
           {
             backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
-            flexDirection: getRTLRowDirection(isRTL),
+            flexDirection: 'row',
           },
         ]}
       >
@@ -231,9 +232,9 @@ export default function ChatsListScreen() {
           )}
         </View>
 
-        <View style={[styles.chatContent, { alignItems: getRTLStartAlign(isRTL) }]}>
-          <View style={[styles.chatHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <View style={{ flex: 1, flexDirection: getRTLRowDirection(isRTL), alignItems: 'center', gap: 6 }}>
+        <View style={[styles.chatContent, { alignItems: 'flex-start' }]}>
+          <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>{item.name || `${t.chat.title} ${item.id.slice(0, 5)}`}</Text>
               {item.orderStatus && (() => {
                 const s = item.orderStatus;
@@ -256,7 +257,7 @@ export default function ChatsListScreen() {
             </Text>
           </View>
           
-          <View style={[styles.lastMessageContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.lastMessageContainer, { flexDirection: 'row' }]}>
              {unread === 0 && (
                 <View style={{ marginEnd: 4 }}>
                     {item.readStatus === 'read' && <CheckCheck size={16} color={colors.primary} />}
@@ -271,7 +272,7 @@ export default function ChatsListScreen() {
                 { 
                     color: unread > 0 ? colors.text : colors.textSecondary,
                     fontWeight: unread > 0 ? '600' : '400',
-                    textAlign: getRTLTextAlign(isRTL)
+                    writingDirection: 'rtl'
                 },
               ]}
             >
@@ -309,7 +310,17 @@ export default function ChatsListScreen() {
           title: isRTL ? 'المحادثات' : 'Chats',
           headerLeftContainerStyle: styles.headerSideContainer,
           headerRightContainerStyle: styles.headerSideContainer,
-          headerLeft: () => (
+          headerLeft: () =>
+            navigation.canGoBack() ? (
+              <Pressable
+                onPress={() => router.back()}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
+              >
+                <ChevronRight size={24} color={colors.text} />
+              </Pressable>
+            ) : null,
+          headerRight: () => (
             <Pressable
               onPress={() => {
                 if (isSearchActive) {
@@ -324,15 +335,6 @@ export default function ChatsListScreen() {
               <Search size={16} color={colors.text} />
             </Pressable>
           ),
-          headerRight: () =>
-            navigation.canGoBack() ? (
-              <Pressable
-                onPress={() => router.back()}
-                style={({ pressed }) => [styles.headerBackButton, { opacity: pressed ? 0.9 : 1 }]}
-              >
-                <ChevronRight size={20} color={colors.text} />
-              </Pressable>
-            ) : null,
         }}
       />
       <StatusBar style={colors.statusBar} />
@@ -345,7 +347,7 @@ export default function ChatsListScreen() {
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                flexDirection: rowDirection,
+                flexDirection: 'row',
               },
             ]}
           >
@@ -354,7 +356,7 @@ export default function ChatsListScreen() {
               ref={searchInputRef}
               placeholder={isRTL ? 'بحث في المحادثات...' : 'Search chats...'}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.searchInput, { color: colors.text, writingDirection: 'rtl' }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
               clearButtonMode="while-editing"
@@ -394,19 +396,19 @@ export default function ChatsListScreen() {
                   style={[
                     styles.chatItem,
                     {
-                      flexDirection: rowDirection,
+                      flexDirection: 'row',
                     },
                   ]}
                 >
                   <View style={styles.avatarContainer}>
                     <Skeleton width={56} height={56} radius={28} />
                   </View>
-                  <View style={[styles.chatContent, { alignItems: getRTLStartAlign(isRTL) }]}>
-                    <View style={[styles.chatHeader, { flexDirection: rowDirection }]}>
+                  <View style={[styles.chatContent, { alignItems: 'flex-start' }]}>
+                    <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
                       <Skeleton height={14} radius={8} width="60%" />
                       <Skeleton height={10} radius={6} width={52} />
                     </View>
-                    <View style={[styles.lastMessageContainer, { flexDirection: rowDirection }]}>
+                    <View style={[styles.lastMessageContainer, { flexDirection: 'row' }]}>
                       <Skeleton height={12} radius={7} width="85%" />
                     </View>
                   </View>

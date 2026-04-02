@@ -10,7 +10,8 @@ function SwipeableMessage({ children, onReply, isMe, isRTL }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const replyOpacity = useRef(new Animated.Value(0)).current;
 
-  const swipeDirection = isRTL ? -1 : 1;
+  // Layout is always RTL (forceRTL), so swipe direction is always -1.
+  const swipeDirection = -1;
 
   const panResponder = useRef(
     PanResponder.create({

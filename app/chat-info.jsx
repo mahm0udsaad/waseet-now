@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ChevronRight, FileText, Image as ImageIcon, Calendar } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLStartAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { supabase } from "@/utils/supabase/client";
 import FadeInView from "@/components/ui/FadeInView";
 import * as WebBrowser from "expo-web-browser";
@@ -26,7 +26,7 @@ export default function ChatInfoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const params = useLocalSearchParams();
 
   const { conversationId, otherUserId, otherUserName, otherUserAvatar } = params;
@@ -192,7 +192,7 @@ export default function ChatInfoScreen() {
           {loadingProfile ? (
             <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
           ) : profile?.created_at ? (
-            <View style={[styles.profileMeta, { flexDirection: rowDirection }]}>
+            <View style={[styles.profileMeta, { flexDirection: 'row' }]}>
               <Calendar size={14} color={colors.textMuted} />
               <Text style={[styles.profileMetaText, { color: colors.textMuted }]}>
                 {isRTL ? `عضو منذ ${formatDate(profile.created_at)}` : `Member since ${formatDate(profile.created_at)}`}
@@ -203,7 +203,7 @@ export default function ChatInfoScreen() {
 
         {/* Media Section */}
         <FadeInView delay={80} style={styles.section}>
-          <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <ImageIcon size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {isRTL ? "الصور المشتركة" : "Shared Media"}
@@ -233,7 +233,7 @@ export default function ChatInfoScreen() {
 
         {/* Receipts Section */}
         <FadeInView delay={160} style={styles.section}>
-          <View style={[styles.sectionHeader, { flexDirection: rowDirection }]}>
+          <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
             <FileText size={18} color={colors.primary} />
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {isRTL ? "الفواتير" : "Receipts"}
@@ -251,19 +251,19 @@ export default function ChatInfoScreen() {
               <Pressable
                 key={receipt.id}
                 onPress={() => openReceiptPdf(receipt.pdf_path)}
-                style={[styles.receiptCard, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: rowDirection }]}
+                style={[styles.receiptCard, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: 'row' }]}
               >
                 <View style={[styles.receiptIconWrap, { backgroundColor: colors.primary + "18" }]}>
                   <FileText size={20} color={colors.primary} />
                 </View>
-                <View style={[styles.receiptInfo, { alignItems: getRTLStartAlign(isRTL) }]}>
+                <View style={[styles.receiptInfo, { alignItems: 'flex-start' }]}>
                   <Text style={[styles.receiptDesc, { color: colors.text }]} numberOfLines={1}>
                     {receipt.description}
                   </Text>
                   <Text style={[styles.receiptAmount, { color: colors.primary }]}>
                     {receipt.amount} {receipt.currency}
                   </Text>
-                  <View style={[styles.receiptMeta, { flexDirection: rowDirection }]}>
+                  <View style={[styles.receiptMeta, { flexDirection: 'row' }]}>
                     <View style={[styles.statusBadge, { backgroundColor: receiptStatusColor(receipt.status) + "20" }]}>
                       <Text style={[styles.statusText, { color: receiptStatusColor(receipt.status) }]}>
                         {receiptStatusLabel(receipt.status)}

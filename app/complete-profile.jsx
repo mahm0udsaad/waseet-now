@@ -1,5 +1,5 @@
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
-import { useLanguage, getRTLTextAlign } from "@/utils/i18n/store";
+import { useLanguage } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import {
   generateFallbackDisplayName,
@@ -46,7 +46,7 @@ export default function CompleteProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark, theme, setTheme } = useTheme();
-  const { language, setLanguage, isRTL, rowDirection } = useLanguage();
+  const { language, setLanguage, isRTL } = useLanguage();
 
   const scrollRef = useRef(null);
   const nameInputRef = useRef(null);
@@ -222,7 +222,7 @@ export default function CompleteProfileScreen() {
       <KeyboardAvoidingAnimatedView style={styles.container} behavior="padding">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={[styles.main, { paddingTop: insets.top + 8 }]}>
-            <View style={[styles.header, { flexDirection: rowDirection }]}>
+            <View style={styles.header}>
               <Pressable
                 onPress={() => {
                   Keyboard.dismiss();
@@ -235,7 +235,7 @@ export default function CompleteProfileScreen() {
                 }}
                 style={[styles.headerBtn, { backgroundColor: colors.surface }]}
               >
-                {isRTL ? <ArrowRight size={20} color={colors.text} /> : <ArrowLeft size={20} color={colors.text} />}
+                <ArrowRight size={20} color={colors.text} />
               </Pressable>
 
               <View style={styles.progress}>
@@ -302,7 +302,6 @@ export default function CompleteProfileScreen() {
                     {
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
-                      flexDirection: rowDirection,
                     },
                   ]}
                 >
@@ -315,7 +314,7 @@ export default function CompleteProfileScreen() {
                     onChangeText={setDisplayName}
                     placeholder={isRTL ? "الاسم (اختياري)" : "Name (optional)"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' }]}
+                    style={[styles.input, { color: colors.text, textAlign: 'auto', writingDirection: isRTL ? 'rtl' : 'ltr' }]}
                     autoCapitalize="words"
                     textContentType="name"
                     returnKeyType="next"
@@ -331,7 +330,6 @@ export default function CompleteProfileScreen() {
                     {
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
-                      flexDirection: rowDirection,
                     },
                   ]}
                 >
@@ -344,7 +342,7 @@ export default function CompleteProfileScreen() {
                     onChangeText={setEmail}
                     placeholder={isRTL ? "البريد الإلكتروني (اختياري)" : "Email (optional)"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), writingDirection: isRTL ? 'rtl' : 'ltr' }]}
+                    style={[styles.input, { color: colors.text, textAlign: 'auto', writingDirection: isRTL ? 'rtl' : 'ltr' }]}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoCorrect={false}
@@ -485,7 +483,7 @@ export default function CompleteProfileScreen() {
                 <Text style={styles.primaryText}>
                   {saving ? (isRTL ? "جاري الحفظ..." : "Saving...") : (step === 0 ? nextText : saveText)}
                 </Text>
-                {!saving && (step === 0 ? (isRTL ? <ArrowLeft size={18} color="#fff" /> : <ArrowRight size={18} color="#fff" />) : null)}
+                {!saving && (step === 0 ? <ArrowLeft size={18} color="#fff" /> : null)}
               </Pressable>
             </View>
           </View>
@@ -519,6 +517,7 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 15, fontWeight: "600" },
 
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 10,
@@ -559,7 +558,7 @@ const styles = StyleSheet.create({
   avatarFallback: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   avatarBadge: {
     position: "absolute",
-    right: 6,
+    end: 6,
     bottom: 6,
     width: 30,
     height: 30,

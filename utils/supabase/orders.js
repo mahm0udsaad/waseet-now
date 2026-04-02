@@ -39,7 +39,9 @@ export async function createOrder(data) {
   if (!data?.ad_id) throw new Error("Missing ad_id");
   if (!data?.buyer_id) throw new Error("Missing buyer_id");
   if (!data?.seller_id) throw new Error("Missing seller_id");
-  if (!data?.amount) throw new Error("Missing amount");
+  if (!data?.amount || Number(data.amount) <= 0 || isNaN(Number(data.amount))) {
+    throw new Error("Invalid amount: must be a positive number");
+  }
 
   // Check if order already exists for this receipt
   const { data: existingOrder, error: checkError } = await supabase
@@ -319,6 +321,7 @@ export async function getOrdersForConversation(conversationId) {
 export function subscribeToConversationOrders(conversationId, onChange) {
   if (!conversationId) return () => {};
 
+  let debounceTimer = null;
   const channelName = `conv-orders-${conversationId}`;
   const channel = supabase
     .channel(channelName)
@@ -330,19 +333,23 @@ export function subscribeToConversationOrders(conversationId, onChange) {
         table: "orders",
         filter: `conversation_id=eq.${conversationId}`,
       },
-      async () => {
-        // Re-fetch all orders on any change
-        try {
-          const orders = await getOrdersForConversation(conversationId);
-          onChange?.(orders);
-        } catch (err) {
-          console.warn("Failed to refresh orders on realtime:", err);
-        }
+      () => {
+        // Debounce rapid changes to avoid multiple DB hits
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+          try {
+            const orders = await getOrdersForConversation(conversationId);
+            onChange?.(orders);
+          } catch (err) {
+            console.warn("Failed to refresh orders on realtime:", err);
+          }
+        }, 300);
       }
     )
     .subscribe();
 
   return () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
     supabase.removeChannel(channel);
   };
 }

@@ -1,7 +1,7 @@
 import { NativeIcon } from "@/components/native/NativeIcon";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { Shadows, Spacing } from "@/constants/theme";
-import { useTranslation, getRTLRowDirection, getRTLInverseRowDirection, getRTLTextAlign, getRTLStartAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { buildListingSharePayload } from "@/utils/sharing/listings";
 import { fetchAdById } from "@/utils/supabase/ads";
 import { useTheme } from "@/utils/theme/store";
@@ -27,13 +27,32 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_HEIGHT = height * 0.4;
+const RTL_EMBED_START = "\u202B";
+const RTL_EMBED_END = "\u202C";
+const BIDI_CONTROL_CHARS = /[\u200E\u200F\u061C\u202A-\u202E\u2066-\u2069]/g;
+
+function getDescriptionLines(value, isRTL) {
+  if (typeof value !== "string" || value.length === 0) {
+    return [value];
+  }
+
+  return value
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(BIDI_CONTROL_CHARS, ""))
+    .map((line) => {
+      if (!line) return " ";
+
+      return isRTL ? `${RTL_EMBED_START}${line}${RTL_EMBED_END}` : line;
+    });
+}
 
 export default function TaqibAdDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, writingDirection } = useTranslation();
 
   const [adData, setAdData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -164,11 +183,11 @@ export default function TaqibAdDetailsScreen() {
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
           <View style={styles.section}>
-            <View style={[styles.grid, { flexDirection: getRTLInverseRowDirection(isRTL) }]}>
+            <View style={styles.grid}>
               {[0, 1].map((item) => (
                 <View
                   key={item}
-                  style={[styles.gridItem, { flexDirection: getRTLInverseRowDirection(isRTL) }]}
+                  style={styles.gridItem}
                 >
                   <Skeleton height={44} radius={12} width={44} />
                   <View style={{ flex: 1 }}>
@@ -202,7 +221,7 @@ export default function TaqibAdDetailsScreen() {
             },
           ]}
         >
-          <View style={[styles.bottomContent, { flexDirection: getRTLInverseRowDirection(isRTL) }]}>
+          <View style={styles.bottomContent}>
             <View style={{ flex: 1 }}>
               <Skeleton height={12} radius={6} width={72} style={{ marginBottom: 8 }} />
               <Skeleton height={16} radius={6} width={132} />
@@ -241,6 +260,11 @@ export default function TaqibAdDetailsScreen() {
   const bottomBarProps = Platform.OS === "ios" 
     ? { intensity: 90, tint: isDark ? "dark" : "light" } 
     : { style: { backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border } };
+  const textContainerDirection = isRTL ? "rtl" : "ltr";
+  const descriptionLines = getDescriptionLines(
+    adData.description || (isRTL ? "لا يوجد وصف إضافي." : "No description provided."),
+    isRTL
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -316,16 +340,20 @@ export default function TaqibAdDetailsScreen() {
           
           {/* Header Info */}
           <FadeInView spring style={styles.section}>
-             <View style={{ flexDirection: getRTLRowDirection(isRTL), justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.title, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {adData.title}
-                  </Text>
-                  <Text style={[styles.date, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-                    {new Date(adData.created_at).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </Text>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1, width: '100%', direction: textContainerDirection }}>
+                  <View style={{ width: '100%', alignItems: 'flex-start' }}>
+                    <Text style={[styles.title, { color: colors.text, writingDirection }]}>
+                      {adData.title}
+                    </Text>
+                  </View>
+                  <View style={{ width: '100%', alignItems: 'flex-start' }}>
+                    <Text style={[styles.date, { color: colors.textSecondary, writingDirection }]}>
+                      {new Date(adData.created_at).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                      })}
+                    </Text>
+                  </View>
                 </View>
                 {/* Price Tag if exists */}
                 {adData.price && (
@@ -342,32 +370,32 @@ export default function TaqibAdDetailsScreen() {
 
           {/* Details Grid */}
           <FadeInView delay={100} spring style={styles.section}>
-             <View style={[styles.grid, { flexDirection: getRTLRowDirection(isRTL) }]}>
+             <View style={styles.grid}>
                 {/* Location */}
-                <View style={[styles.gridItem, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                <View style={styles.gridItem}>
                    <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
                       <NativeIcon name="pin-outline" size={20} color={colors.text} />
                    </View>
-                   <View>
-                      <Text style={[styles.gridLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                   <View style={{ flex: 1, alignItems: 'flex-start', direction: textContainerDirection }}>
+                      <Text style={[styles.gridLabel, { color: colors.textSecondary, writingDirection }]}>
                         {isRTL ? "الموقع" : "Location"}
                       </Text>
-                      <Text style={[styles.gridValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                      <Text style={[styles.gridValue, { color: colors.text, writingDirection }]}>
                         {adData.location || (isRTL ? "غير محدد" : "N/A")}
                       </Text>
                    </View>
                 </View>
 
                 {/* Type/Category */}
-                <View style={[styles.gridItem, { flexDirection: getRTLRowDirection(isRTL) }]}>
+                <View style={styles.gridItem}>
                    <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
                       <NativeIcon name="tag" size={20} color={colors.text} />
                    </View>
-                   <View>
-                      <Text style={[styles.gridLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                   <View style={{ flex: 1, alignItems: 'flex-start', direction: textContainerDirection }}>
+                      <Text style={[styles.gridLabel, { color: colors.textSecondary, writingDirection }]}>
                         {isRTL ? "النوع" : "Type"}
                       </Text>
-                      <Text style={[styles.gridValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                      <Text style={[styles.gridValue, { color: colors.text, writingDirection }]}>
                         {t.home?.[adData.type] || adData.type}
                       </Text>
                    </View>
@@ -378,13 +406,33 @@ export default function TaqibAdDetailsScreen() {
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
           {/* Description */}
-          <FadeInView delay={200} spring style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
-              {isRTL ? "الوصف" : "Description"}
-            </Text>
-            <Text style={[styles.description, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
-              {adData.description || (isRTL ? "لا يوجد وصف إضافي." : "No description provided.")}
-            </Text>
+          <FadeInView delay={200} spring style={[styles.section, { direction: textContainerDirection }]}>
+            <View style={{ width: '100%', alignItems: 'flex-start' }}>
+              <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
+                {isRTL ? "الوصف" : "Description"}
+              </Text>
+            </View>
+            <View style={{ width: '100%', direction: textContainerDirection }}>
+              {descriptionLines.map((line, index) => (
+                <View
+                  key={`description-line-${index}`}
+                  style={{ width: '100%', alignItems: 'flex-start' }}
+                >
+                  <Text
+                    style={[
+                      styles.description,
+                      {
+                        color: colors.textSecondary,
+                        writingDirection,
+                        marginBottom: index === descriptionLines.length - 1 ? 0 : 2,
+                      },
+                    ]}
+                  >
+                    {line}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </FadeInView>
 
         </View>
@@ -393,14 +441,14 @@ export default function TaqibAdDetailsScreen() {
       {/* Bottom Action Bar */}
       <FadeInView delay={300} style={[styles.bottomContainer, { paddingBottom: insets.bottom }]}>
         <BottomBar {...bottomBarProps} style={styles.bottomBar}>
-           <View style={[styles.bottomContent, { flexDirection: getRTLRowDirection(isRTL) }]}>
-              <View style={{ flex: 1, alignItems: getRTLStartAlign(isRTL) }}>
-                 <Text style={[styles.providerLabel, { color: colors.textSecondary }]}>
+           <View style={styles.bottomContent}>
+              <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                 <Text style={[styles.providerLabel, { color: colors.textSecondary, writingDirection }]}>
                     {isRTL ? "مقدم الخدمة" : "Provider"}
                  </Text>
-                 <Text style={[styles.providerName, { color: colors.text }]}>
+                 <Text style={[styles.providerName, { color: colors.text, writingDirection }]}>
                     {/* Placeholder name until we join users table */}
-                    {isRTL ? "مستخدم وسيط الان" : "Waseet Alan User"} 
+                    {isRTL ? "مستخدم وسيط الان" : "Waseet Alan User"}
                  </Text>
               </View>
 
@@ -487,7 +535,7 @@ const styles = StyleSheet.create({
   paginationContainer: {
     position: 'absolute',
     bottom: 24,
-    left: 0, right: 0,
+    start: 0, end: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -538,6 +586,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: Spacing.l,
+    width: '100%',
   },
   title: {
     fontSize: 24,
@@ -565,10 +614,12 @@ const styles = StyleSheet.create({
   },
   
   grid: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 24,
   },
   gridItem: {
+    flexDirection: 'row',
     flex: 1,
     minWidth: '40%',
     alignItems: 'center',
@@ -601,7 +652,7 @@ const styles = StyleSheet.create({
 
   bottomContainer: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: 0, start: 0, end: 0,
   },
   bottomBar: {
     paddingHorizontal: Spacing.l,
@@ -609,6 +660,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.s, // Handled by safe area padding on container
   },
   bottomContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     height: 60,

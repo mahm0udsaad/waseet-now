@@ -30,6 +30,9 @@ export function useChatReceipt() {
     if (!receiptData.description || !receiptData.amount) {
       throw new Error("Missing required fields");
     }
+    if (Number(receiptData.amount) <= 0 || isNaN(Number(receiptData.amount))) {
+      throw new Error("Amount must be a positive number");
+    }
 
     setCreating(true);
     try {

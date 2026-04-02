@@ -2,7 +2,6 @@ import React, { memo } from "react";
 import { Text, StyleSheet } from "react-native";
 import { NativePressable } from "@/components/native/NativePressable";
 import { NativeIcon } from "@/components/native/NativeIcon";
-import { getRTLTextAlign } from "@/utils/i18n/store";
 
 const ProfessionCard = memo(({ 
   profession, 
@@ -59,7 +58,7 @@ const NationalityItem = memo(({
     opacityOnPress={0.5}
     style={[styles.modalItem, { borderBottomColor: colors.border }]}
   >
-    <Text style={[styles.modalItemText, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+    <Text style={[styles.modalItemText, { color: colors.text, writingDirection: 'rtl' }]}>
       {isRTL ? item.ar : item.en}
     </Text>
   </NativePressable>

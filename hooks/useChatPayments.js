@@ -47,10 +47,10 @@ export function useChatPayments({
     const handleDaminPayReturn = async () => {
       try {
         const payResult = JSON.parse(params.payResult);
-        const payResultKey = `${payResult?.paymentId || "no-payment-id"}:${payResult?.status || "unknown"}`;
+        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+        const payResultKey = `damin:${orderId}:${payResult?.paymentId || "no-payment-id"}:${payResult?.status || "unknown"}`;
         if (lastHandledPayResultRef.current === payResultKey) return;
         lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
         const paymobPaymentId = payResult?.paymentId;
         const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
 
@@ -104,8 +104,8 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
+              const alreadySent = (messages || []).some((m) =>
+                (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
               );
@@ -131,22 +131,24 @@ export function useChatPayments({
           try {
             const updated = await getDaminOrderForChat(convId || conversationId);
             setDaminOrder(updated);
-          } catch {}
+          } catch (refreshErr) {
+            console.warn("[DaminPay] Failed to refresh damin order:", refreshErr);
+          }
 
           Alert.alert(
             isRTL ? "تم الدفع بنجاح" : "Payment Successful",
             isRTL ? "تم تأكيد الدفع تلقائياً." : "Payment has been automatically confirmed."
           );
-          router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
         } else if (payResult.status === "failed") {
           Alert.alert(
             isRTL ? "فشل الدفع" : "Payment Failed",
             payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
           );
-          router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
         }
       } catch (outerErr) {
         console.error("[DaminPay] handleDaminPayReturn error:", outerErr);
+      } finally {
+        router.setParams({ payResult: undefined, isDamin: undefined, orderId: undefined, amount: undefined });
       }
     };
 
@@ -160,10 +162,10 @@ export function useChatPayments({
     const handleRegularPayReturn = async () => {
       try {
         const payResult = JSON.parse(params.payResult);
-        const payResultKey = `regular:${payResult?.paymentId || "no-id"}:${payResult?.status || "unknown"}`;
+        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
+        const payResultKey = `regular:${orderId}:${payResult?.paymentId || "no-id"}:${payResult?.status || "unknown"}`;
         if (lastHandledPayResultRef.current === payResultKey) return;
         lastHandledPayResultRef.current = payResultKey;
-        const orderId = Array.isArray(params.orderId) ? params.orderId[0] : params.orderId;
         const paymobPaymentId = payResult?.paymentId;
         const convId = conversationId || (Array.isArray(params.id) ? params.id[0] : params.id);
 
@@ -193,8 +195,8 @@ export function useChatPayments({
 
           if (convId) {
             try {
-              const alreadySent = messages.some((m) =>
-                (m.attachments || []).some(
+              const alreadySent = (messages || []).some((m) =>
+                (m?.attachments || []).some(
                   (a) => a.type === "payment_receipt" && a.status === "succeeded" && String(a.order_id) === String(orderId)
                 )
               );
@@ -220,22 +222,24 @@ export function useChatPayments({
           try {
             const updated = await getOrdersForConversation(convId || conversationId);
             setOrdersForChat(updated);
-          } catch {}
+          } catch (refreshErr) {
+            console.warn("[RegularPay] Failed to refresh orders:", refreshErr);
+          }
 
           Alert.alert(
             isRTL ? "تم الدفع بنجاح" : "Payment Successful",
             isRTL ? "تم تأكيد الدفع." : "Payment has been confirmed."
           );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
         } else if (payResult.status === "failed") {
           Alert.alert(
             isRTL ? "فشل الدفع" : "Payment Failed",
             payResult.reason || (isRTL ? "لم تتم العملية. يرجى المحاولة مرة أخرى." : "Payment failed. Please try again.")
           );
-          router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
         }
       } catch (outerErr) {
         console.error("[RegularPay] handleRegularPayReturn error:", outerErr);
+      } finally {
+        router.setParams({ payResult: undefined, orderId: undefined, amount: undefined });
       }
     };
 

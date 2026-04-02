@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { NativeIcon } from '@/components/native/NativeIcon';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
-import { getRTLRowDirection, getRTLStartAlign, getRTLTextAlign, useTranslation } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { getNotificationRoute } from '@/utils/notifications/routing';
 import { useInAppNotificationsStore } from '@/utils/notifications/inAppStore';
 import { useTheme } from '@/utils/theme/store';
@@ -109,20 +109,20 @@ export default function InAppToast() {
           ]}
         >
           <Pressable
-            style={[styles.contentContainer, { flexDirection: getRTLRowDirection(isRTL) }]}
+            style={styles.contentContainer}
             onPress={handlePress}
           >
             <View style={[styles.iconWrapper, { backgroundColor: accentColor + '15' }]}>
               <NativeIcon name={iconName} size={24} color={accentColor} />
             </View>
 
-            <View style={[styles.textWrapper, { alignItems: getRTLStartAlign(isRTL) }]}>
-              <Text style={[styles.title, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]} numberOfLines={1}>
+            <View style={[styles.textWrapper, { alignItems: 'flex-start' }]}>
+              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
                 {toast.title}
               </Text>
               {toast.body && (
                 <Text
-                  style={[styles.body, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}
+                  style={[styles.body, { color: colors.textSecondary }]}
                   numberOfLines={2}
                 >
                   {toast.body}

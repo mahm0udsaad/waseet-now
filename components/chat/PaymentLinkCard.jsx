@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { CreditCard, CheckCircle2, AlertTriangle } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 
 export default function PaymentLinkCard({
@@ -36,7 +36,7 @@ export default function PaymentLinkCard({
       ]}
     >
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={[styles.iconContainer, { backgroundColor: statusBg }]}>
           {alreadyPaid ? (
             <CheckCircle2 size={16} color={statusColor} />
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   header: {
+    flexDirection: "row",
     padding: Spacing.m,
     alignItems: "center",
     gap: 8,

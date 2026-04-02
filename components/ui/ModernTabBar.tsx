@@ -4,8 +4,9 @@ import { useTranslation } from "@/utils/i18n/store";
 import { useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { useTheme } from "@/utils/theme/store";
 import { BlurView } from "expo-blur";
+import * as NavigationBar from "expo-navigation-bar";
 import { usePathname, useRouter } from "expo-router";
-import React, { memo, useCallback, useMemo, useRef } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -75,8 +76,16 @@ export default function ModernTabBar({ activeTab }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const notificationsUnread = useInAppNotificationsStore((s) => s.unreadCount);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const navColor = colors.surface;
+    NavigationBar.setBackgroundColorAsync(navColor).catch(() => {});
+    NavigationBar.setButtonStyleAsync(isDark ? "light" : "dark").catch(() => {});
+  }, [colors.surface, isDark]);
 
   const tabs = useMemo(
     () => [
@@ -130,24 +139,28 @@ export default function ModernTabBar({ activeTab }) {
   );
 
   const containerStyle = {
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDark ? '#18181B' : '#FFFFFF'),
+    backgroundColor: Platform.OS === "ios" ? "transparent" : colors.surface,
     borderColor: colors.border,
   };
-  
+
   const blurTint = isDark ? "dark" : "light";
+  const Container = Platform.OS === "ios" ? BlurView : View;
+  const containerProps =
+    Platform.OS === "ios"
+      ? { intensity: 90, tint: blurTint }
+      : {};
 
   return (
     <View style={[styles.containerWrapper, { paddingBottom: insets.bottom + Spacing.s }]}>
-      <BlurView
-        intensity={90}
-        tint={blurTint}
+      <Container
+        {...containerProps}
         style={[
           styles.container,
           containerStyle,
-          Platform.OS === 'android' && styles.androidShadow
+          Platform.OS === "android" && styles.androidShadow
         ]}
       >
-        <View style={[styles.content, { flexDirection: rowDirection }]}>
+        <View style={styles.content}>
           {tabs.map((tab) => (
             <TabItem
               key={tab.id}
@@ -159,7 +172,7 @@ export default function ModernTabBar({ activeTab }) {
             />
           ))}
         </View>
-      </BlurView>
+      </Container>
     </View>
   );
 }

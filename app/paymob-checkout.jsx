@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  ArrowLeft,
   ArrowRight,
   RefreshCw,
   CheckCircle2,
@@ -20,7 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { pollPaymobStatus, checkPaymobStatus } from "@/utils/paymob";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { sendMessage } from "@/utils/supabase/chat";
@@ -217,13 +216,27 @@ export default function PaymobCheckoutScreen() {
       }
     }
 
-    router.navigate({
-      pathname: "/damin-order-details",
-      params: {
-        id: orderId,
-        payResult: payResultJson,
-      },
-    });
+    // Route back based on order type
+    if (isDamin === "true") {
+      router.navigate({
+        pathname: "/damin-order-details",
+        params: {
+          id: orderId,
+          payResult: payResultJson,
+        },
+      });
+    } else if (conversationId) {
+      router.replace({
+        pathname: "/chat",
+        params: {
+          id: conversationId,
+          payResult: payResultJson,
+          orderId,
+        },
+      });
+    } else {
+      router.back();
+    }
   }, [result, paymentId, orderId, conversationId, amount, isDamin, router, isRTL]);
 
   const handleRetryCheck = useCallback(() => {
@@ -349,9 +362,9 @@ export default function PaymobCheckoutScreen() {
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <StatusBar style={colors.statusBar} />
 
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={handleUserClose} style={styles.headerButton}>
-          {isRTL ? <ArrowRight size={24} color={colors.text} /> : <ArrowLeft size={24} color={colors.text} />}
+          <ArrowRight size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isRTL ? "الدفع" : "Payment"}

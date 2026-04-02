@@ -1,4 +1,4 @@
-import { useLanguage, useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useLanguage, useTranslation } from "@/utils/i18n/store";
 import { markOnboardingCompleted } from "@/utils/onboarding/store";
 import { getMyProfile } from "@/utils/supabase/profile";
 import { getSupabaseSession } from "@/utils/supabase/client";
@@ -6,7 +6,7 @@ import { useTheme } from "@/utils/theme/store";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react-native";
+import { ArrowRight, Check } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
   Pressable,
@@ -23,7 +23,7 @@ export default function OnboardingScreen() {
   const [currentScreen, setCurrentScreen] = useState(0);
 
   const { colors } = useTheme();
-  const { language, setLanguage, isRTL, rowDirection } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
 
   const screens = [
@@ -194,7 +194,7 @@ export default function OnboardingScreen() {
           <Text
             style={[
               styles.title,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.text },
             ]}
           >
             {screenData.title}
@@ -206,7 +206,7 @@ export default function OnboardingScreen() {
             <Text
               style={[
                 styles.subtitle,
-                { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
+                { color: colors.textSecondary },
               ]}
             >
               {screenData.subtitle}
@@ -237,7 +237,7 @@ export default function OnboardingScreen() {
       {currentScreen > 0 && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
           {/* Progress Indicators */}
-          <View style={[styles.indicators, { flexDirection: rowDirection }]}>
+          <View style={styles.indicators}>
             {screens.slice(1).map((_, idx) => {
               const isActive = currentScreen === idx + 1;
               return (
@@ -256,7 +256,7 @@ export default function OnboardingScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={[styles.actionRow, { flexDirection: rowDirection }]}>
+          <View style={styles.actionRow}>
             {currentScreen > 1 ? (
               <Pressable
                 onPress={prevScreen}
@@ -265,11 +265,7 @@ export default function OnboardingScreen() {
                   { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
               >
-                {isRTL ? (
-                  <ArrowRight size={20} color={colors.text} />
-                ) : (
-                  <ArrowLeft size={20} color={colors.text} />
-                )}
+                <ArrowRight size={20} color={colors.text} />
               </Pressable>
             ) : (
               <View style={styles.backButtonPlaceholder} />
@@ -348,6 +344,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   indicators: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -358,6 +355,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   actionRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 16,

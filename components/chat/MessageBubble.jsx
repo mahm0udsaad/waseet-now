@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { MapPin, FileText, ChevronRight, ChevronLeft } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { BorderRadius } from "@/constants/theme";
 import PaymentReceiptCard from "./PaymentReceiptCard";
 import ReceiptCard from "./ReceiptCard";
@@ -139,7 +139,7 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
             {coordinateText}
           </Text>
         )}
-        <View style={{ flexDirection: getRTLRowDirection(isRTL), alignItems: 'center', marginTop: 6, gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 2 }}>
           <Text style={[styles.locationAction, { color: isMe ? "#FFFFFF" : colors.primary, marginTop: 0 }]}>
             {isRTL ? "فتح في Google Maps" : "Open in Google Maps"}
           </Text>
@@ -172,8 +172,8 @@ function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
     <Pressable
       onPress={() => onPress?.(repliedMessage.id)}
       style={({ pressed }) => ({
-        borderLeftWidth: isRTL ? 0 : 3,
-        borderRightWidth: isRTL ? 3 : 0,
+        borderStartWidth: 3,
+        borderEndWidth: 0,
         borderColor: isMe ? "rgba(255,255,255,0.5)" : colors.primary,
         backgroundColor: isMe ? "rgba(255,255,255,0.15)" : colors.primaryLight + "40",
         borderRadius: 6,
@@ -189,7 +189,7 @@ function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
           fontWeight: "700",
           color: isMe ? "rgba(255,255,255,0.9)" : colors.primary,
           marginBottom: 1,
-          textAlign: isRTL ? "right" : "left",
+          writingDirection: 'rtl',
         }}
         numberOfLines={1}
       >
@@ -199,7 +199,7 @@ function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
         style={{
           fontSize: 13,
           color: isMe ? "rgba(255,255,255,0.7)" : colors.textSecondary,
-          textAlign: isRTL ? "right" : "left",
+          writingDirection: 'rtl',
         }}
         numberOfLines={2}
       >
@@ -378,8 +378,7 @@ function MessageBubble({
         {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
-          alignSelf: isMe ? (isRTL ? "flex-start" : "flex-end") : (isRTL ? "flex-end" : "flex-start"),
-          flexDirection: getRTLRowDirection(isRTL),
+          alignSelf: isMe ? "flex-end" : "flex-start",
         }
       ]}
     >
@@ -390,7 +389,7 @@ function MessageBubble({
         {item.attachments?.map((att, idx) => renderAttachment(att, idx))}
 
         {!!item.content && (
-          <Text style={[styles.text, { color: textColor, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.text, { color: textColor }]}>
             {item.content}
           </Text>
         )}

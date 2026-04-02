@@ -30,6 +30,7 @@ export const iconMapping = {
   
   // Communication
   'message': 'message.fill',
+  'message-circle': 'message.fill',
   'message-outline': 'message',
   'chat': 'bubble.left.and.bubble.right.fill',
   'send': 'paperplane.fill',
@@ -70,6 +71,8 @@ export const iconMapping = {
   'checkmark': 'checkmark.circle.fill',
   'check-circle': 'checkmark.circle.fill',
   'alert': 'exclamationmark.triangle.fill',
+  'alert-circle': 'exclamationmark.circle.fill',
+  'alert-triangle': 'exclamationmark.triangle.fill',
   'warning': 'exclamationmark.circle.fill',
   'error': 'xmark.circle.fill',
   'info': 'info.circle.fill',

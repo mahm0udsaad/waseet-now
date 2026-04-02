@@ -267,9 +267,11 @@ function useProtectedRoute(canNavigate) {
         console.warn('[RootLayout] Failed to load profile completeness:', error);
         // Network/transient error — don't misroute to complete-profile.
         // If already on a public route or complete-profile, stay put; otherwise
-        // let the user through to the main app (profile will be re-checked later).
+        // let the user through (profile will be re-checked later).
+        // Don't force-navigate to /(tabs) — user may be on a deep-link route.
         if (isPublicRoute || isCompleteProfile) return;
-        routerRef.current.replace('/(tabs)');
+        // Only redirect to /(tabs) from signin/register; otherwise preserve
+        // the current route (could be a deep link like /tanazul-details).
         return;
       }
 
@@ -307,8 +309,24 @@ function useProtectedRoute(canNavigate) {
         await resolveRoute(currentSession);
       } catch (error) {
         console.warn('[RootLayout] Initial route resolution failed:', error?.message || error);
+        // Don't blindly navigate to /signin on timeout — the session may still
+        // be loading in the background.  Let onAuthStateChange handle the
+        // redirect once the real session state is known.  Only navigate to
+        // /signin if we can confirm there is genuinely no session.
         if (mounted) {
-          try { routerRef.current.replace('/signin'); } catch (_) { /* router not ready */ }
+          try {
+            // Quick non-blocking check: if Supabase already has a session
+            // in memory (e.g. from a previous getSession call that resolved
+            // after our timeout), don't redirect to signin.
+            const { data } = await supabase.auth.getSession();
+            if (!data?.session) {
+              routerRef.current.replace('/signin');
+            }
+            // If there IS a session, let onAuthStateChange pick up routing.
+          } catch (_) {
+            // Even this fallback failed — still don't redirect; the 15s
+            // failsafe timeout will handle it.
+          }
         }
       } finally {
         if (mounted) {
@@ -799,11 +817,19 @@ export default function RootLayout() {
             />
             <Stack.Screen
               name="wallet-transactions"
-              options={{ headerShown: false }}
+              options={{
+                headerShown: true,
+                title: isRTL ? 'سجل المعاملات' : 'Transactions',
+                headerLargeTitle: false,
+              }}
             />
             <Stack.Screen
               name="wallet-withdraw"
-              options={{ headerShown: false }}
+              options={{
+                headerShown: true,
+                title: isRTL ? 'سحب الأموال' : 'Withdraw Funds',
+                headerLargeTitle: false,
+              }}
             />
             <Stack.Screen
               name="order-details"

@@ -29,7 +29,7 @@ import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedV
 // Utils & Constants
 import { SAUDI_CITIES } from "@/constants/saudiCities";
 import { useTanazulForm } from "@/utils/forms/useTanazulForm";
-import { useTranslation, getRTLTextAlign, pickRTLValue } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { borderRadius, spacing } from "@/utils/native/layout";
 import { useTheme } from "@/utils/theme/store";
@@ -38,7 +38,7 @@ export default function CreateTanazulScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   
   // Refs for Bottom Sheets
   const nationalitySheetRef = useRef(null);
@@ -189,11 +189,11 @@ export default function CreateTanazulScreen() {
     
     return (
       <FadeInView style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+        <Text style={[styles.inputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
           {isRTL ? "المهنة" : "Profession"}
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={[styles.professionsRow, { flexDirection: rowDirection }]}>
+          <View style={styles.professionsRow}>
             {professions.map((prof) => {
               const professionDisplay = {
                 ...prof,
@@ -224,10 +224,10 @@ export default function CreateTanazulScreen() {
   // Render gender selector
   const renderGenderSelector = useCallback(() => (
     <FadeInView style={styles.inputContainer}>
-      <Text style={[styles.inputLabel, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+      <Text style={[styles.inputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
         {isRTL ? "الجنس" : "Gender"}
       </Text>
-      <View style={[styles.genderRow, { flexDirection: rowDirection }]}>
+      <View style={styles.genderRow}>
         <NativePressable
           testID="form-gender-male"
           onPress={() => {
@@ -378,7 +378,7 @@ export default function CreateTanazulScreen() {
           title={isRTL ? "متابعة" : "Continue"}
           onPress={handleNextStep}
           icon="right"
-          iconPosition={pickRTLValue(isRTL, "left", "right")}
+          iconPosition="left"
           size="lg"
         />
       </View>
@@ -403,19 +403,19 @@ export default function CreateTanazulScreen() {
         </Text>
 
         <View style={styles.previewGrid}>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "المدينة:" : "City:"}
             </Text>
             <Text style={[styles.previewValue, { color: colors.text }]}>{formData.location}</Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "الجنسية:" : "Nationality:"}
             </Text>
             <Text style={[styles.previewValue, { color: colors.text }]}>{formData.nationality}</Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "المهنة:" : "Profession:"}
             </Text>
@@ -432,7 +432,7 @@ export default function CreateTanazulScreen() {
               })()}
             </Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "الجنس:" : "Gender:"}
             </Text>
@@ -440,7 +440,7 @@ export default function CreateTanazulScreen() {
               {formData.gender === "male" ? (isRTL ? "رجل" : "Male") : (isRTL ? "امرأة" : "Female")}
             </Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "العمر:" : "Age:"}
             </Text>
@@ -448,7 +448,7 @@ export default function CreateTanazulScreen() {
               {formData.age} {isRTL ? "سنة" : "years"}
             </Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "نقل الكفالة:" : "Transfers:"}
             </Text>
@@ -456,13 +456,13 @@ export default function CreateTanazulScreen() {
               {formData.previousTransfers} {isRTL ? "مرات" : "times"}
             </Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "المدة المتبقية:" : "Remaining:"}
             </Text>
             <Text style={[styles.previewValue, { color: colors.text }]}>{formData.contractDuration}</Text>
           </View>
-          <View style={[styles.previewRow, { flexDirection: rowDirection }]}>
+          <View style={styles.previewRow}>
             <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>
               {isRTL ? "المبلغ:" : "Amount:"}
             </Text>
@@ -484,7 +484,6 @@ export default function CreateTanazulScreen() {
             {
               backgroundColor: colors.surfaceSecondary,
               borderColor: pledgeAccepted ? colors.primary : colors.border,
-              flexDirection: rowDirection,
             },
           ]}
         >
@@ -506,10 +505,10 @@ export default function CreateTanazulScreen() {
             )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.pledgeTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.pledgeTitle, { color: colors.text, writingDirection: 'rtl' }]}>
               {isRTL ? "قسم التعهد بدفع العمولة" : "Commission Pledge"}
             </Text>
-            <Text style={[styles.pledgeText, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.pledgeText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
               {isRTL
                 ? `أتعهد بدفع رسوم المنصة (${commissionDisplayText}) في حال إتمام التنازل.`
                 : `I pledge to pay the platform fee (${commissionDisplayText}) upon completion.`}
@@ -519,8 +518,8 @@ export default function CreateTanazulScreen() {
       </View>
 
       {/* Action Buttons */}
-      <View style={[styles.actionButtons, { flexDirection: rowDirection, paddingHorizontal: spacing.lg }]}>
-        <View style={{ flex: 1, marginRight: isRTL ? 0 : spacing.md, marginLeft: isRTL ? spacing.md : 0 }}>
+      <View style={[styles.actionButtons, { paddingHorizontal: spacing.lg }]}>
+        <View style={{ flex: 1, marginEnd: spacing.md }}>
           <NativeButton
             title={isRTL ? "تعديل" : "Edit"}
           onPress={handlePreviousStep}
@@ -589,7 +588,7 @@ export default function CreateTanazulScreen() {
         onDismiss={() => setNationalitySearch("")}
       >
         <View style={styles.sheetContent}>
-          <View style={[styles.sheetHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               {isRTL ? "اختر الجنسية" : "Select Nationality"}
             </Text>
@@ -602,10 +601,10 @@ export default function CreateTanazulScreen() {
             </NativePressable>
           </View>
 
-          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
+          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={nationalitySearch}
@@ -634,7 +633,7 @@ export default function CreateTanazulScreen() {
         onDismiss={() => setCitySearch("")}
       >
         <View style={styles.sheetContent}>
-          <View style={[styles.sheetHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               {isRTL ? "اختر المدينة" : "Select City"}
             </Text>
@@ -647,10 +646,10 @@ export default function CreateTanazulScreen() {
             </NativePressable>
           </View>
 
-          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
+          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={citySearch}
@@ -699,12 +698,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   professionsRow: {
+    flexDirection: "row",
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
 
   // Gender Selector
   genderRow: {
+    flexDirection: "row",
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
@@ -741,6 +742,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   previewRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
   },
   previewLabel: {
@@ -759,6 +761,7 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xl,
   },
   pledgeBox: {
+    flexDirection: "row",
     borderRadius: borderRadius.md,
     padding: spacing.lg,
     borderWidth: 2,
@@ -785,6 +788,7 @@ const styles = StyleSheet.create({
 
   // Action Buttons
   actionButtons: {
+    flexDirection: "row",
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -795,6 +799,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   sheetHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.lg,
@@ -808,6 +813,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   sheetSearchBar: {
+    flexDirection: "row",
     alignItems: "center",
     borderRadius: borderRadius.md,
     padding: spacing.sm,

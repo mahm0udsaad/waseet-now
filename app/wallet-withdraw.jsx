@@ -1,11 +1,9 @@
-import { useTranslation, getRTLRowDirection, getRTLTextAlign } from '@/utils/i18n/store';
+import { useTranslation } from '@/utils/i18n/store';
 import { useTheme } from '@/utils/theme/store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
-  ArrowLeft,
-  ArrowRight,
   Building2,
   Check,
   Info,
@@ -23,14 +21,12 @@ import {
   View,
 } from 'react-native';
 import FadeInView from "@/components/ui/FadeInView";
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getWalletSummary, submitWithdrawalRequest } from '@/utils/supabase/wallet';
 
 export default function WalletWithdrawScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { isRTL } = useTranslation();
-  const insets = useSafeAreaInsets();
   const withdrawalsEnabled =
     String(process.env.EXPO_PUBLIC_ENABLE_WITHDRAWALS ?? 'true').toLowerCase() !== 'false';
 
@@ -175,21 +171,22 @@ export default function WalletWithdrawScreen() {
             backgroundColor: colors.surface,
             borderColor: isSelected ? colors.primary : colors.border,
             borderWidth: isSelected ? 2 : 1,
+            flexDirection: 'row',
           },
         ]}
       >
         <View style={[styles.methodIcon, { backgroundColor: colors.primary + '20' }]}>
           <Icon size={24} color={colors.primary} />
         </View>
-        <View style={styles.methodInfo}>
-          <Text style={[styles.methodLabel, { color: colors.text }]}>
+        <View style={[styles.methodInfo, { alignItems: 'flex-start' }]}>
+          <Text style={[styles.methodLabel, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {method.label}
           </Text>
-          <Text style={[styles.methodDescription, { color: colors.textSecondary }]}>
+          <Text style={[styles.methodDescription, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {method.description}
           </Text>
           {method.fee > 0 && (
-            <Text style={[styles.methodFee, { color: colors.textMuted }]}>
+            <Text style={[styles.methodFee, { color: colors.textMuted, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
               {isRTL ? `رسوم: ${method.fee} ريال` : `Fee: ${method.fee} SAR`}
             </Text>
           )}
@@ -207,27 +204,9 @@ export default function WalletWithdrawScreen() {
     <LinearGradient colors={gradientColors} style={styles.container}>
       <StatusBar style={colors.statusBar} />
       
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10, flexDirection: getRTLRowDirection(isRTL) }]}>
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-        >
-          {isRTL ? (
-            <ArrowRight size={24} color={colors.text} />
-          ) : (
-            <ArrowLeft size={24} color={colors.text} />
-          )}
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {isRTL ? 'سحب الأموال' : 'Withdraw Funds'}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Available Balance */}
@@ -235,9 +214,9 @@ export default function WalletWithdrawScreen() {
           delay={100}
           style={[styles.balanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <View style={[styles.balanceHeader, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.balanceHeader, { flexDirection: 'row' }]}>
             <Wallet size={20} color={colors.primary} />
-            <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+            <Text style={[styles.balanceLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
               {isRTL ? 'الرصيد المتاح' : 'Available Balance'}
             </Text>
           </View>
@@ -248,24 +227,34 @@ export default function WalletWithdrawScreen() {
 
         {/* Amount Input */}
         <FadeInView delay={150} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {isRTL ? 'المبلغ' : 'Amount'}
           </Text>
-          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: 'row',
+              },
+            ]}
+          >
             <TextInput
               testID="withdraw-amount-input"
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' }]}
               placeholder={isRTL ? 'أدخل المبلغ' : 'Enter amount'}
               placeholderTextColor={colors.textMuted}
               value={withdrawAmount}
               onChangeText={setWithdrawAmount}
               keyboardType="decimal-pad"
+              writingDirection={isRTL ? 'rtl' : 'ltr'}
             />
             <Text style={[styles.currencyLabel, { color: colors.textSecondary }]}>SAR</Text>
           </View>
           
           {/* Quick Amount Buttons */}
-          <View style={[styles.quickAmounts, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={[styles.quickAmounts, { flexDirection: 'row' }]}>
             <Pressable
               onPress={() => handleQuickAmount(0.25)}
               style={[styles.quickButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -297,7 +286,7 @@ export default function WalletWithdrawScreen() {
 
         {/* Withdrawal Method */}
         <FadeInView delay={200} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {isRTL ? 'طريقة الدفع' : 'Withdrawal Method'}
           </Text>
           {withdrawalMethods.map((method) => (
@@ -312,13 +301,22 @@ export default function WalletWithdrawScreen() {
 
         {/* Bank Details */}
         <FadeInView delay={250} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {isRTL ? 'بيانات الحساب البنكي' : 'Bank Account Details'}
           </Text>
-          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: 'row',
+              },
+            ]}
+          >
             <TextInput
               testID="withdraw-iban-input"
-              style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), fontSize: 15, fontWeight: '400' }]}
+              style={[styles.input, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', fontSize: 15, fontWeight: '400' }]}
               placeholder={isRTL ? 'رقم الآيبان (IBAN)' : 'IBAN Number'}
               placeholderTextColor={colors.textMuted}
               value={iban}
@@ -326,20 +324,38 @@ export default function WalletWithdrawScreen() {
               autoCapitalize="characters"
             />
           </View>
-          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: 'row',
+              },
+            ]}
+          >
             <TextInput
               testID="withdraw-bank-name-input"
-              style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), fontSize: 15, fontWeight: '400' }]}
+              style={[styles.input, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', fontSize: 15, fontWeight: '400' }]}
               placeholder={isRTL ? 'اسم البنك' : 'Bank Name'}
               placeholderTextColor={colors.textMuted}
               value={bankName}
               onChangeText={setBankName}
             />
           </View>
-          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: 'row',
+              },
+            ]}
+          >
             <TextInput
               testID="withdraw-holder-name-input"
-              style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL), fontSize: 15, fontWeight: '400' }]}
+              style={[styles.input, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', fontSize: 15, fontWeight: '400' }]}
               placeholder={isRTL ? 'اسم صاحب الحساب' : 'Account Holder Name'}
               placeholderTextColor={colors.textMuted}
               value={accountHolderName}
@@ -354,33 +370,33 @@ export default function WalletWithdrawScreen() {
             delay={250}
             style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <Text style={[styles.summaryTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+            <Text style={[styles.summaryTitle, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
               {isRTL ? 'ملخص' : 'Summary'}
             </Text>
-            <View style={[styles.summaryRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+            <View style={[styles.summaryRow, { flexDirection: 'row' }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
                 {isRTL ? 'المبلغ' : 'Amount'}
               </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
+              <Text style={[styles.summaryValue, { color: colors.text, textAlign: 'auto' }]}>
                 {formatCurrency(parseFloat(withdrawAmount))}
               </Text>
             </View>
             {calculateFee() > 0 && (
-              <View style={[styles.summaryRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+              <View style={[styles.summaryRow, { flexDirection: 'row' }]}>
+                <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
                   {isRTL ? 'الرسوم' : 'Fee'}
                 </Text>
-                <Text style={[styles.summaryValue, { color: colors.error }]}>
+                <Text style={[styles.summaryValue, { color: colors.error, textAlign: 'auto' }]}>
                   -{formatCurrency(calculateFee())}
                 </Text>
               </View>
             )}
             <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={[styles.summaryRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
-              <Text style={[styles.summaryLabel, { color: colors.text, fontWeight: 'bold' }]}>
+            <View style={[styles.summaryRow, { flexDirection: 'row' }]}>
+              <Text style={[styles.summaryLabel, { color: colors.text, fontWeight: 'bold', writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
                 {isRTL ? 'المجموع' : 'Total'}
               </Text>
-              <Text style={[styles.summaryTotal, { color: colors.primary }]}>
+              <Text style={[styles.summaryTotal, { color: colors.primary, textAlign: 'auto' }]}>
                 {formatCurrency(calculateTotal())}
               </Text>
             </View>
@@ -390,10 +406,17 @@ export default function WalletWithdrawScreen() {
         {/* Info Banner */}
         <FadeInView
           delay={300}
-          style={[styles.infoBanner, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}
+          style={[
+            styles.infoBanner,
+            {
+              backgroundColor: colors.primary + '10',
+              borderColor: colors.primary + '30',
+              flexDirection: 'row',
+            },
+          ]}
         >
           <Info size={20} color={colors.primary} />
-          <Text style={[styles.infoBannerText, { color: colors.text }]}>
+          <Text style={[styles.infoBannerText, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
             {isRTL
               ? 'ستتم معالجة طلب السحب الخاص بك وفقًا لطريقة الدفع المحددة.'
               : 'Your withdrawal request will be processed according to the selected payment method.'}
@@ -432,23 +455,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },
@@ -462,6 +468,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   balanceHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
@@ -501,6 +508,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   quickAmounts: {
+    flexDirection: 'row',
     gap: 8,
   },
   quickButton: {
@@ -531,6 +539,7 @@ const styles = StyleSheet.create({
   },
   methodInfo: {
     flex: 1,
+    minWidth: 0,
   },
   methodLabel: {
     fontSize: 16,
@@ -563,6 +572,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   summaryRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,

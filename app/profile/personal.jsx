@@ -1,5 +1,5 @@
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
-import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { getMyProfile, uploadMyAvatarFromBase64, upsertMyProfile } from "@/utils/supabase/profile";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
@@ -32,7 +32,7 @@ function isValidEmail(email) {
 export default function PersonalInformationScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -91,17 +91,17 @@ export default function PersonalInformationScreen() {
                     <Skeleton width={110} height={110} radius={55} />
                   </View>
 
-                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row' }]}>
                     <Skeleton width={38} height={38} radius={12} />
                     <Skeleton height={16} radius={8} width="70%" />
                   </View>
 
-                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row' }]}>
                     <Skeleton width={38} height={38} radius={12} />
                     <Skeleton height={16} radius={8} width="85%" />
                   </View>
 
-                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                  <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row' }]}>
                     <Skeleton width={38} height={38} radius={12} />
                     <Skeleton height={16} radius={8} width="60%" />
                   </View>
@@ -213,7 +213,7 @@ export default function PersonalInformationScreen() {
                   </Text>
                 )}
 
-                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row' }]}>
                   <View style={[styles.fieldIcon, { backgroundColor: colors.primaryLight }]}>
                     <User size={18} color={colors.primary} />
                   </View>
@@ -223,7 +223,7 @@ export default function PersonalInformationScreen() {
                     onChangeText={setDisplayName}
                     placeholder={isRTL ? "الاسم" : "Name"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                    style={[styles.input, { color: colors.text, writingDirection: 'rtl' }]}
                     returnKeyType="next"
                     blurOnSubmit={false}
                     onSubmitEditing={() => emailRef.current?.focus?.()}
@@ -231,7 +231,7 @@ export default function PersonalInformationScreen() {
                   />
                 </View>
 
-                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection }]}>
+                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row' }]}>
                   <View style={[styles.fieldIcon, { backgroundColor: colors.primaryLight }]}>
                     <Mail size={18} color={colors.primary} />
                   </View>
@@ -241,7 +241,7 @@ export default function PersonalInformationScreen() {
                     onChangeText={setEmail}
                     placeholder={isRTL ? "البريد الإلكتروني" : "Email"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+                    style={[styles.input, { color: colors.text, writingDirection: 'rtl' }]}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     returnKeyType="done"
@@ -256,7 +256,7 @@ export default function PersonalInformationScreen() {
                   </Text>
                 )}
 
-                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: rowDirection, opacity: 0.7 }]}>
+                <View style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', opacity: 0.7 }]}>
                   <View style={[styles.fieldIcon, { backgroundColor: colors.surfaceSecondary }]}>
                     <Phone size={18} color={colors.textSecondary} />
                   </View>
@@ -265,7 +265,7 @@ export default function PersonalInformationScreen() {
                     editable={false}
                     placeholder={isRTL ? "رقم الجوال" : "Phone number"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}
+                    style={[styles.input, { color: colors.textSecondary, writingDirection: 'rtl' }]}
                   />
                 </View>
 
@@ -281,7 +281,7 @@ export default function PersonalInformationScreen() {
                     {
                       backgroundColor: colors.primary,
                       opacity: saving || avatarUploading || loading ? 0.5 : pressed ? 0.85 : 1,
-                      flexDirection: rowDirection,
+                      flexDirection: 'row',
                     },
                   ]}
                 >
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   avatarFallback: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   avatarBadge: {
     position: "absolute",
-    right: 6,
+    end: 6,
     bottom: 6,
     width: 30,
     height: 30,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   fieldIcon: { padding: 10, borderRadius: 12 },
-  input: { flex: 1, fontSize: 16, fontWeight: "600" },
+  input: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600" },
   errorText: { fontSize: 13, fontWeight: "700", marginTop: -4 },
   helper: { fontSize: 13, fontWeight: "600", textAlign: "center", marginTop: 4 },
   saveButton: {

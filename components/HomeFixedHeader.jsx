@@ -1,11 +1,10 @@
 import { NativeIcon } from "@/components/native/NativeIcon";
 import { Shadows, Spacing } from "@/constants/theme";
-import { getRTLTextAlign } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const FIXED_HEADER_HEIGHT = 68;
@@ -40,7 +39,7 @@ export default function HomeFixedHeader({
           <Text
             style={[
               styles.greeting,
-              { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.textSecondary },
             ]}
           >
             {homeGreeting}
@@ -48,7 +47,7 @@ export default function HomeFixedHeader({
           <Text
             style={[
               styles.brandName,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.text },
             ]}
           >
             {homeBrand}
@@ -107,10 +106,11 @@ export default function HomeFixedHeader({
     styles.fixedHeader,
     !isBlurred && styles.fixedHeaderClear,
     isBlurred && { borderBottomColor: colors.border },
+    isBlurred && Platform.OS !== "ios" && { backgroundColor: colors.surface },
     { paddingTop: insets.top + 6 },
   ];
 
-  if (isBlurred) {
+  if (isBlurred && Platform.OS === "ios") {
     return (
       <BlurView intensity={55} tint={isDark ? "dark" : "light"} style={wrapperStyle}>
         {content}

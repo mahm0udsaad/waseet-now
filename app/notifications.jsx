@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection, getRTLTextAlign, getRTLStartAlign, pickRTLValue } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import {
   fetchMyNotifications,
@@ -35,7 +35,7 @@ import { getLocalizedNotificationContent } from "@/utils/notifications/formatNot
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
   const notifications = useInAppNotificationsStore((s) => s.notifications);
   const markReadLocal = useInAppNotificationsStore((s) => s.markNotificationRead);
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
@@ -284,7 +284,7 @@ export default function NotificationsScreen() {
                         : colors.background,
                       borderColor: isUnread ? colors.primary + "30" : colors.border,
                       opacity: pressed ? 0.7 : 1,
-                      flexDirection: rowDirection,
+                      flexDirection: 'row',
                     },
                   ]}
                 >
@@ -302,7 +302,7 @@ export default function NotificationsScreen() {
                   <View
                     style={[
                       styles.notificationContent,
-                      { alignItems: getRTLStartAlign(isRTL) },
+                      { alignItems: 'flex-start' },
                     ]}
                   >
                     {/* Type Label */}
@@ -311,7 +311,7 @@ export default function NotificationsScreen() {
                         styles.typeLabel,
                         {
                           color: iconColor,
-                          textAlign: getRTLTextAlign(isRTL),
+                          writingDirection: 'rtl',
                         },
                       ]}
                     >
@@ -325,7 +325,7 @@ export default function NotificationsScreen() {
                           styles.notificationTitle,
                           {
                             color: colors.text,
-                            textAlign: getRTLTextAlign(isRTL),
+                            writingDirection: 'rtl',
                             fontWeight: isUnread ? "700" : "600",
                           },
                         ]}
@@ -343,7 +343,7 @@ export default function NotificationsScreen() {
                             styles.notificationBody,
                             {
                               color: colors.textSecondary,
-                              textAlign: getRTLTextAlign(isRTL),
+                              writingDirection: 'rtl',
                             },
                           ]}
                           numberOfLines={2}
@@ -356,7 +356,7 @@ export default function NotificationsScreen() {
                         <View
                           style={[
                             styles.attachmentRow,
-                            { flexDirection: rowDirection },
+                            { flexDirection: 'row' },
                           ]}
                         >
                           <Paperclip size={13} color={colors.textSecondary} />
@@ -365,7 +365,7 @@ export default function NotificationsScreen() {
                               styles.notificationBody,
                               {
                                 color: colors.textSecondary,
-                                textAlign: getRTLTextAlign(isRTL),
+                                writingDirection: 'rtl',
                                 marginBottom: 0,
                               },
                             ]}
@@ -380,7 +380,7 @@ export default function NotificationsScreen() {
                             styles.notificationBody,
                             {
                               color: colors.textSecondary,
-                              textAlign: getRTLTextAlign(isRTL),
+                              writingDirection: 'rtl',
                             },
                           ]}
                           numberOfLines={2}
@@ -396,7 +396,7 @@ export default function NotificationsScreen() {
                         styles.timestamp,
                         {
                           color: colors.textMuted,
-                          textAlign: getRTLTextAlign(isRTL),
+                          writingDirection: 'rtl',
                         },
                       ]}
                     >
@@ -444,8 +444,8 @@ export default function NotificationsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             {/* Modal Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
-              <View style={{ flexDirection: rowDirection, alignItems: "center", gap: 12 }}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border, flexDirection: 'row' }]}>
+              <View style={{ flexDirection: 'row', alignItems: "center", gap: 12 }}>
                 <Info size={24} color={colors.primary} />
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
                   {isRTL ? "تفاصيل الإشعار" : "Notification Details"}
@@ -468,14 +468,14 @@ export default function NotificationsScreen() {
                 style={styles.modalScroll} 
                 contentContainerStyle={[
                   styles.modalScrollContent, 
-                  { alignItems: getRTLStartAlign(isRTL) }
+                  { alignItems: 'flex-start' }
                 ]}
               >
-                <View style={[styles.detailRow, { alignItems: getRTLStartAlign(isRTL) }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                     {isRTL ? "النوع:" : "Type:"}
                   </Text>
-                  <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                     {getTypeLabel(selectedNotification.type)}
                   </Text>
                 </View>
@@ -484,34 +484,34 @@ export default function NotificationsScreen() {
                   getTypeLabel(selectedNotification.type),
                   getLocalizedNotificationContent(selectedNotification, isRTL).title
                 ) && (
-                  <View style={[styles.detailRow, { alignItems: getRTLStartAlign(isRTL) }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "العنوان:" : "Title:"}
                     </Text>
-                    <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                       {getLocalizedNotificationContent(selectedNotification, isRTL).title}
                     </Text>
                   </View>
                 )}
 
                 {getLocalizedNotificationContent(selectedNotification, isRTL).body && (
-                  <View style={[styles.detailRow, { alignItems: getRTLStartAlign(isRTL) }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "المحتوى:" : "Content:"}
                     </Text>
-                    <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                    <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                       {getLocalizedNotificationContent(selectedNotification, isRTL).body}
                     </Text>
                   </View>
                 )}
 
                 {selectedNotification.data && Object.keys(selectedNotification.data).length > 0 && (
-                  <View style={[styles.detailRow, { alignItems: getRTLStartAlign(isRTL) }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                       {isRTL ? "المعلومات الإضافية:" : "Additional Information:"}
                     </Text>
                     {selectedNotification.data.role && (
-                      <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                         {isRTL ? "الدور: " : "Role: "}
                         {selectedNotification.data.role === 'payer'
                           ? (isRTL ? "الدافع" : "Payer")
@@ -519,19 +519,19 @@ export default function NotificationsScreen() {
                       </Text>
                     )}
                     {selectedNotification.data.amount && (
-                      <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL), marginTop: 4 }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl', marginTop: 4 }]}>
                         {isRTL ? "المبلغ: " : "Amount: "}
                         {selectedNotification.data.amount} {isRTL ? "ريال" : "SAR"}
                       </Text>
                     )}
                     {selectedNotification.data.service_details && (
-                      <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL), marginTop: 4 }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl', marginTop: 4 }]}>
                         {isRTL ? "تفاصيل الخدمة: " : "Service: "}
                         {selectedNotification.data.service_details}
                       </Text>
                     )}
                     {selectedNotification.data.order_id && (
-                      <Text style={[styles.detailValue, { color: colors.textMuted, textAlign: getRTLTextAlign(isRTL), marginTop: 8, fontSize: 12 }]}>
+                      <Text style={[styles.detailValue, { color: colors.textMuted, writingDirection: 'rtl', marginTop: 8, fontSize: 12 }]}>
                         {isRTL ? "رقم الطلب: " : "Order ID: "}
                         {selectedNotification.data.order_id.slice(0, 8)}
                       </Text>
@@ -539,11 +539,11 @@ export default function NotificationsScreen() {
                   </View>
                 )}
 
-                <View style={[styles.detailRow, { alignItems: getRTLStartAlign(isRTL) }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
                     {isRTL ? "التاريخ:" : "Date:"}
                   </Text>
-                  <Text style={[styles.detailValue, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
                     {new Date(selectedNotification.created_at).toLocaleString(
                       isRTL ? "ar-SA-u-ca-gregory" : "en-US"
                     )}
@@ -566,7 +566,7 @@ export default function NotificationsScreen() {
                       }
                     }}
                     icon="arrow-right"
-                    iconPosition={pickRTLValue(isRTL, "left", "right")}
+                    iconPosition="left"
                   />
                 </View>
               </ScrollView>

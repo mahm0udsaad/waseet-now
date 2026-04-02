@@ -1,5 +1,5 @@
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
-import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { fetchAdsByType } from "@/utils/supabase/ads";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,7 +8,6 @@ import { StatusBar } from "expo-status-bar";
 import {
   Briefcase,
   CheckCircle,
-  ChevronRight,
   Clock,
   Filter,
   MapPin,
@@ -22,7 +21,7 @@ import FadeInView from "@/components/ui/FadeInView";
 export default function TanazulListScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +62,7 @@ export default function TanazulListScreen() {
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
+  const screenTitle = isRTL ? "إعلانات التنازل" : "Tanazul Ads";
 
   const renderListSkeleton = () => (
     <SkeletonGroup style={{ paddingTop: 6, paddingBottom: 10 }}>
@@ -78,14 +78,19 @@ export default function TanazulListScreen() {
           ]}
         >
           {/* Header */}
-          <View style={[styles.adHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.adHeader}>
             <Skeleton height={16} radius={8} width={72} />
             <Skeleton height={12} radius={8} width={110} />
           </View>
 
           {/* Main */}
-          <View style={[styles.adMain, { flexDirection: rowDirection }]}>
-            <View style={styles.adTextContainer}>
+          <View style={styles.adMain}>
+            <View
+              style={[
+                styles.adTextContainer,
+                { alignItems: 'flex-start' },
+              ]}
+            >
               <Skeleton height={16} radius={8} width="78%" />
               <Skeleton height={12} radius={8} width="90%" style={{ marginTop: 10 }} />
             </View>
@@ -98,7 +103,6 @@ export default function TanazulListScreen() {
               styles.adFooter,
               {
                 backgroundColor: colors.surfaceSecondary,
-                flexDirection: rowDirection,
               },
             ]}
           >
@@ -129,7 +133,7 @@ export default function TanazulListScreen() {
           headerShown: true,
           headerLargeTitle: false,
           headerTitleAlign: "center",
-          title: isRTL ? "إعلانات التنازل" : "Tanazul Ads",
+          title: screenTitle,
           headerBackButtonDisplayMode: "minimal",
           headerBackTitleVisible: false,
           headerBackTitle: "",
@@ -162,16 +166,15 @@ export default function TanazulListScreen() {
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                flexDirection: rowDirection,
               },
             ]}
           >
-            <Search size={20} color={colors.textMuted} style={{ marginHorizontal: 10 }} />
+            <Search size={20} color={colors.textMuted} style={styles.searchIcon} />
             <TextInput
               testID="tanazul-search-input"
               placeholder={isRTL ? "بحث عن عمالة، مهنة، جنسية..." : "Search workers, profession, nationality..."}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.searchInput, { color: colors.text, textAlign: 'auto', writingDirection }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -199,9 +202,9 @@ export default function TanazulListScreen() {
             }
             ListEmptyComponent={
               error ? (
-                <Text style={{ textAlign: getRTLTextAlign(isRTL), color: colors.error, marginBottom: 12 }}>{error}</Text>
+                <Text style={{ color: colors.error, marginBottom: 12, writingDirection: 'rtl' }}>{error}</Text>
               ) : (
-                <Text style={{ color: colors.textMuted, textAlign: getRTLTextAlign(isRTL) }}>
+                <Text style={{ color: colors.textMuted, writingDirection: 'rtl' }}>
                   {isRTL ? "لا توجد إعلانات حالياً" : "No ads yet"}
                 </Text>
               )
@@ -228,7 +231,7 @@ export default function TanazulListScreen() {
                       { backgroundColor: colors.card, borderColor: colors.border, transform: [{ scale: pressed ? 0.98 : 1 }] },
                     ]}
                   >
-                    <View style={[styles.adHeader, { flexDirection: rowDirection }]}>
+                    <View style={styles.adHeader}>
                       {ad.metadata?.verified && (
                         <View style={[styles.verifiedBadge, { backgroundColor: colors.primaryLight }]}>
                           <CheckCircle size={12} color={colors.primary} style={{ marginHorizontal: 4 }} />
@@ -237,28 +240,34 @@ export default function TanazulListScreen() {
                           </Text>
                         </View>
                       )}
-                      <View style={[styles.timeRow, { flexDirection: rowDirection }]}>
+                      <View style={styles.timeRow}>
                         <Clock size={12} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
                         <Text style={[styles.timeText, { color: colors.textMuted }]}>
                           {ad.created_at ? new Date(ad.created_at).toLocaleString(isRTL ? "ar-SA-u-ca-gregory" : "en-US") : ""}
                         </Text>
                       </View>
                     </View>
-                    <View style={[styles.adMain, { flexDirection: rowDirection }]}>
-                      <View style={styles.adTextContainer}>
-                        <Text style={[styles.adTitle, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}>{titleText}</Text>
-                        <View style={[styles.professionRow, { flexDirection: rowDirection }]}>
+                    <View style={styles.adMain}>
+                      <View style={[styles.flagCircle, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                        <Text style={styles.flagEmoji}>{ad.metadata?.flag || "🏳️"}</Text>
+                      </View>
+                      <View style={[styles.adTextContainer, { alignItems: 'flex-start' }]}>
+                        <Text
+                          style={[styles.adTitle, { color: colors.text }]}
+                        >
+                          {titleText}
+                        </Text>
+                        <View style={styles.professionRow}>
                           <Briefcase size={12} color={colors.textSecondary} style={{ marginHorizontal: 4 }} />
-                          <Text style={[styles.professionText, { color: colors.textSecondary }]}>
+                          <Text
+                            style={[styles.professionText, { color: colors.textSecondary }]}
+                          >
                             {professionText} • {ad.metadata?.nationality || ""}
                           </Text>
                         </View>
                       </View>
-                      <View style={[styles.flagCircle, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-                        <Text style={styles.flagEmoji}>{ad.metadata?.flag || "🏳️"}</Text>
-                      </View>
                     </View>
-                    <View style={[styles.adFooter, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
+                    <View style={[styles.adFooter, { backgroundColor: colors.surfaceSecondary }]}>
                       <View style={styles.footerItem}>
                         <Text style={[styles.footerLabel, { color: colors.textMuted }]}>{isRTL ? "العمر" : "Age"}</Text>
                         <Text style={[styles.footerValue, { color: colors.text }]}>
@@ -268,7 +277,7 @@ export default function TanazulListScreen() {
                       <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
                       <View style={styles.footerItem}>
                         <Text style={[styles.footerLabel, { color: colors.textMuted }]}>{isRTL ? "الموقع" : "Location"}</Text>
-                        <View style={[styles.locationRow, { flexDirection: rowDirection }]}>
+                        <View style={styles.locationRow}>
                           <MapPin size={10} color={colors.primary} style={{ marginHorizontal: 2 }} />
                           <Text style={[styles.footerValue, { color: colors.text }]}>{ad.location || ad.metadata?.location || ""}</Text>
                         </View>
@@ -308,6 +317,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchBar: {
+    flexDirection: "row",
     alignItems: "center",
     borderRadius: 14,
     paddingHorizontal: 12,
@@ -318,6 +328,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 4,
+  },
+  searchIcon: {
+    marginHorizontal: 10,
   },
   filterButton: {
     padding: 8,
@@ -370,6 +383,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   adHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
@@ -385,12 +399,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   timeRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   timeText: {
     fontSize: 10,
   },
   adMain: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
   },
@@ -400,7 +416,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 14,
     borderWidth: 1,
   },
   flagEmoji: {
@@ -408,6 +423,7 @@ const styles = StyleSheet.create({
   },
   adTextContainer: {
     flex: 1,
+    marginHorizontal: 14,
   },
   adTitle: {
     fontSize: 16,
@@ -415,12 +431,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   professionRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   professionText: {
     fontSize: 12,
   },
   adFooter: {
+    flexDirection: "row",
     justifyContent: "space-between",
     padding: 12,
     borderRadius: 12,
@@ -440,6 +458,7 @@ const styles = StyleSheet.create({
     width: 1,
   },
   locationRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   priceValue: {

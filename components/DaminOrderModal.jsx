@@ -17,7 +17,7 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeStore } from '@/utils/theme/store';
-import { useLanguageStore, getRTLRowDirection } from '@/utils/i18n/store';
+import { useLanguageStore } from '@/utils/i18n/store';
 import { hairlineWidth } from '@/utils/native/layout';
 import { typography } from '@/utils/native/typography';
 import { hapticFeedback } from '@/utils/native/haptics';
@@ -30,17 +30,17 @@ function StatCard({ icon, label, value, colors, isRTL }) {
         {
           backgroundColor: colors.background,
           borderColor: colors.border,
-          alignItems: isRTL ? 'flex-end' : 'flex-start',
+          alignItems: 'flex-start',
         },
       ]}
     >
       <View style={[styles.statIconWrap, { backgroundColor: colors.primaryLight }]}>
         {icon}
       </View>
-      <Text style={[styles.statLabel, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
         {label}
       </Text>
-      <Text style={[styles.statValue, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+      <Text style={[styles.statValue, { color: colors.text }]}>
         {value}
       </Text>
     </View>
@@ -104,7 +104,7 @@ export default function DaminOrderContent({
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Top bar */}
-      <View style={[styles.topBar, { flexDirection: getRTLRowDirection(isRTL), borderBottomColor: colors.border }]}>
+      <View style={[styles.topBar, { borderBottomColor: colors.border }]}>
         <Text style={[styles.topBarTitle, { color: colors.text }]}>
           {isRTL ? 'طلب ضمان' : 'Damin Request'}
         </Text>
@@ -135,18 +135,18 @@ export default function DaminOrderContent({
             { borderColor: colors.border, backgroundColor: colors.background },
           ]}
         >
-          <View style={[styles.heroRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.heroRow}>
             <View style={[styles.iconCircle, { backgroundColor: colors.primaryLight }]}>
               <Shield size={20} color={colors.primary} />
             </View>
             <View style={[styles.heroTextWrap, { marginStart: 14 }]}>
-              <Text style={[styles.heroTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+              <Text style={[styles.heroTitle, { color: colors.text }]}>
                 {isRTL ? 'طلب ضمان جديد' : 'New Damin Request'}
               </Text>
               <Text
                 style={[
                   styles.heroSubtitle,
-                  { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' },
+                  { color: colors.textSecondary },
                 ]}
               >
                 {isRTL
@@ -160,7 +160,7 @@ export default function DaminOrderContent({
             <Text
               style={[
                 styles.totalBannerLabel,
-                { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' },
+                { color: colors.textSecondary },
               ]}
             >
               {isRTL ? 'إجمالي الطلب' : 'Order total'}
@@ -168,7 +168,7 @@ export default function DaminOrderContent({
             <Text
               style={[
                 styles.totalBannerValue,
-                { color: colors.primary, textAlign: isRTL ? 'right' : 'left' },
+                { color: colors.primary },
               ]}
             >
               {total} {currency}
@@ -177,7 +177,7 @@ export default function DaminOrderContent({
         </View>
 
         {/* Stats grid */}
-        <View style={[styles.summaryGrid, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.summaryGrid}>
           <StatCard
             icon={<CircleDollarSign size={16} color={colors.primary} />}
             label={isRTL ? 'المبلغ' : 'Amount'}
@@ -204,7 +204,7 @@ export default function DaminOrderContent({
           <Text
             style={[
               styles.sectionLabel,
-              { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' },
+              { color: colors.textSecondary },
             ]}
           >
             {isRTL ? 'التفاصيل' : 'Details'}
@@ -212,7 +212,7 @@ export default function DaminOrderContent({
           <Text
             style={[
               styles.serviceDescription,
-              { color: colors.text, textAlign: isRTL ? 'right' : 'left' },
+              { color: colors.text },
             ]}
           >
             {order.service_type_or_details}
@@ -254,7 +254,7 @@ export default function DaminOrderContent({
           )}
         </Pressable>
 
-        <View style={[styles.secondaryActions, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.secondaryActions}>
           <Pressable
             onPress={handleReject}
             disabled={busy}
@@ -297,7 +297,7 @@ export default function DaminOrderContent({
             <ChevronRight
               size={16}
               color={colors.text}
-              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+              style={{ transform: [{ scaleX: -1 }] }}
             />
           </Pressable>
         </View>
@@ -311,6 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
@@ -340,6 +341,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   heroRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
   },
   heroTextWrap: {
@@ -374,6 +376,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   summaryGrid: {
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 14,
   },
@@ -435,6 +438,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   secondaryActions: {
+    flexDirection: 'row',
     gap: 10,
   },
   secondaryButton: {

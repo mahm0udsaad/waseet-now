@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Receipt, FileText, CheckCircle2, Clock } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 
 export default function ReceiptCard({
@@ -36,7 +36,7 @@ export default function ReceiptCard({
       ]}
     >
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={[styles.iconContainer, { backgroundColor: statusBg }]}>
           {isFinal ? (
             <CheckCircle2 size={16} color={statusColor} />
@@ -69,7 +69,7 @@ export default function ReceiptCard({
 
       {/* Status Row */}
       <View style={styles.detailsContainer}>
-        <View style={[styles.statusRow, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.statusRow}>
           <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
             <Text style={[styles.statusText, { color: statusColor }]}>
               {isSigned && (isRTL ? "موقع من البائع" : "Signed by Seller")}
@@ -80,7 +80,7 @@ export default function ReceiptCard({
       </View>
 
       {/* Actions */}
-      <View style={[styles.actions, { flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={styles.actions}>
         <Pressable
           onPress={() => onReceiptPress?.(data)}
           style={[styles.actionButton, { backgroundColor: colors.primaryLight }]}
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   header: {
+    flexDirection: "row",
     padding: Spacing.m,
     alignItems: "center",
     gap: 8,
@@ -151,6 +152,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   statusRow: {
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -164,6 +166,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   actions: {
+    flexDirection: "row",
     padding: Spacing.m,
     gap: 8,
   },

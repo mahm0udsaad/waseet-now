@@ -138,7 +138,7 @@ export default function PromotionalBanners() {
               styles.slideItem,
               {
                 width: cardWidth,
-                marginRight: index === promotionalCards.length - 1 ? 0 : slideGap,
+                marginEnd: index === promotionalCards.length - 1 ? 0 : slideGap,
               },
             ]}
           >

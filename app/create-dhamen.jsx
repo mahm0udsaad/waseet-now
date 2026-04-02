@@ -23,7 +23,7 @@ import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedV
 // Utils
 import { COUNTRIES, getCountryName } from "@/utils/countries";
 import { useDhamenForm } from "@/utils/forms/useDhamenForm";
-import { useTranslation, getRTLTextAlign, getRTLStartAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { borderRadius, hairlineWidth, spacing } from "@/utils/native/layout";
 import { useTheme } from "@/utils/theme/store";
@@ -33,7 +33,7 @@ export default function CreateDhamenScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { t, isRTL, rowDirection } = useTranslation();
+  const { t, isRTL, writingDirection } = useTranslation();
   const [userPhone, setUserPhone] = useState('');
   const [selectedProviderCountry, setSelectedProviderCountry] = useState(COUNTRIES[0]);
   const [serviceProviderLocalNumber, setServiceProviderLocalNumber] = useState("");
@@ -107,34 +107,34 @@ export default function CreateDhamenScreen() {
     >
       <View style={[styles.calculatorHeader, { borderBottomColor: colors.border }]}>
         <NativeIcon name="money" size="sm" color={colors.primary} />
-        <Text style={[styles.calculatorTitle, { color: colors.text }]}>
+        <Text style={[styles.calculatorTitle, { color: colors.text, writingDirection }]}>
           {t?.dhamen?.costSummary || (isRTL ? "ملخص التكلفة" : "Cost Summary")}
         </Text>
       </View>
 
       <View style={styles.calculatorBody}>
         {/* Value */}
-        <View style={[styles.calculatorRow, { flexDirection: rowDirection }]}>
-          <View style={[styles.calculatorLabel, { flexDirection: rowDirection }]}>
+        <View style={[styles.calculatorRow]}>
+          <View style={[styles.calculatorLabel]}>
             <NativeIcon name="wallet" size={16} color={colors.textSecondary} />
-            <Text style={[styles.calculatorLabelText, { color: colors.textSecondary }]}>
+            <Text style={[styles.calculatorLabelText, { color: colors.textSecondary, writingDirection }]}>
               {t?.dhamen?.value || (isRTL ? "القيمة" : "Value")}
             </Text>
           </View>
-          <Text style={[styles.calculatorValue, { color: colors.text }]}>
+          <Text style={[styles.calculatorValue, { color: colors.text, writingDirection }]}>
             {formatNumber(calculations.value)} {t?.common?.sar || "SAR"}
           </Text>
         </View>
 
         {/* Commission */}
-        <View style={[styles.calculatorRow, { flexDirection: rowDirection }]}>
-          <View style={[styles.calculatorLabel, { flexDirection: rowDirection }]}>
+        <View style={[styles.calculatorRow]}>
+          <View style={[styles.calculatorLabel]}>
             <NativeIcon name="money" size={16} color={colors.textSecondary} />
-            <Text style={[styles.calculatorLabelText, { color: colors.textSecondary }]}>
+            <Text style={[styles.calculatorLabelText, { color: colors.textSecondary, writingDirection }]}>
               {t?.dhamen?.commission || (isRTL ? "عمولة المنصة" : "Platform Commission")} ({calculations.commissionRate}%)
             </Text>
           </View>
-          <Text style={[styles.calculatorValue, { color: colors.textSecondary }]}>
+          <Text style={[styles.calculatorValue, { color: colors.textSecondary, writingDirection }]}>
             {formatNumber(calculations.commission)} {t?.common?.sar || "SAR"}
           </Text>
         </View>
@@ -143,17 +143,17 @@ export default function CreateDhamenScreen() {
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         {/* Total */}
-        <View style={[styles.calculatorRow, { flexDirection: rowDirection }]}>
-          <Text style={[styles.totalLabel, { color: colors.primary }]}>
+        <View style={[styles.calculatorRow]}>
+          <Text style={[styles.totalLabel, { color: colors.primary, writingDirection }]}>
             {t?.dhamen?.total || (isRTL ? "الإجمالي" : "Total")}
           </Text>
-          <Text style={[styles.totalValue, { color: colors.primary }]}>
+          <Text style={[styles.totalValue, { color: colors.primary, writingDirection }]}>
             {formatNumber(calculations.total)} {t?.common?.sar || "SAR"}
           </Text>
         </View>
       </View>
     </FadeInView>
-  ), [calculations, colors, isRTL, t, formatNumber]);
+  ), [calculations, colors, isRTL, t, formatNumber, writingDirection]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -212,10 +212,20 @@ export default function CreateDhamenScreen() {
                 <View
                   style={[
                     styles.phoneRowHeader,
-                    { alignItems: getRTLStartAlign(isRTL) },
+                    {
+                      alignItems: 'flex-start',
+                    },
                   ]}
                 >
-                  <Text style={[styles.phoneLabel, { color: colors.text }]}>
+                  <Text
+                    style={[
+                      styles.phoneLabel,
+                      {
+                        color: colors.text,
+                        writingDirection,
+                      },
+                    ]}
+                  >
                     {isRTL ? "جوال مقدم الخدمة" : "Service Provider Mobile"}
                     <Text style={{ color: colors.error }}> *</Text>
                   </Text>
@@ -224,7 +234,7 @@ export default function CreateDhamenScreen() {
                       styles.phoneSubLabel,
                       {
                         color: colors.textSecondary,
-                        textAlign: getRTLTextAlign(isRTL),
+                        writingDirection,
                       },
                     ]}
                   >
@@ -238,7 +248,6 @@ export default function CreateDhamenScreen() {
                     {
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
-                      flexDirection: rowDirection,
                     },
                   ]}
                 >
@@ -248,7 +257,6 @@ export default function CreateDhamenScreen() {
                       styles.countrySelector,
                       {
                         backgroundColor: pressed ? colors.surfaceSecondary : colors.backgroundSecondary,
-                        flexDirection: rowDirection,
                       },
                     ]}
                     testID="damin-beneficiary-country"
@@ -271,7 +279,7 @@ export default function CreateDhamenScreen() {
                     style={[
                       styles.phoneInput,
                       styles.phoneFieldInput,
-                      { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+                      { color: colors.text, writingDirection: 'ltr' },
                     ]}
                     value={serviceProviderLocalNumber}
                     onChangeText={handleProviderPhoneChange}
@@ -287,7 +295,15 @@ export default function CreateDhamenScreen() {
                   />
                 </View>
 
-                <Text style={[styles.phoneHint, { color: colors.textSecondary, textAlign: getRTLTextAlign(isRTL) }]}>
+                <Text
+                  style={[
+                    styles.phoneHint,
+                    {
+                      color: colors.textSecondary,
+                      writingDirection,
+                    },
+                  ]}
+                >
                   {isRTL
                     ? `الدولة: ${getCountryName(selectedProviderCountry, isRTL)}`
                     : `Country: ${getCountryName(selectedProviderCountry, isRTL)}`}
@@ -325,6 +341,7 @@ export default function CreateDhamenScreen() {
                   onChange={handleDateChange}
                   minimumDate={new Date()}
                   textColor={colors.text}
+                  locale="en-US-u-ca-gregory"
                 />
               )}
               
@@ -350,6 +367,7 @@ export default function CreateDhamenScreen() {
                 testID="damin-service-value"
                 required
                 isLast
+                suffix="SAR"
               />
             </NativeFormSection>
 
@@ -399,6 +417,7 @@ const styles = StyleSheet.create({
   },
   phoneRowHeader: {
     gap: spacing.xs,
+    alignSelf: "stretch",
   },
   phoneLabel: {
     fontSize: 17,
@@ -409,6 +428,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   phoneField: {
+    flexDirection: "row",
     alignItems: "center",
     borderRadius: borderRadius.md,
     borderWidth: 1,
@@ -416,6 +436,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   countrySelector: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
@@ -470,6 +491,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   calculatorRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },

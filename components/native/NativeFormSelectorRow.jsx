@@ -4,23 +4,15 @@ import { NativeFormRow } from './NativeFormRow';
 import { NativePressable } from './NativePressable';
 import { NativeIcon } from './NativeIcon';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation, getRTLRowDirection, pickRTLValue } from '@/utils/i18n/store';
+
 import { typography } from '@/utils/native/typography';
 import { spacing } from '@/utils/native/layout';
 
 /**
  * NativeFormSelectorRow - iOS Settings-style selector row (opens bottom sheet)
- * 
- * @param {Object} props
- * @param {string} props.label - Selector label
- * @param {string} [props.value] - Selected value text
- * @param {string} [props.placeholder] - Placeholder when no value selected
- * @param {Function} props.onPress - Press handler (opens bottom sheet)
- * @param {boolean} [props.isLast=false] - Whether this is the last row
- * @param {boolean} [props.required=false] - Whether the field is required
- * @param {boolean} [props.disabled=false] - Whether the selector is disabled
- * @param {string} [props.icon] - Optional icon name
- * @param {Object} [props.style] - Additional styles
+ *
+ * RTL is handled automatically by I18nManager — flexDirection: 'row' auto-flips,
+ * marginStart/marginEnd auto-flip. Only the chevron icon needs manual flipping.
  */
 export function NativeFormSelectorRow({
   label,
@@ -35,7 +27,6 @@ export function NativeFormSelectorRow({
   testID,
 }) {
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
 
   return (
     <NativePressable
@@ -45,14 +36,14 @@ export function NativeFormSelectorRow({
       testID={testID}
     >
       <NativeFormRow isLast={isLast} style={style}>
-        <View style={[styles.container, { flexDirection: getRTLRowDirection(isRTL) }]}>
-          <View style={[styles.labelContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.container}>
+          <View style={styles.labelContainer}>
             {icon && (
               <NativeIcon
                 name={icon}
                 size="sm"
                 color={colors.textSecondary}
-                style={[styles.icon, isRTL ? { marginLeft: 0, marginRight: spacing.sm } : { marginLeft: spacing.sm }]}
+                style={styles.icon}
               />
             )}
             <Text style={[styles.label, { color: colors.text }]}>
@@ -60,22 +51,21 @@ export function NativeFormSelectorRow({
               {required && <Text style={{ color: colors.error }}> *</Text>}
             </Text>
           </View>
-          
-          <View style={[styles.valueContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+
+          <View style={styles.valueContainer}>
             <Text
               style={[
                 styles.value,
                 !value && styles.placeholder,
                 { color: value ? colors.text : colors.textMuted },
-                isRTL ? { marginLeft: spacing.xs } : { marginRight: spacing.xs }
               ]}
               numberOfLines={1}
             >
               {value || placeholder || 'اختر'}
             </Text>
-            
+
             <NativeIcon
-              name={pickRTLValue(isRTL, "left", "right")}
+              name="left"
               size="sm"
               color={colors.textSecondary}
               style={styles.chevron}
@@ -100,19 +90,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   icon: {
-    marginLeft: spacing.sm,
+    marginEnd: spacing.sm,
   },
   label: {
     ...typography.body,
+    flexShrink: 1,
   },
   valueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: spacing.md,
+    marginStart: spacing.md,
+    flexShrink: 1,
   },
   value: {
     ...typography.body,
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
+    flexShrink: 1,
   },
   placeholder: {
     fontWeight: '400',

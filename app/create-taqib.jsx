@@ -23,7 +23,7 @@ import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedV
 // Utils & Constants
 import { SAUDI_CITIES } from "@/constants/saudiCities";
 import { useTaqibForm } from "@/utils/forms/useTaqibForm";
-import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { useTheme } from "@/utils/theme/store";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { spacing } from "@/utils/native/layout";
@@ -31,7 +31,7 @@ import { spacing } from "@/utils/native/layout";
 export default function CreateTaqibScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
 
   // Ref for city bottom sheet
   const citySheetRef = useRef(null);
@@ -156,7 +156,7 @@ export default function CreateTaqibScreen() {
         onDismiss={() => setCitySearch("")}
       >
         <View style={styles.sheetContent}>
-          <View style={[styles.sheetHeader, { flexDirection: rowDirection }]}>
+          <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               {isRTL ? "اختر المدينة" : "Select City"}
             </Text>
@@ -169,10 +169,10 @@ export default function CreateTaqibScreen() {
             </NativePressable>
           </View>
 
-          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary, flexDirection: rowDirection }]}>
+          <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, textAlign: getRTLTextAlign(isRTL) }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={citySearch}
@@ -214,6 +214,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   sheetHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.lg,
@@ -227,6 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   sheetSearchBar: {
+    flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
     padding: spacing.sm,

@@ -3,7 +3,7 @@ import CountryPickerModal from "@/components/CountryPickerModal";
 import AppPrimaryButton from "@/components/expo-ui/app-primary-button";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { COUNTRIES, getCountryName } from "@/utils/countries";
-import { useTranslation, getRTLTextAlign } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { supabase } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import { Spacing } from "@/constants/theme";
@@ -33,7 +33,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { colors, isDark } = useTheme();
-  const { isRTL, rowDirection } = useTranslation();
+  const { isRTL } = useTranslation();
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // default: Saudi Arabia
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -124,7 +124,6 @@ export default function SignInScreen() {
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              flexDirection: rowDirection,
             },
           ]}
         >
@@ -139,7 +138,6 @@ export default function SignInScreen() {
               styles.countrySelector,
               {
                 backgroundColor: pressed ? colors.surfaceSecondary : "transparent",
-                flexDirection: rowDirection,
               },
             ]}
           >
@@ -152,7 +150,7 @@ export default function SignInScreen() {
             testID="signin-phone-input"
             style={[
               styles.phoneInput,
-              { color: colors.text, textAlign: getRTLTextAlign(isRTL) },
+              { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' },
             ]}
             placeholder={"XXXXXXXXXX"}
             placeholderTextColor={colors.textMuted}
@@ -189,7 +187,7 @@ export default function SignInScreen() {
       </View>
 
       {/* Sign Up Link */}
-      <View style={[styles.footerLink, { flexDirection: rowDirection }]}>
+      <View style={styles.footerLink}>
         <Text style={[styles.footerText, { color: colors.textSecondary }]}>
           {isRTL ? "ليس لديك حساب؟ " : "Don't have an account? "}
         </Text>
@@ -313,6 +311,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   phoneInputWrapper: {
+    flexDirection: "row",
     borderRadius: 16,
     borderWidth: 1.5,
     padding: 16,

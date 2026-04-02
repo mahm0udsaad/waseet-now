@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/utils/theme/store';
-import { useTranslation } from '@/utils/i18n/store';
+
 import { NativeIcon } from '@/components/native/NativeIcon';
 import { Spacing } from '@/constants/theme';
 import { useRouter } from 'expo-router';
@@ -20,7 +20,7 @@ export default function ModernHeader({
 }) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { rowDirection, backIcon } = useTranslation();
+
   const router = useRouter();
 
   const Container = (Platform.OS === 'ios' && !transparent) ? BlurView : View;
@@ -49,7 +49,7 @@ export default function ModernHeader({
           { 
             backgroundColor,
             height: 60,
-            flexDirection: rowDirection,
+            flexDirection: 'row',
             borderBottomWidth: transparent ? 0 : 0.5,
             borderBottomColor: transparent ? 'transparent' : colors.border,
           },
@@ -57,14 +57,14 @@ export default function ModernHeader({
         ]}
       >
         {/* Left Section (Back or Icon) */}
-        <View style={[styles.leftSection, { flexDirection: rowDirection }]}>
+        <View style={styles.leftSection}>
           {showBack && (
             <Pressable 
               onPress={handleBack} 
               style={({ pressed }) => [styles.iconButton, { opacity: pressed ? 0.7 : 1 }]}
             >
               <NativeIcon
-                name={backIcon}
+                name="right"
                 size={28}
                 color={colors.text}
               />
@@ -107,7 +107,7 @@ export default function ModernHeader({
         </View>
 
         {/* Right Section (Actions) */}
-        <View style={[styles.rightSection, { flexDirection: rowDirection }]}>
+        <View style={styles.rightSection}>
           {rightActions}
         </View>
       </Container>

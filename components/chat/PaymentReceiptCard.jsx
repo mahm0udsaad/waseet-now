@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { CheckCircle2, Clock, CreditCard, Receipt, Copy, XCircle } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/utils/theme/store";
-import { useTranslation, getRTLRowDirection, pickRTLValue } from "@/utils/i18n/store";
+import { useTranslation } from "@/utils/i18n/store";
 import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 
 export default function PaymentReceiptCard({ data, isMe }) {
@@ -47,7 +47,7 @@ export default function PaymentReceiptCard({ data, isMe }) {
       ]}
     >
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: getRTLRowDirection(isRTL) }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={[styles.iconContainer, { backgroundColor: isRejected ? "#EF444420" : isPending ? "#F59E0B20" : "#10B98120" }]}>
           {isRejected ? (
             <XCircle size={16} color="#EF4444" />
@@ -78,8 +78,8 @@ export default function PaymentReceiptCard({ data, isMe }) {
 
       {/* Details Rows */}
       <View style={styles.detailsContainer}>
-        <View style={[styles.row, { flexDirection: getRTLRowDirection(isRTL) }]}>
-          <View style={[styles.rowLabelContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+        <View style={styles.row}>
+          <View style={styles.rowLabelContainer}>
             <CreditCard size={14} color={colors.textSecondary} />
             <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>
               {isRTL ? "طريقة الدفع" : "Payment Method"}
@@ -91,14 +91,14 @@ export default function PaymentReceiptCard({ data, isMe }) {
         </View>
 
         {reference && (
-          <View style={[styles.row, { flexDirection: getRTLRowDirection(isRTL) }]}>
-            <View style={[styles.rowLabelContainer, { flexDirection: getRTLRowDirection(isRTL) }]}>
+          <View style={styles.row}>
+            <View style={styles.rowLabelContainer}>
               <Receipt size={14} color={colors.textSecondary} />
               <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>
                 {isRTL ? "رقم العملية" : "Reference"}
               </Text>
             </View>
-            <Pressable onPress={handleCopyReference} style={{ flexDirection: getRTLRowDirection(isRTL), alignItems: "center", gap: 4 }}>
+            <Pressable onPress={handleCopyReference} style={{ flexDirection: 'row', alignItems: "center", gap: 4 }}>
               <Text style={[styles.rowValue, { color: colors.text }]}>
                 {reference.slice(0, 12)}...
               </Text>
@@ -107,8 +107,8 @@ export default function PaymentReceiptCard({ data, isMe }) {
           </View>
         )}
 
-        <View style={[styles.row, { flexDirection: getRTLRowDirection(isRTL) }]}>
-           <Text style={[styles.dateText, { color: colors.textMuted, width: '100%', textAlign: pickRTLValue(isRTL, 'right', 'left') }]}>
+        <View style={styles.row}>
+           <Text style={[styles.dateText, { color: colors.textMuted, width: '100%' }]}>
              {new Date(createdAt).toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
              })}
@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   header: {
+    flexDirection: "row",
     padding: Spacing.m,
     alignItems: "center",
     gap: 8,
@@ -163,10 +164,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   row: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   rowLabelContainer: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
