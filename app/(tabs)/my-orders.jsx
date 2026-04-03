@@ -1,5 +1,5 @@
 import { AppFlatList } from '@/components/layout';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,6 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
 import { useTranslation } from '@/utils/i18n/store';
-import FadeInView from "@/components/ui/FadeInView";
 import { useOrders } from '@/hooks/useOrders';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { NativeButton } from '@/components/native';
@@ -29,56 +28,52 @@ import { getSupabaseSession } from '@/utils/supabase/client';
 import { showToast } from '@/utils/notifications/inAppStore';
 import { hapticFeedback } from '@/utils/native/haptics';
 
-const StatusBadge = ({ status, colors, isRTL, testID }) => {
-  const getStatusColor = () => {
-    switch (status) {
-      case 'completed': return '#10B981'; // Emerald
-      case 'payment_verified': return '#3B82F6'; // Blue
-      case 'in_progress': return '#2563EB'; // Blue
-      case 'completion_requested': return '#F97316'; // Orange
-      case 'awaiting_admin_transfer_approval': return '#8B5CF6'; // Purple
-      case 'payment_submitted': return '#8B5CF6'; // Purple
-      case 'awaiting_payment': return '#F59E0B'; // Amber
-      case 'paid': return '#3B82F6'; // Legacy
-      case 'pending_payment': return '#F59E0B'; // Amber
-      case 'awaiting_completion': return '#3B82F6'; // Blue
-      case 'disputed': return '#EF4444'; // Red
-      case 'refunded': return '#EF4444'; // Red
-      case 'cancelled': return '#EF4444'; // Red
-      default: return colors.textMuted;
-    }
-  };
+const STATUS_COLORS = {
+  completed: '#10B981',
+  payment_verified: '#3B82F6',
+  in_progress: '#2563EB',
+  completion_requested: '#F97316',
+  awaiting_admin_transfer_approval: '#8B5CF6',
+  payment_submitted: '#8B5CF6',
+  awaiting_payment: '#F59E0B',
+  paid: '#3B82F6',
+  pending_payment: '#F59E0B',
+  awaiting_completion: '#3B82F6',
+  disputed: '#EF4444',
+  refunded: '#EF4444',
+  cancelled: '#EF4444',
+};
 
-  const getStatusLabel = () => {
-    switch (status) {
-      case 'completed': return isRTL ? 'مكتمل' : 'Completed';
-      case 'payment_verified': return isRTL ? 'تم التحقق من الدفع' : 'Payment Verified';
-      case 'in_progress': return isRTL ? 'قيد التنفيذ' : 'In Progress';
-      case 'completion_requested': return isRTL ? 'بانتظار تأكيد المستفيد' : 'Awaiting Buyer Confirmation';
-      case 'awaiting_admin_transfer_approval': return isRTL ? 'بانتظار موافقة الإدارة' : 'Awaiting Admin Approval';
-      case 'payment_submitted': return isRTL ? 'تم إرسال الحوالة' : 'Transfer Submitted';
-      case 'awaiting_payment': return isRTL ? 'بانتظار الدفع' : 'Awaiting Payment';
-      case 'paid': return isRTL ? 'مدفوع' : 'Paid'; // Legacy
-      case 'pending_payment': return isRTL ? 'قيد الانتظار' : 'Pending Payment';
-      case 'awaiting_completion': return isRTL ? 'بانتظار اكتمال الخدمة' : 'Awaiting Completion';
-      case 'disputed': return isRTL ? 'نزاع' : 'Disputed';
-      case 'refunded': return isRTL ? 'مسترد' : 'Refunded';
-      case 'cancelled': return isRTL ? 'ملغي' : 'Cancelled';
-      default: return status;
-    }
-  };
+const STATUS_LABELS = {
+  completed: ['مكتمل', 'Completed'],
+  payment_verified: ['تم التحقق من الدفع', 'Payment Verified'],
+  in_progress: ['قيد التنفيذ', 'In Progress'],
+  completion_requested: ['بانتظار تأكيد المستفيد', 'Awaiting Buyer Confirmation'],
+  awaiting_admin_transfer_approval: ['بانتظار موافقة الإدارة', 'Awaiting Admin Approval'],
+  payment_submitted: ['تم إرسال الحوالة', 'Transfer Submitted'],
+  awaiting_payment: ['بانتظار الدفع', 'Awaiting Payment'],
+  paid: ['مدفوع', 'Paid'],
+  pending_payment: ['قيد الانتظار', 'Pending Payment'],
+  awaiting_completion: ['بانتظار اكتمال الخدمة', 'Awaiting Completion'],
+  disputed: ['نزاع', 'Disputed'],
+  refunded: ['مسترد', 'Refunded'],
+  cancelled: ['ملغي', 'Cancelled'],
+};
 
-  const color = getStatusColor();
+const StatusBadge = React.memo(function StatusBadge({ status, colors, isRTL, testID }) {
+  const color = STATUS_COLORS[status] || colors.textMuted;
+  const labels = STATUS_LABELS[status];
+  const label = labels ? (isRTL ? labels[0] : labels[1]) : status;
 
   return (
     <View testID={testID} style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
       <View style={[styles.statusDot, { backgroundColor: color }]} />
-      <Text style={[styles.statusText, { color: color }]}>{getStatusLabel()}</Text>
+      <Text style={[styles.statusText, { color: color }]}>{label}</Text>
     </View>
   );
-};
+});
 
-const OrderIcon = ({ type, colors }) => {
+const OrderIcon = React.memo(function OrderIcon({ type, colors }) {
     let Icon = FileText;
     let color = colors.primary;
 
@@ -98,7 +93,7 @@ const OrderIcon = ({ type, colors }) => {
             <Icon size={24} color={color} />
         </View>
     );
-};
+});
 
 export default function MyOrdersScreen() {
   const router = useRouter();
@@ -180,7 +175,7 @@ export default function MyOrdersScreen() {
     }
   };
 
-  const renderOrder = ({ item, index }) => {
+  const renderOrder = useCallback(({ item, index }) => {
     const adTitle = item.ad?.title || (isRTL ? 'طلب' : 'Order');
     const adType = item.ad?.type || 'tanazul';
     const formattedDate = new Date(item.created_at).toLocaleDateString(
@@ -192,7 +187,6 @@ export default function MyOrdersScreen() {
       : (isRTL ? (adType === 'tanazul' ? 'المتنازل' : 'بائع') : 'Seller');
     const formattedAmount = `${item.amount} ${item.currency}`;
 
-    // Check if this is a Damin order that needs confirmation
     const isDaminOrder = item.isDaminOrder;
     let needsConfirmation = false;
     let userRole = null;
@@ -210,87 +204,85 @@ export default function MyOrdersScreen() {
     }
 
     return (
-      <FadeInView delay={index * 100}>
-        <Pressable
-          testID={`order-card-${index}`}
-          onPress={() => {
-            const pathname = item.isDaminOrder ? "/damin-order-details" : "/order-details";
-            router.push({
-              pathname,
-              params: { id: item.id }
-            });
-          }}
-          style={({ pressed }) => [
-            styles.orderCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: needsConfirmation ? colors.warning + '40' : colors.border,
-              borderWidth: needsConfirmation ? 2 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
-            },
-          ]}
-        >
-          {needsConfirmation && (
-            <View style={[styles.confirmationBanner, { backgroundColor: colors.warning + '15' }]}>
-              <AlertCircle size={16} color={colors.warning} />
-              <Text style={[styles.confirmationText, { color: colors.warning }]}>
-                {isRTL ? 'يتطلب تأكيدك' : 'Confirmation Required'}
-              </Text>
-            </View>
-          )}
-          
-          <View style={styles.cardHeader}>
-              <View style={styles.headerLeft}>
-                  <Text style={[styles.orderId, { color: colors.textMuted }]}>{item.id.slice(0, 8)}</Text>
-                  <View style={[styles.dot, { backgroundColor: colors.border }]} />
-                  <Text style={[styles.orderDate, { color: colors.textMuted }]}>{formattedDate}</Text>
-              </View>
-              <StatusBadge status={item.status} colors={colors} isRTL={isRTL} testID="order-status" />
+      <Pressable
+        testID={`order-card-${index}`}
+        onPress={() => {
+          const pathname = item.isDaminOrder ? "/damin-order-details" : "/order-details";
+          router.push({
+            pathname,
+            params: { id: item.id }
+          });
+        }}
+        style={({ pressed }) => [
+          styles.orderCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: needsConfirmation ? colors.warning + '40' : colors.border,
+            borderWidth: needsConfirmation ? 2 : 1,
+            opacity: pressed ? 0.85 : 1,
+          },
+        ]}
+      >
+        {needsConfirmation && (
+          <View style={[styles.confirmationBanner, { backgroundColor: colors.warning + '15' }]}>
+            <AlertCircle size={16} color={colors.warning} />
+            <Text style={[styles.confirmationText, { color: colors.warning }]}>
+              {isRTL ? 'يتطلب تأكيدك' : 'Confirmation Required'}
+            </Text>
           </View>
-          
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          
-          <View style={styles.cardBody}>
-              <OrderIcon type={adType} colors={colors} />
-              <View style={styles.cardContent}>
-                  <Text style={[styles.cardTitle, { color: colors.text, writingDirection: 'rtl' }]}>{adTitle}</Text>
-                  <Text style={[styles.providerName, { color: colors.textSecondary }]}>
-                    {isDaminOrder
-                      ? (userRole === 'payer'
-                          ? (isRTL ? 'صاحب الطلب' : 'Order Owner')
-                          : (isRTL ? 'مقدم الخدمة' : 'Service Provider'))
-                      : roleLabel}
-                  </Text>
-                  <Text style={[styles.amount, { color: colors.primary }]}>{formattedAmount}</Text>
-              </View>
-               <View style={styles.arrowContainer}>
-                  {isRTL ? (
-                     <ChevronLeft size={20} color={colors.textMuted} />
-                  ) : (
-                     <ChevronRight size={20} color={colors.textMuted} />
-                  )}
-              </View>
-          </View>
+        )}
 
-          {needsConfirmation && (
-            <Pressable 
-              style={[styles.cardFooter, { borderTopColor: colors.border }]}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <NativeButton
-                title={isRTL ? 'تأكيد المشاركة' : 'Confirm Participation'}
-                onPress={() => handleQuickConfirm(item.id)}
-                size="sm"
-                loading={actionLoading === item.id}
-                disabled={actionLoading === item.id}
-                icon="check"
-              />
-            </Pressable>
-          )}
-        </Pressable>
-      </FadeInView>
+        <View style={styles.cardHeader}>
+            <View style={styles.headerLeft}>
+                <Text style={[styles.orderId, { color: colors.textMuted }]}>{item.id.slice(0, 8)}</Text>
+                <View style={[styles.dot, { backgroundColor: colors.border }]} />
+                <Text style={[styles.orderDate, { color: colors.textMuted }]}>{formattedDate}</Text>
+            </View>
+            <StatusBadge status={item.status} colors={colors} isRTL={isRTL} testID="order-status" />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <View style={styles.cardBody}>
+            <OrderIcon type={adType} colors={colors} />
+            <View style={styles.cardContent}>
+                <Text style={[styles.cardTitle, { color: colors.text, writingDirection: 'rtl' }]}>{adTitle}</Text>
+                <Text style={[styles.providerName, { color: colors.textSecondary }]}>
+                  {isDaminOrder
+                    ? (userRole === 'payer'
+                        ? (isRTL ? 'صاحب الطلب' : 'Order Owner')
+                        : (isRTL ? 'مقدم الخدمة' : 'Service Provider'))
+                    : roleLabel}
+                </Text>
+                <Text style={[styles.amount, { color: colors.primary }]}>{formattedAmount}</Text>
+            </View>
+             <View style={styles.arrowContainer}>
+                {isRTL ? (
+                   <ChevronLeft size={20} color={colors.textMuted} />
+                ) : (
+                   <ChevronRight size={20} color={colors.textMuted} />
+                )}
+            </View>
+        </View>
+
+        {needsConfirmation && (
+          <Pressable
+            style={[styles.cardFooter, { borderTopColor: colors.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <NativeButton
+              title={isRTL ? 'تأكيد المشاركة' : 'Confirm Participation'}
+              onPress={() => handleQuickConfirm(item.id)}
+              size="sm"
+              loading={actionLoading === item.id}
+              disabled={actionLoading === item.id}
+              icon="check"
+            />
+          </Pressable>
+        )}
+      </Pressable>
     );
-  };
+  }, [colors, isRTL, currentUserId, actionLoading, router, handleQuickConfirm]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -418,6 +410,10 @@ export default function MyOrdersScreen() {
           }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          removeClippedSubviews
           ListEmptyComponent={
             !loading ? (
               <View style={styles.emptyState}>

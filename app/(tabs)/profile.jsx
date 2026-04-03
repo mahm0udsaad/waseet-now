@@ -202,7 +202,8 @@ export default function ProfileScreen() {
     if (!currentUserId) return;
     loadUserAds();
     loadOrdersCount();
-  }, [currentUserId, loadOrdersCount, loadUserAds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   const handleAction = async (action) => {
     if (action === 'toggleTheme') toggleTheme();
@@ -414,6 +415,7 @@ export default function ProfileScreen() {
                         : require('@/assets/images/logo.png')
                     }
                     style={[styles.profileImage, !profile?.avatar_url && { backgroundColor: '#FFFFFF' }]}
+                    cachePolicy="memory-disk"
                   />
                 )}
                 <Pressable 
@@ -548,9 +550,8 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.adsList}>
               {userAds.map((ad, index) => (
-                <FadeInView
+                <View
                   key={ad.id}
-                  delay={200 + index * 45}
                   style={[styles.adListCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={[styles.adListTopRow, { flexDirection: 'row' }]}>
@@ -623,7 +624,7 @@ export default function ProfileScreen() {
                       </Text>
                     </Pressable>
                   </View>
-                </FadeInView>
+                </View>
               ))}
             </View>
           )}

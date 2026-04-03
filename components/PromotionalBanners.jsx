@@ -148,7 +148,7 @@ export default function PromotionalBanners() {
                   source={{ uri: card.backgroundImageUrl }}
                   style={StyleSheet.absoluteFill}
                   contentFit="cover"
-                  transition={250}
+                  cachePolicy="memory-disk"
                 />
               ) : null}
 

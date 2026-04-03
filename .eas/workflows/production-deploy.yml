@@ -22,12 +22,10 @@ jobs:
     steps:
       - uses: eas/checkout
       - uses: eas/install_node_modules
-      - run:
-          name: Run ESLint
-          command: npx expo lint
-      - run:
-          name: TypeScript check
-          command: npx tsc --noEmit --skipLibCheck
+      - name: Run ESLint
+        run: npx expo lint
+      - name: TypeScript check
+        run: npx tsc --noEmit --skipLibCheck
 
   # Step 2: Build iOS (after lint passes)
   build_ios:

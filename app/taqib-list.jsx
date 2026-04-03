@@ -13,9 +13,8 @@ import {
   Plus,
   Search
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
-import FadeInView from "@/components/ui/FadeInView";
 
 const RTL_ISOLATE_START = "\u2067";
 const RTL_ISOLATE_END = "\u2069";
@@ -73,10 +72,14 @@ export default function TaqibListScreen() {
     }
   };
 
-  const filteredAds = ads.filter((ad) => {
-    const target = `${ad.title || ""} ${ad.description || ""}`.toLowerCase();
-    return target.includes(searchQuery.toLowerCase());
-  });
+  const filteredAds = useMemo(() => {
+    if (!searchQuery) return ads;
+    const query = searchQuery.toLowerCase();
+    return ads.filter((ad) => {
+      const target = `${ad.title || ""} ${ad.description || ""}`.toLowerCase();
+      return target.includes(query);
+    });
+  }, [ads, searchQuery]);
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
@@ -157,7 +160,7 @@ export default function TaqibListScreen() {
       <View style={styles.content}>
 
         {/* Search Bar */}
-        <FadeInView delay={200} style={styles.searchContainer}>
+        <View style={styles.searchContainer}>
             <View
               style={[
                 styles.searchBar,
@@ -181,7 +184,7 @@ export default function TaqibListScreen() {
               <Filter size={18} color={colors.text} />
             </Pressable>
           </View>
-        </FadeInView>
+        </View>
 
         {loading && !refreshing ? (
           renderListSkeleton()
@@ -208,8 +211,11 @@ export default function TaqibListScreen() {
                 </Text>
               )
             }
+            initialNumToRender={10}
+            maxToRenderPerBatch={6}
+            windowSize={7}
+            removeClippedSubviews
             renderItem={({ item: ad, index }) => (
-              <FadeInView delay={Math.min(250 + index * 80, 650)}>
                 <Pressable
                   testID={`taqib-card-${index}`}
                   onPress={() => router.push({ pathname: "/taqib-ad-details", params: { id: ad.id } })}
@@ -218,7 +224,7 @@ export default function TaqibListScreen() {
                     {
                       backgroundColor: colors.card,
                       borderColor: colors.border,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                      opacity: pressed ? 0.85 : 1,
                     },
                   ]}
                 >
@@ -279,7 +285,6 @@ export default function TaqibListScreen() {
                     );
                   })()}
                 </Pressable>
-              </FadeInView>
             )}
           />
         )}

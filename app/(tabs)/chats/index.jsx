@@ -239,7 +239,7 @@ export default function ChatsListScreen() {
         ]}
       >
         <View style={styles.avatarContainer}>
-          <Image source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }} style={styles.avatar} />
+          <Image source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }} style={styles.avatar} cachePolicy="memory-disk" />
           {item.isOnline && (
             <View style={[styles.onlineBadge, { borderColor: colors.background }]} />
           )}

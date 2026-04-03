@@ -3,6 +3,7 @@ import InAppToast from '@/components/InAppToast';
 import { loadCommissionSettings } from '@/constants/commissionConfig';
 import { getPreferredFontFamily } from '@/constants/theme';
 import { useAuth } from '@/utils/auth/useAuth';
+import { useAuthStore } from '@/utils/auth/store';
 import {
   clearFatalError,
   getFatalError,
@@ -189,6 +190,7 @@ const queryClient = new QueryClient({
 });
 
 const STARTUP_PROFILE_TIMEOUT_MS = 8000;
+const STARTUP_INIT_TIMEOUT_MS = 5000;
 
 function withTimeout(task, timeoutMs, label) {
   let timeoutId;
@@ -507,7 +509,7 @@ export default function RootLayout() {
         }
 
         const data = response.notification?.request?.content?.data;
-        const route = getNotificationRoute(data);
+        const route = getNotificationRoute(data, { fallbackToNotifications: true });
         console.log('[Notification tapped]', data);
 
         if (notificationId) {
@@ -585,15 +587,21 @@ export default function RootLayout() {
     const initializeApp = async () => {
       try {
         const results = await Promise.allSettled([
-          initiate().then(() => console.log('[Init] initiate done')),
-          initTheme().then(() => console.log('[Init] initTheme done')),
-          initLanguage().then(() => console.log('[Init] initLanguage done')),
+          withTimeout(initiate(), STARTUP_INIT_TIMEOUT_MS, 'initiate').then(() => console.log('[Init] initiate done')),
+          withTimeout(initTheme(), STARTUP_INIT_TIMEOUT_MS, 'initTheme').then(() => console.log('[Init] initTheme done')),
+          withTimeout(initLanguage(), STARTUP_INIT_TIMEOUT_MS, 'initLanguage').then(() => console.log('[Init] initLanguage done')),
         ]);
         results.forEach((r, i) => {
           if (r.status === 'rejected') {
             console.error(`[Init] Task ${i} failed:`, r.reason);
           }
         });
+        // If initiate() timed out, isReady is still false — force it so startup can proceed.
+        // The auth state defaults to null (signed out), which is safe.
+        if (!useAuthStore.getState().isReady) {
+          console.warn('[Init] Auth init timed out — forcing isReady');
+          useAuthStore.setState({ isReady: true });
+        }
       } catch (error) {
         console.error('[RootLayout] App initialization failed:', error);
       } finally {

@@ -14,9 +14,8 @@ import {
   Plus,
   Search
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
-import FadeInView from "@/components/ui/FadeInView";
 
 export default function TanazulListScreen() {
   const router = useRouter();
@@ -47,17 +46,21 @@ export default function TanazulListScreen() {
     }
   };
 
-  const filteredAds = ads.filter((ad) => {
-    const professionSearch =
-      ad.metadata?.profession_label_ar ||
-      ad.metadata?.profession_label_ar_short ||
-      ad.metadata?.profession_label_en ||
-      ad.metadata?.profession_label_en_short ||
-      ad.metadata?.profession ||
-      "";
-    const target = `${ad.title || ""} ${professionSearch} ${ad.metadata?.nationality || ""}`.toLowerCase();
-    return target.includes(searchQuery.toLowerCase());
-  });
+  const filteredAds = useMemo(() => {
+    if (!searchQuery) return ads;
+    const query = searchQuery.toLowerCase();
+    return ads.filter((ad) => {
+      const professionSearch =
+        ad.metadata?.profession_label_ar ||
+        ad.metadata?.profession_label_ar_short ||
+        ad.metadata?.profession_label_en ||
+        ad.metadata?.profession_label_en_short ||
+        ad.metadata?.profession ||
+        "";
+      const target = `${ad.title || ""} ${professionSearch} ${ad.metadata?.nationality || ""}`.toLowerCase();
+      return target.includes(query);
+    });
+  }, [ads, searchQuery]);
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
@@ -159,7 +162,7 @@ export default function TanazulListScreen() {
       <View style={styles.content}>
 
         {/* Search Bar */}
-        <FadeInView delay={200} style={styles.searchContainer}>
+        <View style={styles.searchContainer}>
           <View
             style={[
               styles.searchBar,
@@ -182,7 +185,7 @@ export default function TanazulListScreen() {
               <Filter size={18} color={colors.text} />
             </Pressable>
           </View>
-        </FadeInView>
+        </View>
 
         {loading && !refreshing ? (
           renderListSkeleton()
@@ -209,6 +212,10 @@ export default function TanazulListScreen() {
                 </Text>
               )
             }
+            initialNumToRender={8}
+            maxToRenderPerBatch={6}
+            windowSize={7}
+            removeClippedSubviews
             renderItem={({ item: ad, index }) => {
               const arabicProfession = ad.metadata?.profession_label_ar_short || ad.metadata?.profession_label_ar || "";
               const englishProfession = ad.metadata?.profession_label_en_short || ad.metadata?.profession_label_en || "";
@@ -223,12 +230,11 @@ export default function TanazulListScreen() {
                 : (ad.metadata?.profession_label_en || ad.metadata?.profession_label_en_short || ad.metadata?.profession || "");
 
               return (
-                <FadeInView delay={Math.min(300 + index * 100, 700)}>
                   <Pressable
                     onPress={() => router.push({ pathname: "/tanazul-details", params: { id: ad.id } })}
                     style={({ pressed }) => [
                       styles.adCard,
-                      { backgroundColor: colors.card, borderColor: colors.border, transform: [{ scale: pressed ? 0.98 : 1 }] },
+                      { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 },
                     ]}
                   >
                     <View style={styles.adHeader}>
@@ -291,7 +297,6 @@ export default function TanazulListScreen() {
                       </View>
                     </View>
                   </Pressable>
-                </FadeInView>
               );
             }}
           />
