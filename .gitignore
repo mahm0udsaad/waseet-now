@@ -18,6 +18,14 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Firebase / Push notification credentials
+# NOTE: google-services.json and GoogleService-Info.plist are NOT secrets — they
+# ship in every installed app binary and are restricted server-side by
+# package/bundle + signing key. They MUST be committed so EAS Build can find them.
+# Service account keys and keystores below ARE secrets — keep them gitignored.
+fcm-service-account*.json
+play-store-service-account.json
+
 # Metro
 .metro-health-check*
 

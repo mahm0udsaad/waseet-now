@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55680442870",
+    "project_id": "wasit-alan",
+    "storage_bucket": "wasit-alan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55680442870:android:eb3472719495eb1ca667d7",
+        "android_client_info": {
+          "package_name": "com.wasitalan.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3be0PD0B2_efxp0fKJiIhUspwTbyASzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
