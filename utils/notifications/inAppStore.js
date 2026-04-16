@@ -1,5 +1,8 @@
 import { create } from "zustand";
 
+const chatUnread = (list) =>
+  list.filter((n) => !n.read_at && n.conversation_id).length;
+
 export const useInAppNotificationsStore = create((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -7,8 +10,7 @@ export const useInAppNotificationsStore = create((set, get) => ({
 
   setNotifications: (notifications) => {
     const list = Array.isArray(notifications) ? notifications : [];
-    const unreadCount = list.filter((n) => !n.read_at).length;
-    set({ notifications: list, unreadCount });
+    set({ notifications: list, unreadCount: chatUnread(list) });
   },
 
   addNotification: (notification) => {
@@ -16,7 +18,7 @@ export const useInAppNotificationsStore = create((set, get) => ({
     const prev = get().notifications || [];
     if (prev.some((n) => n.id === notification.id)) return;
     const next = [notification, ...prev].slice(0, 100);
-    set({ notifications: next, unreadCount: next.filter((n) => !n.read_at).length });
+    set({ notifications: next, unreadCount: chatUnread(next) });
   },
 
   markConversationReadLocal: (conversationId) => {
@@ -24,7 +26,7 @@ export const useInAppNotificationsStore = create((set, get) => ({
     const next = prev.map((n) =>
       n.conversation_id === conversationId && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
     );
-    set({ notifications: next, unreadCount: next.filter((n) => !n.read_at).length });
+    set({ notifications: next, unreadCount: chatUnread(next) });
   },
 
   markNotificationRead: (notificationId) => {
@@ -32,7 +34,7 @@ export const useInAppNotificationsStore = create((set, get) => ({
     const next = prev.map((n) =>
       n.id === notificationId && !n.read_at ? { ...n, read_at: new Date().toISOString() } : n
     );
-    set({ notifications: next, unreadCount: next.filter((n) => !n.read_at).length });
+    set({ notifications: next, unreadCount: chatUnread(next) });
   },
 
   showToast: (toast) => set({ toast }),

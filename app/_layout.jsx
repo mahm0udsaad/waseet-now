@@ -720,6 +720,14 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="profile/receipts"
+              options={{
+                headerShown: true,
+                title: isRTL ? 'إيصالاتي' : 'My Receipts',
+                headerLargeTitle: false,
+              }}
+            />
+            <Stack.Screen
               name="create-taqib"
               options={{
                 headerShown: true,
@@ -758,6 +766,15 @@ export default function RootLayout() {
                 headerShown: true,
                 title: isRTL ? 'إعلانات التنازل' : 'Tanazul Ads',
                 headerLargeTitle: false,
+              }}
+            />
+            <Stack.Screen
+              name="airport-inspection"
+              options={{
+                headerShown: true,
+                title: isRTL ? 'خدمة تفتيش وتوصيل للمطار' : 'Airport Inspection Service',
+                headerLargeTitle: false,
+                headerBackButtonDisplayMode: 'minimal',
               }}
             />
             <Stack.Screen
@@ -857,6 +874,10 @@ export default function RootLayout() {
                 presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
                 headerShown: false,
                 title: isRTL ? 'الدفع' : 'Payment',
+                sheetGrabberVisible: true,
+                sheetCornerRadius: 24,
+                sheetExpandsWhenScrolledToEdge: true,
+                sheetAllowedDetents: [0.95],
               }}
             />
             <Stack.Screen

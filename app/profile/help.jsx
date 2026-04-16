@@ -16,20 +16,20 @@ import Constants from 'expo-constants';
 const SUPPORT_EMAIL = 'support@wasitalan.com';
 const SUPPORT_PHONE = '+966536300031';
 
-function FAQItem({ question, answer, colors, isRTL }) {
+function FAQItem({ question, answer, colors, isRTL, writingDirection }) {
   const [open, setOpen] = useState(false);
   const Chevron = open ? ChevronUp : ChevronDown;
 
   return (
     <Pressable onPress={() => setOpen(!open)} style={styles.faqItem}>
       <View style={[styles.faqHeader, { flexDirection: 'row' }]}>
-        <Text style={[styles.faqQuestion, { color: colors.text, writingDirection: 'rtl' }]}>
+        <Text style={[styles.faqQuestion, { color: colors.text, writingDirection }]}>
           {question}
         </Text>
         <Chevron size={18} color={colors.textMuted} />
       </View>
       {open && (
-        <Text style={[styles.faqAnswer, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+        <Text style={[styles.faqAnswer, { color: colors.textSecondary, writingDirection }]}>
           {answer}
         </Text>
       )}
@@ -39,7 +39,7 @@ function FAQItem({ question, answer, colors, isRTL }) {
 
 export default function HelpScreen() {
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, writingDirection } = useTranslation();
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -62,7 +62,7 @@ export default function HelpScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <HelpCircle size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {t.profile.faq}
             </Text>
           </View>
@@ -74,6 +74,7 @@ export default function HelpScreen() {
                 answer={faq.a}
                 colors={colors}
                 isRTL={isRTL}
+                writingDirection={writingDirection}
               />
             </React.Fragment>
           ))}
@@ -85,7 +86,7 @@ export default function HelpScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Mail size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {t.profile.contactUs}
             </Text>
           </View>
@@ -99,10 +100,10 @@ export default function HelpScreen() {
           >
             <Mail size={16} color={colors.textSecondary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection: 'rtl' }]}>
+              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection }]}>
                 {t.profile.contactEmail}
               </Text>
-              <Text style={[styles.contactValue, { color: colors.text, writingDirection: 'rtl' }]}>
+              <Text style={[styles.contactValue, { color: colors.text, writingDirection }]}>
                 {SUPPORT_EMAIL}
               </Text>
             </View>
@@ -119,10 +120,10 @@ export default function HelpScreen() {
           >
             <Phone size={16} color={colors.textSecondary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection: 'rtl' }]}>
+              <Text style={[styles.contactLabel, { color: colors.textMuted, writingDirection }]}>
                 {t.profile.contactPhone}
               </Text>
-              <Text style={[styles.contactValue, { color: colors.text, writingDirection: 'rtl' }]}>
+              <Text style={[styles.contactValue, { color: colors.text, writingDirection }]}>
                 {SUPPORT_PHONE}
               </Text>
             </View>
@@ -135,12 +136,12 @@ export default function HelpScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Info size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {t.profile.aboutApp}
             </Text>
           </View>
           <View style={[styles.aboutRow, { flexDirection: 'row' }]}>
-            <Text style={[styles.aboutLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+            <Text style={[styles.aboutLabel, { color: colors.textSecondary, writingDirection }]}>
               {t.profile.appVersion}
             </Text>
             <Text style={[styles.aboutValue, { color: colors.text }]}>

@@ -1,5 +1,5 @@
 import { AppFlatList } from '@/components/layout';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,82 +29,91 @@ import { getSupabaseSession } from '@/utils/supabase/client';
 import { showToast } from '@/utils/notifications/inAppStore';
 import { hapticFeedback } from '@/utils/native/haptics';
 
-const StatusBadge = ({ status, colors, isRTL, testID }) => {
-  const getStatusColor = () => {
-    switch (status) {
-      case 'completed': return '#10B981'; // Emerald
-      case 'payment_verified': return '#3B82F6'; // Blue
-      case 'in_progress': return '#2563EB'; // Blue
-      case 'completion_requested': return '#F97316'; // Orange
-      case 'awaiting_admin_transfer_approval': return '#8B5CF6'; // Purple
-      case 'payment_submitted': return '#8B5CF6'; // Purple
-      case 'awaiting_payment': return '#F59E0B'; // Amber
-      case 'paid': return '#3B82F6'; // Legacy
-      case 'pending_payment': return '#F59E0B'; // Amber
-      case 'awaiting_completion': return '#3B82F6'; // Blue
-      case 'disputed': return '#EF4444'; // Red
-      case 'refunded': return '#EF4444'; // Red
-      case 'cancelled': return '#EF4444'; // Red
-      default: return colors.textMuted;
-    }
-  };
+const STATUS_COLORS = {
+  completed: '#10B981',
+  payment_verified: '#3B82F6',
+  in_progress: '#2563EB',
+  completion_requested: '#F97316',
+  awaiting_admin_transfer_approval: '#8B5CF6',
+  payment_submitted: '#8B5CF6',
+  awaiting_payment: '#F59E0B',
+  paid: '#3B82F6',
+  pending_payment: '#F59E0B',
+  awaiting_completion: '#3B82F6',
+  disputed: '#EF4444',
+  refunded: '#EF4444',
+  cancelled: '#EF4444',
+};
 
-  const getStatusLabel = () => {
-    switch (status) {
-      case 'completed': return isRTL ? 'مكتمل' : 'Completed';
-      case 'payment_verified': return isRTL ? 'تم التحقق من الدفع' : 'Payment Verified';
-      case 'in_progress': return isRTL ? 'قيد التنفيذ' : 'In Progress';
-      case 'completion_requested': return isRTL ? 'بانتظار تأكيد المستفيد' : 'Awaiting Buyer Confirmation';
-      case 'awaiting_admin_transfer_approval': return isRTL ? 'بانتظار موافقة الإدارة' : 'Awaiting Admin Approval';
-      case 'payment_submitted': return isRTL ? 'تم إرسال الحوالة' : 'Transfer Submitted';
-      case 'awaiting_payment': return isRTL ? 'بانتظار الدفع' : 'Awaiting Payment';
-      case 'paid': return isRTL ? 'مدفوع' : 'Paid'; // Legacy
-      case 'pending_payment': return isRTL ? 'قيد الانتظار' : 'Pending Payment';
-      case 'awaiting_completion': return isRTL ? 'بانتظار اكتمال الخدمة' : 'Awaiting Completion';
-      case 'disputed': return isRTL ? 'نزاع' : 'Disputed';
-      case 'refunded': return isRTL ? 'مسترد' : 'Refunded';
-      case 'cancelled': return isRTL ? 'ملغي' : 'Cancelled';
-      default: return status;
-    }
-  };
+const STATUS_LABELS_AR = {
+  completed: 'مكتمل',
+  payment_verified: 'تم التحقق من الدفع',
+  in_progress: 'قيد التنفيذ',
+  completion_requested: 'بانتظار تأكيد المستفيد',
+  awaiting_admin_transfer_approval: 'بانتظار موافقة الإدارة',
+  payment_submitted: 'تم إرسال الحوالة',
+  awaiting_payment: 'بانتظار الدفع',
+  paid: 'مدفوع',
+  pending_payment: 'قيد الانتظار',
+  awaiting_completion: 'بانتظار اكتمال الخدمة',
+  disputed: 'نزاع',
+  refunded: 'مسترد',
+  cancelled: 'ملغي',
+};
 
-  const color = getStatusColor();
+const STATUS_LABELS_EN = {
+  completed: 'Completed',
+  payment_verified: 'Payment Verified',
+  in_progress: 'In Progress',
+  completion_requested: 'Awaiting Buyer Confirmation',
+  awaiting_admin_transfer_approval: 'Awaiting Admin Approval',
+  payment_submitted: 'Transfer Submitted',
+  awaiting_payment: 'Awaiting Payment',
+  paid: 'Paid',
+  pending_payment: 'Pending Payment',
+  awaiting_completion: 'Awaiting Completion',
+  disputed: 'Disputed',
+  refunded: 'Refunded',
+  cancelled: 'Cancelled',
+};
+
+const StatusBadge = React.memo(function StatusBadge({ status, colors, isRTL, testID }) {
+  const color = STATUS_COLORS[status] || colors.textMuted;
+  const label = isRTL
+    ? (STATUS_LABELS_AR[status] || status)
+    : (STATUS_LABELS_EN[status] || status);
 
   return (
     <View testID={testID} style={[styles.statusBadge, { backgroundColor: color + '20' }]}>
       <View style={[styles.statusDot, { backgroundColor: color }]} />
-      <Text style={[styles.statusText, { color: color }]}>{getStatusLabel()}</Text>
+      <Text style={[styles.statusText, { color }]}>{label}</Text>
     </View>
   );
+});
+
+const ORDER_ICON_MAP = {
+  taqib: { Icon: Briefcase, color: '#4F46E5' },
+  tanazul: { Icon: FileText, color: '#059669' },
+  dhamen: { Icon: Shield, color: '#D97706' },
 };
 
-const OrderIcon = ({ type, colors }) => {
-    let Icon = FileText;
-    let color = colors.primary;
+const OrderIcon = React.memo(function OrderIcon({ type, colors }) {
+  const cfg = ORDER_ICON_MAP[type];
+  const Icon = cfg?.Icon || FileText;
+  const color = cfg?.color || colors.primary;
 
-    if (type === 'taqib') {
-        Icon = Briefcase;
-        color = '#4F46E5';
-    } else if (type === 'tanazul') {
-        Icon = FileText;
-        color = '#059669';
-    } else if (type === 'dhamen') {
-        Icon = Shield;
-        color = '#D97706';
-    }
-
-    return (
-        <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-            <Icon size={24} color={color} />
-        </View>
-    );
-};
+  return (
+    <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+      <Icon size={24} color={color} />
+    </View>
+  );
+});
 
 export default function MyOrdersScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const [activeFilter, setActiveFilter] = useState('all');
   const { orders, loading, refreshing, error, refetch } = useOrders();
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -128,7 +137,7 @@ export default function MyOrdersScreen() {
     }, [refetch])
   );
 
-  const filters = [
+  const filters = useMemo(() => [
     { id: 'all', label: isRTL ? 'الكل' : 'All' },
     { id: 'awaiting_payment', label: isRTL ? 'بانتظار الدفع' : 'Awaiting Payment' },
     { id: 'awaiting_admin_transfer_approval', label: isRTL ? 'مراجعة الإدارة' : 'Admin Review' },
@@ -137,11 +146,12 @@ export default function MyOrdersScreen() {
     { id: 'completion_requested', label: isRTL ? 'بانتظار تأكيد المستفيد' : 'Awaiting Buyer Confirmation' },
     { id: 'completed', label: isRTL ? 'مكتمل' : 'Completed' },
     { id: 'cancelled', label: isRTL ? 'ملغي' : 'Cancelled' },
-  ];
+  ], [isRTL]);
 
-  const filteredOrders = activeFilter === 'all' 
-    ? orders 
-    : orders.filter(o => o.status === activeFilter);
+  const filteredOrders = useMemo(
+    () => (activeFilter === 'all' ? orders : orders.filter((o) => o.status === activeFilter)),
+    [orders, activeFilter]
+  );
   const handleRefresh = useCallback(() => {
     refetch(true);
   }, [refetch]);
@@ -151,13 +161,13 @@ export default function MyOrdersScreen() {
     []
   );
 
-  const handleQuickConfirm = async (orderId) => {
+  const handleQuickConfirm = useCallback(async (orderId) => {
     hapticFeedback.confirm();
     setActionLoading(orderId);
 
     try {
       const result = await confirmDaminOrderParticipation(orderId);
-      
+
       showToast({
         type: 'success',
         title: isRTL ? 'تم التأكيد' : 'Confirmed',
@@ -178,9 +188,9 @@ export default function MyOrdersScreen() {
     } finally {
       setActionLoading(null);
     }
-  };
+  }, [isRTL, refetch]);
 
-  const renderOrder = ({ item, index }) => {
+  const renderOrder = useCallback(({ item, index }) => {
     const adTitle = item.ad?.title || (isRTL ? 'طلب' : 'Order');
     const adType = item.ad?.type || 'tanazul';
     const formattedDate = new Date(item.created_at).toLocaleDateString(
@@ -210,7 +220,7 @@ export default function MyOrdersScreen() {
     }
 
     return (
-      <FadeInView delay={index * 100}>
+      <FadeInView delay={Math.min(index, 8) * 40}>
         <Pressable
           testID={`order-card-${index}`}
           onPress={() => {
@@ -253,7 +263,7 @@ export default function MyOrdersScreen() {
           <View style={styles.cardBody}>
               <OrderIcon type={adType} colors={colors} />
               <View style={styles.cardContent}>
-                  <Text style={[styles.cardTitle, { color: colors.text, writingDirection: 'rtl' }]}>{adTitle}</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text, writingDirection }]}>{adTitle}</Text>
                   <Text style={[styles.providerName, { color: colors.textSecondary }]}>
                     {isDaminOrder
                       ? (userRole === 'payer'
@@ -290,7 +300,7 @@ export default function MyOrdersScreen() {
         </Pressable>
       </FadeInView>
     );
-  };
+  }, [colors, isRTL, writingDirection, router, currentUserId, actionLoading, handleQuickConfirm]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -309,7 +319,7 @@ export default function MyOrdersScreen() {
                 hitSlop={8}
                 style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, padding: 4 })}
               >
-                <ChevronRight size={24} color={colors.text} />
+                <ChevronLeft size={24} color={colors.text} />
               </Pressable>
             ) : null,
         }}

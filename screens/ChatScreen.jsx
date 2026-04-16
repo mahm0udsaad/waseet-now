@@ -24,6 +24,7 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import {
   AlertTriangle,
+  CalendarDays,
   Camera,
   Check,
   CheckCircle,
@@ -38,6 +39,7 @@ import {
   Reply,
   Send,
   Shield,
+  Wallet,
   X,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -83,6 +85,7 @@ export default function ChatScreen() {
     hasMore,
     loadingMore,
     loadOlderMessages,
+    refreshMessages,
   } = useChatConversation(params, t, isRTL);
 
   const resolvedAdId = adContext?.adId || (Array.isArray(params.adId) ? params.adId[0] : params.adId) || null;
@@ -169,7 +172,7 @@ export default function ChatScreen() {
   const [receiptPreviewAttachment, setReceiptPreviewAttachment] = useState(null);
   const [receiptPreviewData, setReceiptPreviewData] = useState(null);
   const [receiptPreviewLoading, setReceiptPreviewLoading] = useState(false);
-  const [refreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
 
   // Sheet visibility state (native Modal)
@@ -249,6 +252,21 @@ export default function ChatScreen() {
     Keyboard.dismiss();
     setAttachmentSheetVisible(true);
   }, []);
+
+  const handleMessagesRefresh = useCallback(async () => {
+    if (refreshing || loadingMore) return;
+
+    setRefreshing(true);
+    try {
+      if (hasMore) {
+        await loadOlderMessages();
+      } else {
+        await refreshMessages();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [hasMore, loadingMore, loadOlderMessages, refreshMessages, refreshing]);
 
   const handlePickImage = useCallback(async () => {
     const success = await pickImage();
@@ -642,7 +660,7 @@ export default function ChatScreen() {
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
     : [colors.background, colors.backgroundSecondary];
-  const chatTitle = otherUserProfile?.displayName || params.name || params.adTitle || t.chat.title;
+  const chatTitle = params.name || otherUserProfile?.displayName || params.adTitle || t.chat.title;
 
   const skeletonMessages = React.useMemo(
     () =>
@@ -853,7 +871,7 @@ export default function ChatScreen() {
               </View>
             </Pressable>
 
-            {isAdOwner && (
+            {(isAdOwner || daminOrder.user_role === 'beneficiary') && (
               <Pressable
                 onPress={openReceiptSheet}
                 style={[styles.compactActionBtn, { backgroundColor: colors.primaryLight }]}
@@ -986,8 +1004,9 @@ export default function ChatScreen() {
               contentContainerStyle={[styles.messagesList, { paddingBottom: 20 }]}
               showsVerticalScrollIndicator={false}
               ListHeaderComponent={loadingMore ? <ActivityIndicator style={{ padding: 10 }} /> : null}
-              refreshing={hasMore ? refreshing : false}
-              onRefresh={hasMore ? loadOlderMessages : undefined}
+              refreshing={refreshing || loadingMore}
+              onRefresh={handleMessagesRefresh}
+              alwaysBounceVertical
               initialNumToRender={15}
               maxToRenderPerBatch={10}
               windowSize={11}
@@ -1484,7 +1503,12 @@ export default function ChatScreen() {
                 <X size={22} color={colors.text} />
               </Pressable>
             </View>
-            <ScrollView style={styles.sheetContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+            <ScrollView
+              style={styles.sheetContent}
+              contentContainerStyle={styles.receiptSheetContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               {/* Ad Context Info */}
               {resolvedAdTitle ? (
                 <View style={[styles.receiptAdContext, { backgroundColor: colors.primaryLight, flexDirection: 'row' }]}>
@@ -1507,16 +1531,19 @@ export default function ChatScreen() {
                   : "An electronic receipt with your signature will be created. The buyer can accept and sign it."}
               </Text>
 
-              <View style={styles.receiptForm}>
+              <View style={[styles.receiptFormCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 {/* Description Field */}
-                <View>
-                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
-                    {isRTL ? "الوصف" : "Description"}
-                  </Text>
-                  <View style={[styles.receiptInput, { backgroundColor: colors.surface }]}>
+                <View style={[styles.receiptFieldRow, { borderBottomColor: colors.border }]}>
+                  <View style={[styles.receiptFieldIcon, { backgroundColor: colors.primaryLight }]}>
+                    <FileText size={18} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
+                      {isRTL ? "الوصف" : "Description"}
+                    </Text>
                     <TextInput
                       testID="receipt-desc-input"
-                      style={[styles.receiptTextInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' }]}
+                      style={[styles.receiptFieldInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' }]}
                       placeholder={isRTL ? "وصف الخدمة أو المنتج" : "Service or product description"}
                       placeholderTextColor={colors.textMuted}
                       value={receiptData.description}
@@ -1527,60 +1554,66 @@ export default function ChatScreen() {
                 </View>
 
                 {/* Amount Field */}
-                <View>
-                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
-                    {isRTL ? "المبلغ" : "Amount"}
-                  </Text>
-                  <View style={[styles.receiptInput, { backgroundColor: colors.surface, flexDirection: 'row' }]}>
-                    <TextInput
-                      testID="receipt-amount-input"
-                      style={[styles.receiptTextInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', flex: 1 }]}
-                      placeholder={isRTL ? "أدخل المبلغ" : "Enter amount"}
-                      placeholderTextColor={colors.textMuted}
-                      value={receiptData.amount}
-                      onChangeText={(text) => updateReceiptData({ amount: text })}
-                      keyboardType="numeric"
-                    />
-                    <View style={[styles.currencyBadge, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.currencyBadgeText}>{t.common.sar}</Text>
+                <View style={[styles.receiptFieldRow, { borderBottomColor: colors.border }]}>
+                  <View style={[styles.receiptFieldIcon, { backgroundColor: '#10B98115' }]}>
+                    <Wallet size={18} color="#10B981" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
+                      {isRTL ? "المبلغ" : "Amount"}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TextInput
+                        testID="receipt-amount-input"
+                        style={[styles.receiptFieldInput, { color: colors.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', flex: 1 }]}
+                        placeholder={isRTL ? "أدخل المبلغ" : "Enter amount"}
+                        placeholderTextColor={colors.textMuted}
+                        value={receiptData.amount}
+                        onChangeText={(text) => updateReceiptData({ amount: text })}
+                        keyboardType="numeric"
+                      />
+                      <View style={[styles.currencyBadge, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.currencyBadgeText}>{t.common.sar}</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
 
                 {/* Date Field (read-only) */}
-                <View>
-                  <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
-                    {isRTL ? "التاريخ" : "Date"}
-                  </Text>
-                  <View style={[styles.receiptInput, { backgroundColor: colors.surfaceSecondary }]}>
-                    <Text style={[styles.receiptDateText, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
-                      {new Date(receiptData.date).toLocaleDateString(isRTL ? "ar-SA-u-ca-gregory" : "en-US", {
+                <View style={[styles.receiptFieldRow, { borderBottomWidth: 0 }]}>
+                  <View style={[styles.receiptFieldIcon, { backgroundColor: '#F59E0B15' }]}>
+                    <CalendarDays size={18} color="#F59E0B" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.receiptFieldLabel, { color: colors.textSecondary, writingDirection: isRTL ? 'rtl' : 'ltr' }]}>
+                      {isRTL ? "التاريخ" : "Date"}
+                    </Text>
+                    <Text style={[styles.receiptFieldInput, { color: colors.text, writingDirection: isRTL ? 'rtl' : 'ltr', paddingVertical: 4 }]}>
+                      {new Date(receiptData.date).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
-                        calendar: "gregory",
                       })}
                     </Text>
                   </View>
                 </View>
-
-                <Pressable
-                  testID="receipt-create-btn"
-                  onPress={createReceipt}
-                  disabled={creatingReceipt}
-                  style={[styles.createReceiptButton, { backgroundColor: creatingReceipt ? colors.textMuted : colors.primary }]}
-                >
-                  {creatingReceipt ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Check size={20} color="#fff" />
-                      <Text style={styles.createReceiptText}>{t.chat.createReceipt}</Text>
-                    </>
-                  )}
-                </Pressable>
               </View>
-              <View style={{ height: 40 }} />
+
+              <Pressable
+                testID="receipt-create-btn"
+                onPress={createReceipt}
+                disabled={creatingReceipt}
+                style={[styles.createReceiptButton, { backgroundColor: creatingReceipt ? colors.textMuted : colors.primary, marginTop: 24 }]}
+              >
+                {creatingReceipt ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Check size={20} color="#fff" />
+                    <Text style={styles.createReceiptText}>{t.chat.createReceipt}</Text>
+                  </>
+                )}
+              </Pressable>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -1841,7 +1874,7 @@ const styles = StyleSheet.create({
   removeAttachment: {
     position: "absolute",
     top: -6,
-    right: -6,
+    end: -6,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -1931,8 +1964,6 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 10,
   },
   sheetTitle: {
     fontSize: 18,
@@ -1941,6 +1972,14 @@ const styles = StyleSheet.create({
   },
 
   // Receipt Form
+  receiptSheetContent: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 40,
+  },
   receiptAdContext: {
     borderRadius: 12,
     padding: 12,
@@ -1960,16 +1999,42 @@ const styles = StyleSheet.create({
   },
   receiptHelper: {
     fontSize: 13,
-    marginBottom: 16,
-    lineHeight: 18,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  receiptFormCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  receiptFieldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    gap: 10,
+  },
+  receiptFieldIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  receiptFieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  receiptFieldInput: {
+    fontSize: 15,
+    paddingVertical: 2,
+    minHeight: 24,
   },
   receiptForm: {
     gap: 16,
-  },
-  receiptFieldLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
   },
   receiptInput: {
     flexDirection: "row",

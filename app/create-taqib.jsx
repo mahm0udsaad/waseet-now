@@ -31,7 +31,7 @@ import { spacing } from "@/utils/native/layout";
 export default function CreateTaqibScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   // Ref for city bottom sheet
   const citySheetRef = useRef(null);
@@ -172,7 +172,7 @@ export default function CreateTaqibScreen() {
           <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={citySearch}

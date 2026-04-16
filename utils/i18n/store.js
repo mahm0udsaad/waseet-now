@@ -141,6 +141,19 @@ const ar = {
     help: 'مركز المساعدة',
     logout: 'تسجيل الخروج',
     myAds: 'إعلاناتي',
+    myReceipts: 'إيصالاتي',
+    noReceipts: 'لا توجد إيصالات',
+    noReceiptsDesc: 'ستظهر هنا جميع معاملاتك المدفوعة والمكتملة',
+    asBuyer: 'كمشتري',
+    asSeller: 'كبائع',
+    asPayer: 'كدافع',
+    asBeneficiary: 'كمستفيد',
+    receiptTypeOrder: 'طلب',
+    receiptTypeDamin: 'ضامن',
+    receiptTypePending: 'فاتورة',
+    receiptStatusFinal: 'مكتمل',
+    receiptStatusPendingSignature: 'بانتظار توقيعك',
+    pdfNotAvailable: 'ملف PDF غير متاح',
     orders: 'طلبات',
     rating: 'تقييم',
     noAds: 'لم تقم بإضافة أي إعلانات بعد',
@@ -303,6 +316,19 @@ const en = {
     help: 'Help Center',
     logout: 'Logout',
     myAds: 'My Ads',
+    myReceipts: 'My Receipts',
+    noReceipts: 'No receipts yet',
+    noReceiptsDesc: 'All your paid and completed transactions will appear here',
+    asBuyer: 'As Buyer',
+    asSeller: 'As Seller',
+    asPayer: 'As Payer',
+    asBeneficiary: 'As Beneficiary',
+    receiptTypeOrder: 'Order',
+    receiptTypeDamin: 'Escrow',
+    receiptTypePending: 'Invoice',
+    receiptStatusFinal: 'Final',
+    receiptStatusPendingSignature: 'Awaiting your signature',
+    pdfNotAvailable: 'PDF not available',
     orders: 'Orders',
     rating: 'Rating',
     noAds: "You haven't posted any ads yet",
@@ -379,8 +405,8 @@ const getDirectionSnapshot = (language) => {
     isRTL,
     t: translations[language],
     locale: locale?.languageTag ?? null,
-    localeTextDirection: 'rtl',
-    writingDirection: 'rtl',
+    localeTextDirection: isRTL ? 'rtl' : 'ltr',
+    writingDirection: isRTL ? 'rtl' : 'ltr',
   };
 };
 
@@ -408,9 +434,10 @@ export const useLanguageStore = create((set, get) => ({
 
     if (Platform.OS !== 'web') {
       const isArabic = nextLanguage === 'ar';
+      const wasRTL = I18nManager.isRTL;
       I18nManager.allowRTL(isArabic);
       I18nManager.forceRTL(isArabic);
-      if (I18nManager.isRTL !== isArabic) {
+      if (wasRTL !== isArabic) {
         setTimeout(reloadForRTL, 100);
       }
     }

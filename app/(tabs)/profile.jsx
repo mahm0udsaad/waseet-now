@@ -19,6 +19,7 @@ import {
   LogOut,
   Moon,
   Package,
+  Receipt,
   Shield,
   Trash2,
   User,
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { t, isRTL, language, toggleLanguage } = useLanguage();
+  const { t, isRTL, language, toggleLanguage, writingDirection } = useLanguage();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -84,6 +85,7 @@ export default function ProfileScreen() {
       items: [
         { id: 'personal', icon: User, label: t.profile.personal, route: '/profile/personal' },
         { id: 'wallet', icon: Wallet, label: t.profile.wallet, route: '/wallet' },
+        { id: 'receipts', icon: Receipt, label: t.profile.myReceipts, route: '/profile/receipts' },
         { id: 'notifications', icon: Bell, label: t.profile.notifications, route: '/notifications' },
       ],
     },
@@ -101,7 +103,7 @@ export default function ProfileScreen() {
         { id: 'help', icon: HelpCircle, label: t.profile.help, route: '/profile/help' },
       ],
     },
-  ], [t]);
+  ], [t.profile]);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -319,13 +321,13 @@ export default function ProfileScreen() {
         <item.icon size={20} color={colors.primary} />
       </View>
 
-      <Text style={[styles.menuLabel, { color: colors.text, writingDirection: 'rtl' }]}>
+      <Text style={[styles.menuLabel, { color: colors.text, writingDirection }]}>
         {item.label}
       </Text>
 
       <View style={[styles.menuAction, { flexDirection: 'row' }]}>
         {item.isValue && (
-          <Text style={[styles.valueText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+          <Text style={[styles.valueText, { color: colors.textSecondary, writingDirection }]}>
             {item.id === 'language' ? (language === 'ar' ? 'العربية' : 'English') : ''}
           </Text>
         )}
@@ -484,7 +486,7 @@ export default function ProfileScreen() {
           <View style={[styles.adsSectionHeader, { flexDirection: 'row' }]}>
             <View style={[styles.adsTitleContainer, { flexDirection: 'row' }]}>
               <Package size={20} color={colors.primary} />
-              <Text style={[styles.adsSectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+              <Text style={[styles.adsSectionTitle, { color: colors.text, writingDirection }]}>
                 {t.profile.myAds}
               </Text>
             </View>
@@ -570,18 +572,18 @@ export default function ProfileScreen() {
                     </View>
                   </View>
 
-                  <Text style={[styles.adCardTitle, { color: colors.text, writingDirection: 'rtl' }]} numberOfLines={2}>
+                  <Text style={[styles.adCardTitle, { color: colors.text, writingDirection }]} numberOfLines={2}>
                     {ad.title}
                   </Text>
 
                   {getAdMetaLine(ad) ? (
-                    <Text style={[styles.adMetaSummary, { color: colors.textSecondary, writingDirection: 'rtl' }]} numberOfLines={1}>
+                    <Text style={[styles.adMetaSummary, { color: colors.textSecondary, writingDirection }]} numberOfLines={1}>
                       {getAdMetaLine(ad)}
                     </Text>
                   ) : null}
 
                   {ad.price ? (
-                    <Text style={[styles.adCardPrice, { color: colors.primary, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.adCardPrice, { color: colors.primary, writingDirection }]}>
                       {Number(ad.price).toLocaleString()} {t.common.sar}
                     </Text>
                   ) : null}
@@ -637,7 +639,7 @@ export default function ProfileScreen() {
                     delay={200 + (sectionIndex * 100)}
                     style={styles.section}
                 >
-                    <Text style={[styles.sectionTitle, { color: colors.textMuted, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.textMuted, writingDirection }]}>
                         {section.section}
                     </Text>
                     <View style={[styles.sectionItems, { backgroundColor: colors.surface, borderColor: colors.border }]}>

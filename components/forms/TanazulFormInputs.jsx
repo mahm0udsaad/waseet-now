@@ -45,12 +45,14 @@ const ProfessionCard = memo(({
 
 ProfessionCard.displayName = "ProfessionCard";
 
-const NationalityItem = memo(({ 
-  item, 
-  onPress, 
-  colors, 
-  isRTL 
-}) => (
+const NationalityItem = memo(({
+  item,
+  onPress,
+  colors,
+  isRTL,
+}) => {
+  const writingDirection = isRTL ? 'rtl' : 'ltr';
+  return (
   <NativePressable
     onPress={onPress}
     haptic="tap"
@@ -58,11 +60,12 @@ const NationalityItem = memo(({
     opacityOnPress={0.5}
     style={[styles.modalItem, { borderBottomColor: colors.border }]}
   >
-    <Text style={[styles.modalItemText, { color: colors.text, writingDirection: 'rtl' }]}>
+    <Text style={[styles.modalItemText, { color: colors.text, writingDirection }]}>
       {isRTL ? item.ar : item.en}
     </Text>
   </NativePressable>
-));
+  );
+});
 
 NationalityItem.displayName = "NationalityItem";
 

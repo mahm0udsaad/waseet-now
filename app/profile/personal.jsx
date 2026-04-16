@@ -32,7 +32,7 @@ function isValidEmail(email) {
 export default function PersonalInformationScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   const nameRef = useRef(null);
   const emailRef = useRef(null);
@@ -223,7 +223,7 @@ export default function PersonalInformationScreen() {
                     onChangeText={setDisplayName}
                     placeholder={isRTL ? "الاسم" : "Name"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, writingDirection: 'rtl' }]}
+                    style={[styles.input, { color: colors.text, writingDirection }]}
                     returnKeyType="next"
                     blurOnSubmit={false}
                     onSubmitEditing={() => emailRef.current?.focus?.()}
@@ -241,7 +241,7 @@ export default function PersonalInformationScreen() {
                     onChangeText={setEmail}
                     placeholder={isRTL ? "البريد الإلكتروني" : "Email"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text, writingDirection: 'rtl' }]}
+                    style={[styles.input, { color: colors.text, writingDirection }]}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     returnKeyType="done"
@@ -265,7 +265,7 @@ export default function PersonalInformationScreen() {
                     editable={false}
                     placeholder={isRTL ? "رقم الجوال" : "Phone number"}
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.textSecondary, writingDirection: 'rtl' }]}
+                    style={[styles.input, { color: colors.textSecondary, writingDirection }]}
                   />
                 </View>
 

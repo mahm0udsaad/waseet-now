@@ -3,13 +3,14 @@ import HomeFixedHeader, { FIXED_HEADER_HEIGHT } from "@/components/HomeFixedHead
 import { NativeIcon } from "@/components/native/NativeIcon";
 import PromotionalBanners from "@/components/PromotionalBanners";
 import { BorderRadius, Shadows, Spacing } from "@/constants/theme";
+import { Plane, Sparkles, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { pickRTLValue, useLanguage } from "@/utils/i18n/store";
 import { showToast, useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { fetchMyNotifications } from "@/utils/supabase/notifications";
 import { useTheme } from "@/utils/theme/store";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -24,7 +25,7 @@ export default function HomeScreen() {
   const [isHeaderBlurred, setIsHeaderBlurred] = useState(false);
   const insets = useSafeAreaInsets();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { language, toggleLanguage, isRTL } = useLanguage();
+  const { language, toggleLanguage, isRTL, writingDirection } = useLanguage();
   const unreadCount = useInAppNotificationsStore((s) => s.unreadCount);
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +55,7 @@ export default function HomeScreen() {
     }
   };
 
-  const services = [
+  const services = useMemo(() => [
     {
       id: "tanazul",
       title: isRTL ? "تنازل" : "Tanazul",
@@ -82,7 +83,7 @@ export default function HomeScreen() {
       route: "/create-dhamen",
       delay: 400,
     },
-  ];
+  ], [isRTL]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -124,7 +125,7 @@ export default function HomeScreen() {
         <PromotionalBanners key={`home-banners-${bannersRefreshKey}`} />
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? "خدماتنا" : "Our Services"}
           </Text>
           <View style={styles.servicesGrid}>
@@ -147,8 +148,8 @@ export default function HomeScreen() {
                     <NativeIcon name={service.icon} size={28} color={service.color} />
                   </View>
                   <View style={styles.serviceInfo}>
-                    <Text style={[styles.serviceTitle, { color: colors.text }]}>{service.title}</Text>
-                    <Text style={[styles.serviceSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
+                    <Text style={[styles.serviceTitle, { color: colors.text, writingDirection }]}>{service.title}</Text>
+                    <Text style={[styles.serviceSubtitle, { color: colors.textSecondary, writingDirection }]} numberOfLines={2}>
                       {service.subtitle}
                     </Text>
                   </View>
@@ -161,30 +162,59 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View
-          style={[styles.statsContainer, { backgroundColor: colors.surface, borderColor: colors.border }, Shadows.small]}
+        {/* Airport Inspection Service Card */}
+        <Pressable
+          onPress={() => router.push("/airport-inspection")}
+          style={({ pressed }) => [
+            styles.airportCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: "#D4AF37",
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+            Shadows.small,
+          ]}
         >
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>+5k</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              {isRTL ? "مستخدم" : "Users"}
+          <View style={styles.airportGlow} />
+          <View style={styles.airportBadgeRow}>
+            <View style={styles.airportBadge}>
+              <Sparkles size={12} color="#D4AF37" />
+              <Text style={[styles.airportBadgeText, { writingDirection }]}>
+                {isRTL ? "مميز" : "PREMIUM"}
+              </Text>
+            </View>
+            <Text style={[styles.airportProvider, { color: colors.textMuted, writingDirection }]}>
+              {isRTL ? "خدمة وسيط" : "Waseet Service"}
             </Text>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.success }]}>99%</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              {isRTL ? "رضا" : "Satisfied"}
-            </Text>
+          <View style={styles.airportMain}>
+            <View style={styles.airportIconCircle}>
+              <Plane size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.airportTextWrap}>
+              <Text style={[styles.airportTitle, { color: colors.text, writingDirection }]}>
+                {isRTL
+                  ? "خدمة تفتيش وتوصيل للمطار"
+                  : "Airport Inspection & Delivery"}
+              </Text>
+              <Text style={[styles.airportSubtitle, { color: colors.textSecondary, writingDirection }]}>
+                {isRTL
+                  ? "نوفر لك خدمة متكاملة لتوصيل العاملة للمطار"
+                  : "Complete worker airport transfer service"}
+              </Text>
+            </View>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.warning }]}>24/7</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              {isRTL ? "دعم" : "Support"}
+          <View style={styles.airportFooter}>
+            <Text style={[styles.airportFooterNote, { color: colors.textMuted, writingDirection }]}>
+              {isRTL ? "اطلب الآن" : "Request now"}
             </Text>
+            {isRTL ? (
+              <ChevronLeft size={16} color="#D4AF37" />
+            ) : (
+              <ChevronRight size={16} color="#D4AF37" />
+            )}
           </View>
-        </View>
+        </Pressable>
 
       </AppScrollView>
     </View>
@@ -198,8 +228,8 @@ const styles = StyleSheet.create({
   fixedHeaderWrap: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     zIndex: 10,
   },
   section: {
@@ -238,12 +268,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
-    writingDirection: 'rtl',
   },
   serviceSubtitle: {
     fontSize: 13,
     lineHeight: 18,
-    writingDirection: 'rtl',
   },
   arrowCircle: {
     width: 32,
@@ -252,29 +280,84 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.l,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderWidth: 1,
+  airportCard: {
+    borderRadius: 20,
+    padding: Spacing.m,
     marginBottom: Spacing.xxl,
+    borderWidth: 2,
+    overflow: "hidden",
+    position: "relative",
   },
-  statItem: {
-    alignItems: 'center',
+  airportGlow: {
+    position: "absolute",
+    top: -40,
+    end: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(212, 175, 55, 0.08)",
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 4,
+  airportBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
-  statLabel: {
+  airportBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  airportBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#D4AF37",
+  },
+  airportProvider: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  airportMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  airportIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(212, 175, 55, 0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  airportTextWrap: {
+    flex: 1,
+  },
+  airportTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  airportSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
+    lineHeight: 17,
   },
-  statDivider: {
-    width: 1,
-    height: 30,
+  airportFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(212, 175, 55, 0.15)",
+    paddingTop: 10,
+  },
+  airportFooterNote: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

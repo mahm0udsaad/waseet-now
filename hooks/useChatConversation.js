@@ -23,6 +23,9 @@ export function useChatConversation(params, t, isRTL) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
+  const markConversationReadLocal = useInAppNotificationsStore(
+    (s) => s.markConversationReadLocal
+  );
 
   const refreshMessages = useCallback(async () => {
     if (!conversationId) {
@@ -41,10 +44,17 @@ export function useChatConversation(params, t, isRTL) {
     setHasMore(data.length >= 30);
     return data;
   }, [conversationId, markConversationReadLocal]);
-  
-  const markConversationReadLocal = useInAppNotificationsStore(
-    (s) => s.markConversationReadLocal
-  );
+
+  // Stable refs so effects don't re-run on language/translation changes
+  const refreshMessagesRef = useRef(refreshMessages);
+  refreshMessagesRef.current = refreshMessages;
+  const isRTLRef = useRef(isRTL);
+  isRTLRef.current = isRTL;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
   // Resolve current user + conversation id
   useEffect(() => {
     let isMounted = true;
@@ -194,7 +204,8 @@ export function useChatConversation(params, t, isRTL) {
     };
   }, [conversationId, currentUserId]);
 
-  // Load messages + subscribe
+  // Load messages + subscribe — depend only on conversationId so we don't rebuild the
+  // realtime channel when language/translations change.
   useEffect(() => {
     if (!conversationId) {
       setLoadingMessages(false);
@@ -206,12 +217,12 @@ export function useChatConversation(params, t, isRTL) {
     const load = async () => {
       setLoadingMessages(true);
       try {
-        await refreshMessages();
+        await refreshMessagesRef.current?.();
       } catch (error) {
         const message =
           error?.message ||
-          (isRTL ? "تعذر تحميل الرسائل" : "Failed to load messages");
-        Alert.alert(t.common.error, message);
+          (isRTLRef.current ? "تعذر تحميل الرسائل" : "Failed to load messages");
+        Alert.alert(tRef.current.common.error, message);
       } finally {
         setLoadingMessages(false);
       }
@@ -253,13 +264,15 @@ export function useChatConversation(params, t, isRTL) {
     return () => {
       unsubscribe?.();
     };
-  }, [conversationId, isRTL, t.common.error, refreshMessages]);
+  }, [conversationId]);
 
   // A6: Load older messages (infinite scroll)
+  // Read current messages from ref so this callback stays stable as new messages arrive
   const loadOlderMessages = useCallback(async () => {
     if (!conversationId || loadingMoreRef.current || !hasMore) return;
-    if (messages.length === 0) return;
-    const oldest = messages[0];
+    const currentMessages = messagesRef.current;
+    if (!currentMessages || currentMessages.length === 0) return;
+    const oldest = currentMessages[0];
     if (!oldest) return;
 
     loadingMoreRef.current = true;
@@ -286,7 +299,7 @@ export function useChatConversation(params, t, isRTL) {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [conversationId, hasMore, messages]);
+  }, [conversationId, hasMore]);
 
   // Send message handler
   const handleSendMessage = async (content, attachments, { replyToId } = {}) => {

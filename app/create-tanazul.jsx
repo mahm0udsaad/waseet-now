@@ -38,7 +38,7 @@ export default function CreateTanazulScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   
   // Refs for Bottom Sheets
   const nationalitySheetRef = useRef(null);
@@ -189,7 +189,7 @@ export default function CreateTanazulScreen() {
     
     return (
       <FadeInView style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
+        <Text style={[styles.inputLabel, { color: colors.text, writingDirection }]}>
           {isRTL ? "المهنة" : "Profession"}
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -224,7 +224,7 @@ export default function CreateTanazulScreen() {
   // Render gender selector
   const renderGenderSelector = useCallback(() => (
     <FadeInView style={styles.inputContainer}>
-      <Text style={[styles.inputLabel, { color: colors.text, writingDirection: 'rtl' }]}>
+      <Text style={[styles.inputLabel, { color: colors.text, writingDirection }]}>
         {isRTL ? "الجنس" : "Gender"}
       </Text>
       <View style={styles.genderRow}>
@@ -505,10 +505,10 @@ export default function CreateTanazulScreen() {
             )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.pledgeTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.pledgeTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? "قسم التعهد بدفع العمولة" : "Commission Pledge"}
             </Text>
-            <Text style={[styles.pledgeText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+            <Text style={[styles.pledgeText, { color: colors.textSecondary, writingDirection }]}>
               {isRTL
                 ? `أتعهد بدفع رسوم المنصة (${commissionDisplayText}) في حال إتمام التنازل.`
                 : `I pledge to pay the platform fee (${commissionDisplayText}) upon completion.`}
@@ -604,7 +604,7 @@ export default function CreateTanazulScreen() {
           <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={nationalitySearch}
@@ -649,7 +649,7 @@ export default function CreateTanazulScreen() {
           <View style={[styles.sheetSearchBar, { backgroundColor: colors.surfaceSecondary }]}>
             <NativeIcon name="search" size="sm" color={colors.textMuted} style={{ marginHorizontal: 10 }} />
             <TextInput
-              style={[styles.sheetSearchInput, { color: colors.text, writingDirection: 'rtl' }]}
+              style={[styles.sheetSearchInput, { color: colors.text, writingDirection }]}
               placeholder={isRTL ? "بحث..." : "Search..."}
               placeholderTextColor={colors.textMuted}
               value={citySearch}

@@ -29,7 +29,7 @@ import { getWalletSummary } from '@/utils/supabase/wallet';
 export default function WalletOverviewScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const withdrawalsEnabled =
     String(process.env.EXPO_PUBLIC_ENABLE_WITHDRAWALS ?? 'true').toLowerCase() !== 'false';
 
@@ -119,7 +119,7 @@ export default function WalletOverviewScreen() {
           ]}
         >
           <Icon size={20} color={iconColor} />
-          <Text style={[styles.actionButtonText, { color: textColor, writingDirection: 'rtl' }]}>{label}</Text>
+          <Text style={[styles.actionButtonText, { color: textColor, writingDirection }]}>{label}</Text>
         </Pressable>
       </FadeInView>
     );
@@ -171,7 +171,7 @@ export default function WalletOverviewScreen() {
           >
             <View style={[styles.balanceHeader, { flexDirection: 'row' }]}>
               <WalletIcon size={28} color="#fff" />
-              <Text style={[styles.balanceTitle, { writingDirection: 'rtl' }]}>
+              <Text style={[styles.balanceTitle, { writingDirection }]}>
                 {isRTL ? 'الرصيد المتاح' : 'Available Balance'}
               </Text>
             </View>
@@ -212,7 +212,7 @@ export default function WalletOverviewScreen() {
           delay={300}
           style={[styles.infoBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.infoBannerText, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+          <Text style={[styles.infoBannerText, { color: colors.textSecondary, writingDirection }]}>
             {isRTL
               ? 'المبالغ قيد الانتظار هي أموال محجوزة من المشترين وسيتم إصدارها عند اكتمال الطلب.'
               : 'Escrow amounts are funds held from buyers and will be released when orders are completed.'}
@@ -255,7 +255,7 @@ export default function WalletOverviewScreen() {
           <View style={styles.quickStatRow}>
             <View style={[styles.quickStat, { flexDirection: 'row' }]}>
               <TrendingUp size={16} color="#10B981" />
-              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection }]}>
                 {isRTL ? 'الدخل' : 'Income'}
               </Text>
               <Text style={[styles.quickStatValue, { color: '#10B981' }]}>
@@ -264,7 +264,7 @@ export default function WalletOverviewScreen() {
             </View>
             <View style={[styles.quickStat, { flexDirection: 'row' }]}>
               <TrendingDown size={16} color="#EF4444" />
-              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+              <Text style={[styles.quickStatLabel, { color: colors.textSecondary, writingDirection }]}>
                 {isRTL ? 'المسحوبات' : 'Withdrawn'}
               </Text>
               <Text style={[styles.quickStatValue, { color: '#EF4444' }]}>

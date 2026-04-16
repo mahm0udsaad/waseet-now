@@ -30,7 +30,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   const [method, setMethod] = useState(null); // 'phone'
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // default: Saudi Arabia
@@ -203,7 +203,7 @@ export default function RegisterScreen() {
           <TextInput
             style={[
               styles.phoneInput,
-              { color: colors.text, writingDirection: 'rtl' },
+              { color: colors.text, writingDirection },
             ]}
             placeholder={"XXXXXXXXXX"}
             placeholderTextColor={colors.textMuted}

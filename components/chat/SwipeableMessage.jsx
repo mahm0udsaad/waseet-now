@@ -87,10 +87,10 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   replyIconLeft: {
-    left: -8,
+    start: -8,
   },
   replyIconRight: {
-    right: -8,
+    end: -8,
   },
   replyIconCircle: {
     width: 32,

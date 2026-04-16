@@ -58,7 +58,10 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
     let cancelled = false;
 
     const run = async () => {
-      if (resolvedLabel || !cacheKey) return;
+      // Early-return guards (don't read resolvedLabel from deps — would re-run after set)
+      if (!cacheKey) return;
+      if (locationLabelCache.has(cacheKey)) return;
+      if (attachment?.label || attachment?.formattedAddress) return;
       if (typeof attachment?.latitude !== "number" || typeof attachment?.longitude !== "number") return;
 
       try {
@@ -81,7 +84,9 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
     return () => {
       cancelled = true;
     };
-  }, [attachment?.latitude, attachment?.longitude, cacheKey, isRTL, resolvedLabel]);
+    // Intentionally don't depend on resolvedLabel — the cache + guards handle re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachment?.latitude, attachment?.longitude, cacheKey, isRTL]);
 
   const locationLabel =
     resolvedLabel ||
@@ -154,7 +159,7 @@ function LocationAttachment({ attachment, isMe, colors, textColor, isRTL }) {
   );
 }
 
-function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
+function ReplyPreview({ repliedMessage, isMe, colors, isRTL, writingDirection, onPress }) {
   if (!repliedMessage) return null;
 
   const isMyReply = repliedMessage.sender_id === repliedMessage._currentUserId;
@@ -189,7 +194,7 @@ function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
           fontWeight: "700",
           color: isMe ? "rgba(255,255,255,0.9)" : colors.primary,
           marginBottom: 1,
-          writingDirection: 'rtl',
+          writingDirection,
         }}
         numberOfLines={1}
       >
@@ -199,7 +204,7 @@ function ReplyPreview({ repliedMessage, isMe, colors, isRTL, onPress }) {
         style={{
           fontSize: 13,
           color: isMe ? "rgba(255,255,255,0.7)" : colors.textSecondary,
-          writingDirection: 'rtl',
+          writingDirection,
         }}
         numberOfLines={2}
       >
@@ -230,7 +235,7 @@ function MessageBubble({
   onReplyPress,
 }) {
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   const bubbleStyle = {
     backgroundColor: isMe ? colors.primary : colors.surface,
@@ -384,7 +389,7 @@ function MessageBubble({
     >
       <View style={[styles.bubble, bubbleStyle]}>
         {repliedMessage && (
-          <ReplyPreview repliedMessage={repliedMessage} isMe={isMe} colors={colors} isRTL={isRTL} onPress={onReplyPress} />
+          <ReplyPreview repliedMessage={repliedMessage} isMe={isMe} colors={colors} isRTL={isRTL} writingDirection={writingDirection} onPress={onReplyPress} />
         )}
         {item.attachments?.map((att, idx) => renderAttachment(att, idx))}
 

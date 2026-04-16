@@ -56,14 +56,14 @@ import { hapticFeedback } from '@/utils/native/haptics';
 import { showToast } from '@/utils/notifications/inAppStore';
 import { checkPaymobStatus, createPaymobIntention } from '@/utils/paymob';
 
-const InfoRow = ({ icon: Icon, label, value, colors, isRTL }) => (
+const InfoRow = ({ icon: Icon, label, value, colors, isRTL, writingDirection }) => (
   <View style={styles.infoRow}>
     <View style={[styles.infoIconContainer, { backgroundColor: colors.primary + '15' }]}>
       <Icon size={20} color={colors.primary} />
     </View>
     <View style={styles.infoContent}>
-      <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: colors.text, writingDirection: 'rtl' }]}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: colors.text, writingDirection }]}>{value}</Text>
     </View>
   </View>
 );
@@ -192,7 +192,7 @@ export default function DaminOrderDetailsScreen() {
   const params = useLocalSearchParams();
   const { id } = params;
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const insets = useSafeAreaInsets();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -939,7 +939,7 @@ export default function DaminOrderDetailsScreen() {
   // --- Alert card renderer ---
   const renderAlertCard = () => {
     const alertCardStyle = styles.alertCard;
-    const textAlignment = { writingDirection: 'rtl' };
+    const textAlignment = { writingDirection };
 
     switch (actionContext.type) {
       case 'confirm_participation':
@@ -1259,10 +1259,10 @@ export default function DaminOrderDetailsScreen() {
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.disputeModalTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+            <Text style={[styles.disputeModalTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'فتح نزاع' : 'Open a Dispute'}
             </Text>
-            <Text style={[styles.disputeModalBody, { color: colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>
+            <Text style={[styles.disputeModalBody, { color: colors.textSecondary, writingDirection }]}>
               {isRTL ? 'يرجى كتابة سبب النزاع:' : 'Please describe the reason for the dispute:'}
             </Text>
             <TextInput
@@ -1345,7 +1345,7 @@ export default function DaminOrderDetailsScreen() {
                 {order.id.slice(0, 8).toUpperCase()}
               </Text>
             </View>
-            <StatusBadge status={order.status} colors={colors} isRTL={isRTL} />
+            <StatusBadge status={order.status} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           </View>
         </FadeInView>
 
@@ -1355,7 +1355,7 @@ export default function DaminOrderDetailsScreen() {
             delay={120}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <ProgressStepper status={order.status} colors={colors} isRTL={isRTL} />
+            <ProgressStepper status={order.status} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           </FadeInView>
         )}
 
@@ -1367,17 +1367,17 @@ export default function DaminOrderDetailsScreen() {
           delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'تفاصيل الخدمة' : 'Service Details'}
           </Text>
-          <Text style={[styles.serviceDescription, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.serviceDescription, { color: colors.text, writingDirection }]}>
             {order.service_type_or_details}
           </Text>
           {order.service_period_start && (
-            <InfoRow icon={Calendar} label={isRTL ? 'تاريخ البدء' : 'Start Date'} value={order.service_period_start} colors={colors} isRTL={isRTL} />
+            <InfoRow icon={Calendar} label={isRTL ? 'تاريخ البدء' : 'Start Date'} value={order.service_period_start} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           )}
           {order.completion_days && (
-            <InfoRow icon={Clock} label={isRTL ? 'مدة الإنجاز' : 'Completion Days'} value={`${order.completion_days} ${isRTL ? 'يوم' : 'days'}`} colors={colors} isRTL={isRTL} />
+            <InfoRow icon={Clock} label={isRTL ? 'مدة الإنجاز' : 'Completion Days'} value={`${order.completion_days} ${isRTL ? 'يوم' : 'days'}`} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           )}
         </FadeInView>
 
@@ -1386,11 +1386,11 @@ export default function DaminOrderDetailsScreen() {
           delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'المشاركون' : 'Participants'}
           </Text>
 
-          <InfoRow icon={User} label={isRTL ? 'صاحب الطلب' : 'Order Owner'} value={order.payer_phone} colors={colors} isRTL={isRTL} />
+          <InfoRow icon={User} label={isRTL ? 'صاحب الطلب' : 'Order Owner'} value={order.payer_phone} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           {order.payer_confirmed_at && (
             <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120' }]}>
               <CheckCircle2 size={16} color="#10B981" />
@@ -1402,7 +1402,7 @@ export default function DaminOrderDetailsScreen() {
 
           <View style={{ height: 12 }} />
 
-          <InfoRow icon={User} label={isRTL ? 'مقدم الخدمة' : 'Service Provider'} value={order.beneficiary_phone} colors={colors} isRTL={isRTL} />
+          <InfoRow icon={User} label={isRTL ? 'مقدم الخدمة' : 'Service Provider'} value={order.beneficiary_phone} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
           {order.beneficiary_confirmed_at && (
             <View style={[styles.confirmedBadge, { backgroundColor: '#10B98120' }]}>
               <CheckCircle2 size={16} color="#10B981" />
@@ -1418,16 +1418,16 @@ export default function DaminOrderDetailsScreen() {
           delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'التفاصيل المالية' : 'Financial Details'}
           </Text>
-          <InfoRow icon={DollarSign} label={isRTL ? 'قيمة الخدمة' : 'Service Value'} value={`${order.service_value.toFixed(2)} SAR`} colors={colors} isRTL={isRTL} />
-          <InfoRow icon={DollarSign} label={isRTL ? `عمولة المنصة (${order.commission_rate ?? 10}%)` : `Platform Commission (${order.commission_rate ?? 10}%)`} value={`${order.commission.toFixed(2)} SAR`} colors={colors} isRTL={isRTL} />
+          <InfoRow icon={DollarSign} label={isRTL ? 'قيمة الخدمة' : 'Service Value'} value={`${order.service_value.toFixed(2)} SAR`} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
+          <InfoRow icon={DollarSign} label={isRTL ? `عمولة المنصة (${order.commission_rate ?? 10}%)` : `Platform Commission (${order.commission_rate ?? 10}%)`} value={`${order.commission.toFixed(2)} SAR`} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
 
           {/* Highlight total amount when payment is needed */}
           {order.status === 'both_confirmed' && (userRole === 'creator' || userRole === 'payer') && (
             <View style={[styles.highlightBox, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B40' }]}>
-              <Text style={[styles.highlightText, { color: '#F59E0B', writingDirection: 'rtl' }]}>
+              <Text style={[styles.highlightText, { color: '#F59E0B', writingDirection }]}>
                 {isRTL ? `المبلغ المطلوب دفعه: ${order.total_amount.toFixed(2)} ر.س` : `Amount to Pay: ${order.total_amount.toFixed(2)} SAR`}
               </Text>
             </View>
@@ -1449,10 +1449,10 @@ export default function DaminOrderDetailsScreen() {
           delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'التاريخ' : 'Timeline'}
           </Text>
-          <InfoRow icon={Calendar} label={isRTL ? 'تاريخ الإنشاء' : 'Created'} value={formattedDate} colors={colors} isRTL={isRTL} />
+          <InfoRow icon={Calendar} label={isRTL ? 'تاريخ الإنشاء' : 'Created'} value={formattedDate} colors={colors} isRTL={isRTL} writingDirection={writingDirection} />
         </FadeInView>
       </ScrollView>
 

@@ -47,8 +47,19 @@ end$$;
 -- Enable pg_net extension for HTTP requests from database triggers
 create extension if not exists pg_net;
 
--- Function to send push notification via Edge Function
--- This will be called by a trigger on notifications table
+-- Function to send push notification via Edge Function.
+-- Called by a trigger on the notifications table.
+--
+-- Reads the service_role_key from Supabase Vault (secret name: 'service_role_key').
+-- The project URL is hardcoded because it is not sensitive and never changes.
+--
+-- Prerequisite: create the vault secret once, e.g. via the Supabase dashboard
+-- or SQL editor (run as an authorized role):
+--   select vault.create_secret(
+--     '<YOUR_SERVICE_ROLE_JWT>',
+--     'service_role_key',
+--     'Service role key for edge function calls from DB triggers'
+--   );
 create or replace function public.trigger_push_notification()
 returns trigger
 language plpgsql
@@ -56,50 +67,45 @@ security definer
 set search_path = public
 as $$
 declare
-  edge_function_url text;
+  edge_function_url constant text := 'https://nkgkdopsljckzmclgdbm.supabase.co/functions/v1/send-message-push';
   service_role_key text;
-  supabase_url text;
 begin
-  -- Only send push for 'message' type notifications
-  if new.type != 'message' then
+  select decrypted_secret
+    into service_role_key
+  from vault.decrypted_secrets
+  where name = 'service_role_key'
+  limit 1;
+
+  if service_role_key is null or service_role_key = '' then
+    raise warning 'Vault secret `service_role_key` missing or empty. Push notification skipped for notification %.', new.id;
     return new;
   end if;
 
-  -- Get Supabase URL and service role key from environment
-  -- These should be set in Supabase Dashboard > Project Settings > Database > Vault
-  -- For now, we'll use a placeholder that needs to be configured
-  supabase_url := current_setting('app.settings.supabase_url', true);
-  service_role_key := current_setting('app.settings.service_role_key', true);
-  
-  if supabase_url is null or service_role_key is null then
-    raise warning 'Supabase URL or service role key not configured. Push notification skipped.';
-    return new;
-  end if;
-
-  edge_function_url := supabase_url || '/functions/v1/send-message-push';
-
-  -- Make async HTTP request to Edge Function
+  -- Async fire-and-forget via pg_net. We don't wait for the response;
+  -- push delivery failure must never block the notification insert.
   perform net.http_post(
-    url := edge_function_url,
+    url     := edge_function_url,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || service_role_key
     ),
-    body := jsonb_build_object(
+    body    := jsonb_build_object(
       'notification_id', new.id,
-      'recipient_id', new.recipient_id,
+      'recipient_id',    new.recipient_id,
+      'type',            new.type,
       'conversation_id', new.conversation_id,
-      'message_id', new.message_id,
-      'title', new.title,
-      'body', new.body
+      'message_id',      new.message_id,
+      'order_id',        new.order_id,
+      'damin_order_id',  new.damin_order_id,
+      'title',           new.title,
+      'body',            new.body
     )
   );
 
   return new;
 exception
   when others then
-    -- Don't fail the notification insert if push fails
-    raise warning 'Failed to trigger push notification: %', sqlerrm;
+    raise warning 'Failed to trigger push notification for %: %', new.id, sqlerrm;
     return new;
 end;
 $$;
@@ -118,13 +124,17 @@ grant all on all sequences in schema net to postgres, anon, authenticated, servi
 grant all on all functions in schema net to postgres, anon, authenticated, service_role;
 
 -- Instructions for setup:
--- 1. Set environment variables in Supabase Dashboard:
---    - Go to Project Settings > Database > Configuration
---    - Add these settings:
---      ALTER DATABASE postgres SET app.settings.supabase_url = 'https://your-project.supabase.co';
---      ALTER DATABASE postgres SET app.settings.service_role_key = 'your-service-role-key';
+-- 1. Store the service role key in Supabase Vault (once per project). From the
+--    Supabase SQL editor, run:
+--      select vault.create_secret(
+--        '<YOUR_SERVICE_ROLE_JWT>',
+--        'service_role_key',
+--        'Service role key for edge function calls from DB triggers'
+--      );
 --
--- 2. Deploy the Edge Function (see supabase/functions/send-message-push/)
+-- 2. Deploy the Edge Function (see supabase/functions/send-message-push/).
 --
--- 3. Test by sending a message in the app
+-- 3. Test by inserting a test notification, then check
+--      select * from net._http_response order by created desc limit 5;
+--    to confirm the trigger fired and received a 200 from the edge function.
 

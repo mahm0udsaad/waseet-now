@@ -20,11 +20,115 @@ import { supabase, getSupabaseUser } from '@/utils/supabase/client';
 import { useChatUnreadStore } from '@/utils/chat/unreadStore';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 
+const PAID_STATUSES = ['payment_verified', 'paid', 'in_progress', 'completion_requested', 'completed'];
+const PENDING_STATUSES = ['awaiting_admin_transfer_approval', 'payment_submitted'];
+
+const ChatRow = React.memo(function ChatRow({
+  item,
+  colors,
+  isRTL,
+  writingDirection,
+  chatTitle,
+  noMessagesLabel,
+  onPress,
+  getLastMessagePreview,
+  formatTime,
+}) {
+  const unread = item.unreadCount || 0;
+  const handlePress = useCallback(() => onPress(item), [onPress, item]);
+  const pressableStyle = useCallback(
+    ({ pressed }) => [
+      styles.chatItem,
+      {
+        backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
+        flexDirection: 'row',
+      },
+    ],
+    [colors.surfaceSecondary]
+  );
+
+  let badge = null;
+  if (item.orderStatus) {
+    if (PAID_STATUSES.includes(item.orderStatus)) {
+      badge = (
+        <View style={[styles.statusBadge, { backgroundColor: '#10B98120' }]}>
+          <Text style={[styles.statusBadgeText, { color: '#10B981' }]}>{isRTL ? 'مدفوع' : 'Paid'}</Text>
+        </View>
+      );
+    } else if (PENDING_STATUSES.includes(item.orderStatus)) {
+      badge = (
+        <View style={[styles.statusBadge, { backgroundColor: '#F59E0B20' }]}>
+          <Text style={[styles.statusBadgeText, { color: '#F59E0B' }]}>{isRTL ? 'بانتظار' : 'Pending'}</Text>
+        </View>
+      );
+    }
+  }
+
+  return (
+    <View>
+      <Pressable onPress={handlePress} style={pressableStyle}>
+        <View style={styles.avatarContainer}>
+          <Image
+            source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }}
+            style={styles.avatar}
+          />
+          {item.isOnline && (
+            <View style={[styles.onlineBadge, { borderColor: colors.background }]} />
+          )}
+        </View>
+
+        <View style={[styles.chatContent, { alignItems: 'flex-start' }]}>
+          <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>
+                {item.name || `${chatTitle} ${item.id.slice(0, 5)}`}
+              </Text>
+              {badge}
+            </View>
+            <Text style={[styles.chatTime, { color: colors.textMuted }]}>
+              {formatTime(item.lastMessage?.created_at)}
+            </Text>
+          </View>
+
+          <View style={[styles.lastMessageContainer, { flexDirection: 'row' }]}>
+            {unread === 0 && (
+              <View style={{ marginEnd: 4 }}>
+                {item.readStatus === 'read' && <CheckCheck size={16} color={colors.primary} />}
+                {item.readStatus === 'received' && <CheckCheck size={16} color={colors.textMuted} />}
+                {item.readStatus === 'sent' && <Check size={16} color={colors.textMuted} />}
+              </View>
+            )}
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.lastMessage,
+                {
+                  color: unread > 0 ? colors.text : colors.textSecondary,
+                  fontWeight: unread > 0 ? '600' : '400',
+                  writingDirection,
+                },
+              ]}
+            >
+              {getLastMessagePreview(item.lastMessage) || noMessagesLabel}
+            </Text>
+          </View>
+        </View>
+
+        {unread > 0 && (
+          <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.unreadText}>{unread}</Text>
+          </View>
+        )}
+      </Pressable>
+    </View>
+  );
+});
+
 export default function ChatsListScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, writingDirection } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [conversations, setConversations] = useState([]);
@@ -35,19 +139,52 @@ export default function ChatsListScreen() {
   const searchInputRef = useRef(null);
   const membershipUnsubRef = useRef(null);
   const messageChannelRef = useRef(null);
+  const lastLoadRef = useRef(0);
   const setTotalUnread = useChatUnreadStore((s) => s.setTotalUnread);
   const incrementChatUnread = useChatUnreadStore((s) => s.incrementUnread);
   const decrementChatUnread = useChatUnreadStore((s) => s.decrementUnread);
 
+  // Keep latest conversations length in a ref so loadConversations identity is stable
+  const conversationsLengthRef = useRef(0);
+  conversationsLengthRef.current = conversations.length;
+
+  const loadConversations = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else if (conversationsLengthRef.current === 0) {
+      // Only show skeleton on first load — subsequent focus reloads are silent
+      setLoading(true);
+    }
+    try {
+      const data = await fetchConversations();
+      setConversations(data);
+      setTotalUnread(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
+      setError(null);
+    } catch (err) {
+      setError(err?.message || 'Failed to load chats');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [setTotalUnread]);
+
+  // Stable ref to the latest loadConversations so subscription handlers don't need to re-subscribe
+  const loadConversationsRef = useRef(loadConversations);
+  loadConversationsRef.current = loadConversations;
+
+  const handleRefresh = useCallback(() => {
+    lastLoadRef.current = Date.now();
+    loadConversations(true);
+  }, [loadConversations]);
+
   // Reload conversations on focus, but skip if loaded recently (within 2s)
-  const lastLoadRef = useRef(0);
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
       if (now - lastLoadRef.current < 2000) return;
       lastLoadRef.current = now;
       loadConversations();
-    }, [])
+    }, [loadConversations])
   );
 
   useEffect(() => {
@@ -63,26 +200,6 @@ export default function ChatsListScreen() {
     return () => clearTimeout(timeoutId);
   }, [isSearchActive]);
 
-  const loadConversations = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else if (conversations.length === 0) {
-      // Only show skeleton on first load — subsequent focus reloads are silent
-      setLoading(true);
-    }
-    try {
-      const data = await fetchConversations();
-      setConversations(data);
-      setTotalUnread(data.reduce((sum, c) => sum + (c.unreadCount || 0), 0));
-      setError(null);
-    } catch (err) {
-      setError(err?.message || 'Failed to load chats');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   // Live updates:
   // - subscribe to new messages for each conversation so the list updates instantly
   // - subscribe to new memberships for this user so newly created chats appear without reloads/manual refresh
@@ -92,7 +209,8 @@ export default function ChatsListScreen() {
     // membership subscription (reload list when a new conversation is added for this user)
     membershipUnsubRef.current?.();
     membershipUnsubRef.current = subscribeToConversationMembership(currentUserId, () => {
-      loadConversations();
+      // Call via ref so we don't re-subscribe every time loadConversations identity changes
+      loadConversationsRef.current?.();
     });
 
     return () => {
@@ -104,9 +222,11 @@ export default function ChatsListScreen() {
   // A5: Single realtime channel for all new messages, filtered client-side
   // Use a ref so the subscription handler always sees the latest IDs without re-subscribing
   const conversationIdsRef = useRef(new Set());
-  React.useMemo(() => {
-    conversationIdsRef.current = new Set((conversations || []).map((c) => c.id).filter(Boolean));
-  }, [conversations]);
+  // Keep this ref in sync during render (cheap, pure in effect on ref only)
+  conversationIdsRef.current = useMemo(
+    () => new Set((conversations || []).map((c) => c.id).filter(Boolean)),
+    [conversations]
+  );
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -117,8 +237,9 @@ export default function ChatsListScreen() {
       messageChannelRef.current = null;
     }
 
+    // Unique channel name per-user to avoid cross-mount collisions
     const channel = supabase
-      .channel('chat-list-messages')
+      .channel(`chat-list-messages-${currentUserId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -132,7 +253,8 @@ export default function ChatsListScreen() {
             const list = Array.isArray(prev) ? [...prev] : [];
             const idx = list.findIndex((c) => c.id === convId);
             if (idx === -1) {
-              loadConversations();
+              // Call via ref so we always use the latest loader without re-subscribing
+              loadConversationsRef.current?.();
               return prev;
             }
 
@@ -195,12 +317,13 @@ export default function ChatsListScreen() {
     }
   }, [isRTL]);
 
-  const filteredChats = useMemo(
-    () => conversations.filter((chat) =>
-      (chat.name || chat.id).toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-    [conversations, searchQuery]
-  );
+  const filteredChats = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((chat) =>
+      (chat.name || chat.id || '').toLowerCase().includes(q)
+    );
+  }, [conversations, searchQuery]);
 
   const skeletonChats = React.useMemo(
     () => Array.from({ length: 8 }).map((_, idx) => ({ id: `sk-${idx}` })),
@@ -222,79 +345,21 @@ export default function ChatsListScreen() {
         isOnline: chat.isOnline ? "true" : "false"
       }
     });
-  }, [router, t]);
+  }, [decrementChatUnread, router, t]);
 
-  const renderItem = useCallback(({ item }) => {
-    const unread = item.unreadCount || 0;
-    return (
-    <View>
-      <Pressable
-        onPress={() => handleChatPress(item)}
-        style={({ pressed }) => [
-          styles.chatItem,
-          {
-            backgroundColor: pressed ? colors.surfaceSecondary : 'transparent',
-            flexDirection: 'row',
-          },
-        ]}
-      >
-        <View style={styles.avatarContainer}>
-          <Image source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }} style={styles.avatar} />
-          {item.isOnline && (
-            <View style={[styles.onlineBadge, { borderColor: colors.background }]} />
-          )}
-        </View>
-
-        <View style={[styles.chatContent, { alignItems: 'flex-start' }]}>
-          <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>{item.name || `${t.chat.title} ${item.id.slice(0, 5)}`}</Text>
-              {item.orderStatus && (
-                ['payment_verified', 'paid', 'in_progress', 'completion_requested', 'completed'].includes(item.orderStatus)
-                  ? <View style={[styles.statusBadge, { backgroundColor: '#10B98120' }]}><Text style={[styles.statusBadgeText, { color: '#10B981' }]}>{isRTL ? 'مدفوع' : 'Paid'}</Text></View>
-                  : ['awaiting_admin_transfer_approval', 'payment_submitted'].includes(item.orderStatus)
-                    ? <View style={[styles.statusBadge, { backgroundColor: '#F59E0B20' }]}><Text style={[styles.statusBadgeText, { color: '#F59E0B' }]}>{isRTL ? 'بانتظار' : 'Pending'}</Text></View>
-                    : null
-              )}
-            </View>
-            <Text style={[styles.chatTime, { color: colors.textMuted }]}>
-              {formatTime(item.lastMessage?.created_at)}
-            </Text>
-          </View>
-          
-          <View style={[styles.lastMessageContainer, { flexDirection: 'row' }]}>
-             {unread === 0 && (
-                <View style={{ marginEnd: 4 }}>
-                    {item.readStatus === 'read' && <CheckCheck size={16} color={colors.primary} />}
-                    {item.readStatus === 'received' && <CheckCheck size={16} color={colors.textMuted} />}
-                    {item.readStatus === 'sent' && <Check size={16} color={colors.textMuted} />}
-                </View>
-             )}
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.lastMessage,
-                { 
-                    color: unread > 0 ? colors.text : colors.textSecondary,
-                    fontWeight: unread > 0 ? '600' : '400',
-                    writingDirection: 'rtl'
-                },
-              ]}
-            >
-              {getLastMessagePreview(item.lastMessage) || (isRTL ? 'لا توجد رسائل بعد' : 'No messages yet')}
-            </Text>
-          </View>
-        </View>
-
-        {unread > 0 && (
-          <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.unreadText}>{unread}</Text>
-          </View>
-        )}
-      </Pressable>
-    </View>
-  );
-  }, [colors, isRTL, t, handleChatPress, getLastMessagePreview, formatTime]);
+  const renderItem = useCallback(({ item }) => (
+    <ChatRow
+      item={item}
+      colors={colors}
+      isRTL={isRTL}
+      writingDirection={writingDirection}
+      chatTitle={t.chat.title}
+      noMessagesLabel={isRTL ? 'لا توجد رسائل بعد' : 'No messages yet'}
+      onPress={handleChatPress}
+      getLastMessagePreview={getLastMessagePreview}
+      formatTime={formatTime}
+    />
+  ), [colors, isRTL, writingDirection, t.chat.title, handleChatPress, getLastMessagePreview, formatTime]);
 
   const Separator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -361,7 +426,7 @@ export default function ChatsListScreen() {
               ref={searchInputRef}
               placeholder={isRTL ? 'بحث في المحادثات...' : 'Search chats...'}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, writingDirection: 'rtl' }]}
+              style={[styles.searchInput, { color: colors.text, writingDirection }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
               clearButtonMode="while-editing"
@@ -432,8 +497,12 @@ export default function ChatsListScreen() {
           data={filteredChats}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredChats.length === 0 && styles.listContentEmpty,
+          ]}
           showsVerticalScrollIndicator={false}
+          alwaysBounceVertical
           estimatedItemSize={96}
           initialNumToRender={12}
           maxToRenderPerBatch={8}
@@ -442,7 +511,7 @@ export default function ChatsListScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadConversations(true)}
+              onRefresh={handleRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
@@ -474,6 +543,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100, // Space for bottom tab bar
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
   searchContainer: {
     paddingHorizontal: 20,

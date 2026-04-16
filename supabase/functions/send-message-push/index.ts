@@ -28,17 +28,57 @@ interface ExpoPushMessage {
   badge: number;
   channelId: string;
   priority: "high";
-  image?: string; // Notification image (Android large icon, iOS attachment)
+  image?: string;
 }
 
 interface TokenRow {
   expo_push_token: string;
 }
 
+// Tokens returning these Expo error codes are permanently unusable and should be deleted
+const INVALID_TOKEN_ERRORS = new Set([
+  "DeviceNotRegistered",
+  "InvalidCredentials",
+  "MismatchSenderId",
+]);
+
+// Localized title/body fallback per notification type (Arabic)
+function getDefaultTitleBody(type?: string): { title: string; body: string } {
+  switch (type) {
+    case "message":
+      return { title: "رسالة جديدة", body: "رسالة جديدة" };
+    case "damin_order_created":
+      return { title: "طلب ضامن جديد", body: "تم إضافتك إلى طلب ضامن جديد" };
+    case "damin_service_completed":
+      return { title: "اكتمل طلب الضامن", body: "تم اكتمال طلب الضامن الخاص بك" };
+    case "new_order":
+      return { title: "طلب جديد", body: "لديك طلب جديد" };
+    case "order_update":
+      return { title: "تحديث الطلب", body: "تم تحديث حالة طلبك" };
+    case "payment_received":
+      return { title: "تم استلام الدفع", body: "تم استلام دفعة جديدة" };
+    case "transfer_approved":
+      return { title: "تمت الموافقة على التحويل", body: "تمت الموافقة على التحويل البنكي" };
+    case "transfer_rejected":
+      return { title: "تم رفض التحويل", body: "تم رفض التحويل البنكي" };
+    case "order_completion_requested":
+      return { title: "طلب إكمال الطلب", body: "يرجى تأكيد إكمال الطلب" };
+    case "order_completed":
+      return { title: "اكتمل الطلب", body: "تم إكمال الطلب بنجاح" };
+    case "admin_notification":
+      return { title: "إشعار من الإدارة", body: "لديك رسالة جديدة من إدارة وسيط الآن" };
+    case "withdrawal_approved":
+      return { title: "تمت الموافقة على طلب السحب", body: "تمت الموافقة على طلب السحب الخاص بك" };
+    case "withdrawal_rejected":
+      return { title: "تم رفض طلب السحب", body: "تم رفض طلب السحب الخاص بك" };
+    default:
+      return { title: "إشعار جديد", body: "لديك إشعار جديد" };
+  }
+}
+
 // @ts-ignore - Deno.serve is available in Deno runtime
 Deno.serve(async (req: Request) => {
   try {
-    // Verify this is a valid request (from our own database trigger or authenticated user)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
@@ -47,7 +87,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Parse the payload
     const payload: PushNotificationPayload = await req.json();
     const { recipient_id, type, conversation_id, message_id, order_id, damin_order_id, title, body, data: notifData } = payload;
 
@@ -58,14 +97,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Initialize Supabase client with service role (to read tokens)
     // @ts-ignore - Deno.env is available in Deno runtime
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     // @ts-ignore - Deno.env is available in Deno runtime
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get all active push tokens for the recipient
     const { data: tokens, error: tokensError } = await supabase
       .from("user_push_tokens")
       .select("expo_push_token")
@@ -87,12 +124,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get sender profile and message details for personalized notification
-    let senderName = "رسالة جديدة"; // "New message" in Arabic (default)
-    let messageContent = body || "رسالة جديدة";
+    // Resolve title/body based on notification type
+    const defaults = getDefaultTitleBody(type);
+    let pushTitle = title || defaults.title;
+    let pushBody = body || defaults.body;
     let notificationImage: string | undefined;
-    
-    // Try to get actor info and actual message content
+
+    // Enrich with actor info when available
     const { data: notification } = await supabase
       .from("notifications")
       .select("actor_id")
@@ -100,25 +138,24 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (notification?.actor_id) {
-      // Get sender's profile (name and avatar)
       const { data: actorProfile } = await supabase
         .from("profiles")
         .select("display_name, avatar_url")
         .eq("user_id", notification.actor_id)
         .maybeSingle();
 
-      if (actorProfile?.display_name) {
-        senderName = actorProfile.display_name;
+      if (actorProfile?.display_name && type === "message") {
+        // For chat messages, sender name becomes the title
+        pushTitle = actorProfile.display_name;
       }
 
-      // Use sender's avatar as notification image if available
       if (actorProfile?.avatar_url) {
         notificationImage = actorProfile.avatar_url;
       }
     }
 
-    // Get actual message content if message_id is provided
-    if (message_id) {
+    // For message type, fetch actual message content
+    if (type === "message" && message_id) {
       const { data: message } = await supabase
         .from("messages")
         .select("content, attachments")
@@ -127,32 +164,22 @@ Deno.serve(async (req: Request) => {
 
       if (message) {
         if (message.content) {
-          messageContent = message.content;
+          pushBody = message.content;
         } else if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {
-          // If no text but has attachments
           const attachment = message.attachments[0];
           if (attachment.type === "image") {
-            messageContent = "📷 صورة"; // "Image" in Arabic
+            pushBody = "📷 صورة";
           } else if (attachment.type === "file") {
-            messageContent = "📎 ملف"; // "File" in Arabic
+            pushBody = "📎 ملف";
           } else if (attachment.type === "location") {
-            messageContent = "📍 موقع"; // "Location" in Arabic
+            pushBody = "📍 موقع";
           } else {
-            messageContent = "📎 مرفق"; // "Attachment" in Arabic
+            pushBody = "📎 مرفق";
           }
         }
       }
     }
 
-    // If no sender avatar, use app logo as fallback
-    // You can upload logo.png to Supabase Storage and use that URL
-    // For now, we'll use the icon from your app
-    if (!notificationImage) {
-      // This will use the app icon by default on both platforms
-      notificationImage = undefined;
-    }
-
-    // Count unread notifications for badge
     const { count: unreadCount } = await supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
@@ -161,12 +188,11 @@ Deno.serve(async (req: Request) => {
 
     const badgeCount = unreadCount ?? 1;
 
-    // Build push messages
     const pushMessages: ExpoPushMessage[] = tokens.map((tokenRow: TokenRow) => ({
       to: tokenRow.expo_push_token,
       sound: "default",
-      title: senderName, // Sender's name
-      body: messageContent, // Actual message content
+      title: pushTitle,
+      body: pushBody,
       data: {
         type,
         conversation_id,
@@ -178,10 +204,9 @@ Deno.serve(async (req: Request) => {
       badge: badgeCount,
       channelId: "default",
       priority: "high",
-      ...(notificationImage && { image: notificationImage }), // Add image if available
+      ...(notificationImage && { image: notificationImage }),
     }));
 
-    // Send to Expo Push API
     const pushResponse = await fetch(EXPO_PUSH_API, {
       method: "POST",
       headers: {
@@ -196,17 +221,35 @@ Deno.serve(async (req: Request) => {
 
     console.log("Push notification sent:", {
       recipient_id,
+      type,
       tokens_count: tokens.length,
       result: pushResult,
     });
 
-    // Check for errors in the response
-    if (pushResult.data) {
-      const errors = pushResult.data.filter(
-        (ticket: any) => ticket.status === "error"
-      );
-      if (errors.length > 0) {
-        console.error("Push errors:", errors);
+    // Detect invalid tokens and delete them so they stop consuming future attempts
+    const invalidTokens: string[] = [];
+    if (Array.isArray(pushResult?.data)) {
+      pushResult.data.forEach((ticket: any, idx: number) => {
+        if (ticket?.status === "error") {
+          const errorCode = ticket?.details?.error;
+          const badToken = tokens[idx]?.expo_push_token;
+          if (errorCode && INVALID_TOKEN_ERRORS.has(errorCode) && badToken) {
+            invalidTokens.push(badToken);
+          }
+        }
+      });
+    }
+
+    if (invalidTokens.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("user_push_tokens")
+        .delete()
+        .in("expo_push_token", invalidTokens);
+
+      if (deleteError) {
+        console.error("Failed to delete invalid tokens:", deleteError);
+      } else {
+        console.log(`Deleted ${invalidTokens.length} invalid token(s)`);
       }
     }
 
@@ -214,6 +257,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         message: "Push notifications sent",
         sent: tokens.length,
+        invalid_tokens_removed: invalidTokens.length,
         result: pushResult,
       }),
       {
@@ -236,4 +280,3 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-

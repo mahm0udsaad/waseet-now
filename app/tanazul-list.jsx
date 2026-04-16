@@ -8,11 +8,14 @@ import { StatusBar } from "expo-status-bar";
 import {
   Briefcase,
   CheckCircle,
+  ChevronLeft,
   Clock,
   Filter,
   MapPin,
+  Plane,
   Plus,
-  Search
+  Search,
+  Sparkles
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
@@ -200,11 +203,59 @@ export default function TanazulListScreen() {
                 colors={[colors.primary]}
               />
             }
+            ListHeaderComponent={
+              <Pressable
+                testID="airport-premium-card"
+                onPress={() => router.push("/airport-inspection")}
+                style={({ pressed }) => [
+                  styles.premiumCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: "#D4AF37",
+                    opacity: pressed ? 0.9 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.premiumGlow} pointerEvents="none" />
+                <View style={styles.premiumBadgeRow}>
+                  <View style={styles.premiumBadge}>
+                    <Sparkles size={12} color="#fff" style={{ marginHorizontal: 4 }} />
+                    <Text style={styles.premiumBadgeText}>
+                      {isRTL ? "مميز" : "PREMIUM"}
+                    </Text>
+                  </View>
+                  <Text style={[styles.premiumProvider, { color: colors.textMuted }]}>
+                    {isRTL ? "خدمة من التطبيق" : "App Service"}
+                  </Text>
+                </View>
+                <View style={styles.premiumMain}>
+                  <View style={[styles.premiumIconCircle, { backgroundColor: "#D4AF3722", borderColor: "#D4AF37" }]}>
+                    <Plane size={28} color="#D4AF37" />
+                  </View>
+                  <View style={styles.premiumTextWrap}>
+                    <Text style={[styles.premiumTitle, { color: colors.text }]}>
+                      {isRTL ? "خدمة تفتيش وتوصيل للمطار" : "Airport Inspection & Delivery"}
+                    </Text>
+                    <Text style={[styles.premiumSubtitle, { color: colors.textSecondary }]}>
+                      {isRTL
+                        ? "نتولى تفتيش العمالة وتوصيلها للمطار في الموعد المحدد"
+                        : "Worker inspection & airport delivery on schedule"}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.premiumFooter, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.premiumFooterNote, { color: colors.textMuted }]}>
+                    {isRTL ? "اطلب الآن" : "Request now"}
+                  </Text>
+                  <ChevronLeft size={18} color={colors.primary} />
+                </View>
+              </Pressable>
+            }
             ListEmptyComponent={
               error ? (
-                <Text style={{ color: colors.error, marginBottom: 12, writingDirection: 'rtl' }}>{error}</Text>
+                <Text style={{ color: colors.error, marginBottom: 12, writingDirection }}>{error}</Text>
               ) : (
-                <Text style={{ color: colors.textMuted, writingDirection: 'rtl' }}>
+                <Text style={{ color: colors.textMuted, writingDirection }}>
                   {isRTL ? "لا توجد إعلانات حالياً" : "No ads yet"}
                 </Text>
               )
@@ -374,6 +425,80 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  // Premium Card (Airport Inspection Service)
+  premiumCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    overflow: "hidden",
+    position: "relative",
+  },
+  premiumGlow: {
+    position: "absolute",
+    top: -40,
+    insetInlineEnd: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: "#D4AF3718",
+  },
+  premiumBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  premiumBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D4AF37",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  premiumBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  premiumProvider: { fontSize: 11, fontWeight: "600" },
+  premiumMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  premiumIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  premiumTextWrap: {
+    flex: 1,
+    marginHorizontal: 14,
+  },
+  premiumTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  premiumSubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  premiumFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  premiumFooterNote: { fontSize: 12, fontWeight: "700" },
 
   // Ad Card
   adCard: {

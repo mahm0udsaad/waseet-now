@@ -26,7 +26,7 @@ import { getWalletTransactions, getWalletSummary } from '@/utils/supabase/wallet
 
 export default function WalletTransactionsScreen() {
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -136,28 +136,30 @@ export default function WalletTransactionsScreen() {
             },
           ]}
         >
-          <View style={[styles.transactionIcon, { backgroundColor: typeColor + '20' }]}>
-            <TypeIcon size={24} color={typeColor} />
-          </View>
-
-          <View style={styles.transactionContent}>
-            <Text
-              style={[styles.transactionTitle, { color: colors.text, writingDirection: 'rtl' }]}
-              numberOfLines={1}
-            >
-              {item.title}
-            </Text>
-            <View style={styles.transactionMeta}>
-              <View style={styles.statusContainer}>
-                <StatusIcon size={14} color={statusConfig.color} />
-                <Text style={[styles.transactionStatus, { color: statusConfig.color }]}>
-                  {statusConfig.label}
+          <View style={styles.transactionTopRow}>
+            <View style={styles.transactionContent}>
+              <Text
+                style={[styles.transactionTitle, { color: colors.text, writingDirection }]}
+                numberOfLines={2}
+              >
+                {item.title}
+              </Text>
+              <View style={styles.transactionMeta}>
+                <View style={styles.statusContainer}>
+                  <StatusIcon size={14} color={statusConfig.color} />
+                  <Text style={[styles.transactionStatus, { color: statusConfig.color }]}>
+                    {statusConfig.label}
+                  </Text>
+                </View>
+                <Text style={[styles.transactionDot, { color: colors.textMuted }]}>&bull;</Text>
+                <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
+                  {formatDate(item.timestamp)}
                 </Text>
               </View>
-              <Text style={[styles.transactionDot, { color: colors.textMuted }]}>&bull;</Text>
-              <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
-                {formatDate(item.timestamp)}
-              </Text>
+            </View>
+
+            <View style={[styles.transactionIcon, { backgroundColor: typeColor + '20' }]}>
+              <TypeIcon size={24} color={typeColor} />
             </View>
           </View>
 
@@ -203,7 +205,7 @@ export default function WalletTransactionsScreen() {
             <ArrowDownCircle size={20} color="#10B981" />
           </View>
           <View style={styles.summaryTextContainer}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection }]}>
               {isRTL ? 'إجمالي الدخل' : 'Total Income'}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
@@ -217,7 +219,7 @@ export default function WalletTransactionsScreen() {
             <ArrowUpCircle size={20} color="#3B82F6" />
           </View>
           <View style={styles.summaryTextContainer}>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary, writingDirection }]}>
               {isRTL ? 'إجمالي المسحوبات' : 'Total Withdrawn'}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
@@ -304,12 +306,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   transactionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
+    gap: 12,
+  },
+  transactionTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   transactionIcon: {
@@ -318,16 +323,15 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   transactionContent: {
     flex: 1,
     gap: 4,
-    alignItems: 'flex-start',
   },
   transactionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    width: '100%',
   },
   transactionMeta: {
     flexDirection: 'row',
@@ -351,10 +355,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   transactionAmount: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    minWidth: 100,
-    writingDirection: 'rtl',
   },
   emptyContainer: {
     alignItems: 'center',

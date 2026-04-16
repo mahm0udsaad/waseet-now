@@ -272,3 +272,119 @@ export async function fetchReceiptById(receiptId) {
   return data;
 }
 
+/**
+ * Aggregate all "receipts" for the current user — any financial transaction
+ * they are a party to. Unions three sources:
+ *   - `orders` rows (regular service orders). When an order has a receipt_id
+ *     we merge in the linked receipt's pdf_path and description so the user
+ *     can still open the signed PDF. This avoids duplicating the receipt row.
+ *   - `damin_orders` rows (escrow deals). No PDF; opens damin details screen.
+ *   - `receipts` rows with status='seller_signed' (pending invoices awaiting
+ *     the buyer's signature — these don't have an order yet).
+ *
+ * Returns normalized items sorted by date desc, plus the current userId.
+ * @returns {Promise<{ items: Array, userId: string }>}
+ */
+export async function getMyReceipts() {
+  const session = await ensureSupabaseSession();
+  const userId = session.user.id;
+  const userPhone = session.user?.phone;
+
+  // Build damin OR filter, matching both user IDs and phone-number forms
+  let daminOrFilter = `creator_id.eq.${userId},payer_user_id.eq.${userId},beneficiary_user_id.eq.${userId}`;
+  if (userPhone) {
+    const digits = String(userPhone).replace(/[^0-9]/g, "");
+    const withPlus = "+" + digits;
+    daminOrFilter +=
+      `,payer_phone.eq.${digits},beneficiary_phone.eq.${digits}` +
+      `,payer_phone.eq.${withPlus},beneficiary_phone.eq.${withPlus}`;
+  }
+
+  const [ordersRes, daminRes, pendingReceiptsRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        "id, receipt_id, conversation_id, ad_id, buyer_id, seller_id, amount, currency, status, created_at, ad:ads(title, type), receipt:receipts(pdf_path, description)"
+      )
+      .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("damin_orders")
+      .select(
+        "id, creator_id, payer_user_id, beneficiary_user_id, service_type_or_details, total_amount, service_value, status, created_at"
+      )
+      .or(daminOrFilter)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("receipts")
+      .select(
+        "id, conversation_id, seller_id, buyer_id, amount, currency, description, status, pdf_path, created_at, ad:ads(title, type)"
+      )
+      .eq("status", "seller_signed")
+      .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (ordersRes.error) throw ordersRes.error;
+  if (daminRes.error) throw daminRes.error;
+  if (pendingReceiptsRes.error) throw pendingReceiptsRes.error;
+
+  const items = [];
+
+  for (const o of ordersRes.data || []) {
+    items.push({
+      id: `order:${o.id}`,
+      kind: "order",
+      originalId: o.id,
+      title: o.ad?.title || o.receipt?.description || "",
+      description: o.receipt?.description || "",
+      amount: Number(o.amount) || 0,
+      currency: o.currency || "SAR",
+      status: o.status,
+      date: o.created_at,
+      role: o.buyer_id === userId ? "buyer" : "seller",
+      pdf_path: o.receipt?.pdf_path || null,
+      adType: o.ad?.type || null,
+    });
+  }
+
+  for (const d of daminRes.data || []) {
+    const isPayerSide =
+      d.payer_user_id === userId || d.creator_id === userId;
+    items.push({
+      id: `damin:${d.id}`,
+      kind: "damin",
+      originalId: d.id,
+      title: d.service_type_or_details || "",
+      description: "",
+      amount: Number(d.total_amount ?? d.service_value) || 0,
+      currency: "SAR",
+      status: d.status,
+      date: d.created_at,
+      role: isPayerSide ? "payer" : "beneficiary",
+      pdf_path: null,
+      adType: null,
+    });
+  }
+
+  for (const r of pendingReceiptsRes.data || []) {
+    items.push({
+      id: `receipt:${r.id}`,
+      kind: "pending_receipt",
+      originalId: r.id,
+      title: r.ad?.title || r.description || "",
+      description: r.description || "",
+      amount: Number(r.amount) || 0,
+      currency: r.currency || "SAR",
+      status: r.status,
+      date: r.created_at,
+      role: r.seller_id === userId ? "seller" : "buyer",
+      pdf_path: r.pdf_path || null,
+      adType: r.ad?.type || null,
+    });
+  }
+
+  items.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return { items, userId };
+}
+

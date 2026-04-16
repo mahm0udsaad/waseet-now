@@ -106,7 +106,7 @@ export default function OrderDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const insets = useSafeAreaInsets();
   const { order, loading, error, refetch } = useOrder(id);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -312,7 +312,7 @@ export default function OrderDetailsScreen() {
           delay={200}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'تفاصيل الإعلان' : 'Ad Details'}
           </Text>
           <InfoRow
@@ -324,10 +324,10 @@ export default function OrderDetailsScreen() {
           />
           {order.ad?.description && (
             <View style={[styles.descriptionContainer, { marginTop: 12 }]}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary, writingDirection }]}>
                 {isRTL ? 'الوصف' : 'Description'}
               </Text>
-              <Text style={[styles.descriptionText, { color: colors.text, writingDirection: 'rtl' }]}>
+              <Text style={[styles.descriptionText, { color: colors.text, writingDirection }]}>
                 {order.ad.description}
               </Text>
             </View>
@@ -339,7 +339,7 @@ export default function OrderDetailsScreen() {
           delay={300}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'التفاصيل المالية' : 'Financial Details'}
           </Text>
           <InfoRow
@@ -370,7 +370,7 @@ export default function OrderDetailsScreen() {
             delay={350}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'حالة الدفع والضمان' : 'Payment & Escrow Status'}
             </Text>
 
@@ -444,7 +444,7 @@ export default function OrderDetailsScreen() {
           delay={400}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'المشاركون' : 'Participants'}
           </Text>
           <InfoRow
@@ -468,7 +468,7 @@ export default function OrderDetailsScreen() {
           delay={500}
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
             {isRTL ? 'التاريخ' : 'Timeline'}
           </Text>
           <InfoRow
@@ -486,7 +486,7 @@ export default function OrderDetailsScreen() {
             delay={550}
             style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'تأكيد اكتمال الخدمة' : 'Service Completion'}
             </Text>
 
@@ -499,7 +499,7 @@ export default function OrderDetailsScreen() {
                 ) : (
                   <Clock size={20} color="#F59E0B" />
                 )}
-                <Text style={[styles.confirmationText, { color: colors.text, writingDirection: 'rtl' }]}>
+                <Text style={[styles.confirmationText, { color: colors.text, writingDirection }]}>
                   {isRTL ? 'المشتري' : 'Buyer'}: {buyerConfirmed
                     ? (isRTL ? 'تم التأكيد' : 'Confirmed')
                     : (isRTL ? 'بانتظار التأكيد' : 'Pending')}
@@ -513,7 +513,7 @@ export default function OrderDetailsScreen() {
                 ) : (
                   <Clock size={20} color="#F59E0B" />
                 )}
-                <Text style={[styles.confirmationText, { color: colors.text, writingDirection: 'rtl' }]}>
+                <Text style={[styles.confirmationText, { color: colors.text, writingDirection }]}>
                   {isRTL ? (order.ad?.type === 'tanazul' ? 'المتنازل' : 'البائع') : 'Seller'}: {sellerConfirmed
                     ? (isRTL ? 'تم التأكيد' : 'Confirmed')
                     : (isRTL ? 'بانتظار التأكيد' : 'Pending')}

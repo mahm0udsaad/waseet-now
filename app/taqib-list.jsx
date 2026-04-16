@@ -47,7 +47,7 @@ function formatDisplayText(value, isRTL) {
 export default function TaqibListScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -173,7 +173,7 @@ export default function TaqibListScreen() {
               testID="taqib-search-input"
               placeholder={isRTL ? "بحث عن مكتب أو خدمة..." : "Search office or service..."}
               placeholderTextColor={colors.textMuted}
-              style={[styles.searchInput, { color: colors.text, writingDirection: 'rtl' }]}
+              style={[styles.searchInput, { color: colors.text, writingDirection }]}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -201,9 +201,9 @@ export default function TaqibListScreen() {
             }
             ListEmptyComponent={
               error ? (
-                <Text style={{ color: colors.error, writingDirection: 'rtl', marginBottom: 12 }}>{error}</Text>
+                <Text style={{ color: colors.error, writingDirection, marginBottom: 12 }}>{error}</Text>
               ) : (
-                <Text style={{ color: colors.textMuted, writingDirection: 'rtl' }}>
+                <Text style={{ color: colors.textMuted, writingDirection }}>
                   {isRTL ? "لا توجد إعلانات" : "No ads yet"}
                 </Text>
               )
@@ -247,7 +247,7 @@ export default function TaqibListScreen() {
                           styles.adTitle,
                           {
                             color: colors.text,
-                            writingDirection: "rtl",
+                            writingDirection,
                           },
                         ]}
                         numberOfLines={2}
@@ -259,7 +259,7 @@ export default function TaqibListScreen() {
                           styles.adDescription,
                           {
                             color: colors.textSecondary,
-                            writingDirection: "rtl",
+                            writingDirection,
                           },
                         ]}
                         numberOfLines={1}

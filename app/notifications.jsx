@@ -35,7 +35,7 @@ import { getLocalizedNotificationContent } from "@/utils/notifications/formatNot
 export default function NotificationsScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
   const notifications = useInAppNotificationsStore((s) => s.notifications);
   const markReadLocal = useInAppNotificationsStore((s) => s.markNotificationRead);
   const setNotifications = useInAppNotificationsStore((s) => s.setNotifications);
@@ -63,10 +63,8 @@ export default function NotificationsScreen() {
       if (isMessageType && notif.conversation_id) {
         // For message notifications with conversation_id, keep only the latest
         const existing = conversationMap.get(notif.conversation_id);
-        if (
-          !existing ||
-          new Date(notif.created_at) > new Date(existing.created_at)
-        ) {
+        // ISO-8601 timestamps are lexicographically comparable — avoid Date allocation
+        if (!existing || String(notif.created_at) > String(existing.created_at)) {
           conversationMap.set(notif.conversation_id, notif);
         }
 
@@ -90,13 +88,14 @@ export default function NotificationsScreen() {
       ...otherNotifications,
     ];
 
-    return combined.sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    // ISO-8601 strings sort lexicographically — no Date objects needed per compare
+    return combined.sort((a, b) =>
+      String(b.created_at || '').localeCompare(String(a.created_at || ''))
     );
   }, [notifications]);
 
   // Format timestamp
-  const formatTimestamp = (dateString) => {
+  const formatTimestamp = useCallback((dateString) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -108,17 +107,17 @@ export default function NotificationsScreen() {
     if (diffMins < 60) return isRTL ? `منذ ${diffMins} دقيقة` : `${diffMins}m ago`;
     if (diffHours < 24) return isRTL ? `منذ ${diffHours} ساعة` : `${diffHours}h ago`;
     if (diffDays < 7) return isRTL ? `منذ ${diffDays} يوم` : `${diffDays}d ago`;
-    
+
     // Full date for older notifications
     return date.toLocaleDateString(isRTL ? "ar-SA-u-ca-gregory" : "en-US", {
       month: "short",
       day: "numeric",
       year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
     });
-  };
+  }, [isRTL]);
 
   // Get human-readable type label
-  const getTypeLabel = (type) => {
+  const getTypeLabel = useCallback((type) => {
     switch (type?.toLowerCase()) {
       case "new_message":
       case "message":
@@ -136,10 +135,10 @@ export default function NotificationsScreen() {
       default:
         return isRTL ? "إشعار" : "Notification";
     }
-  };
+  }, [isRTL]);
 
   // Get icon for notification type
-  const getTypeIcon = (type) => {
+  const getTypeIcon = useCallback((type) => {
     switch (type?.toLowerCase()) {
       case "new_message":
       case "message":
@@ -153,10 +152,10 @@ export default function NotificationsScreen() {
       default:
         return Bell;
     }
-  };
+  }, []);
 
   // Get icon color for notification type
-  const getTypeColor = (type) => {
+  const getTypeColor = useCallback((type) => {
     switch (type?.toLowerCase()) {
       case "new_message":
       case "message":
@@ -174,7 +173,7 @@ export default function NotificationsScreen() {
       default:
         return colors.textMuted;
     }
-  };
+  }, [colors]);
 
   const normalizeText = (value) =>
     String(value || "")
@@ -311,7 +310,7 @@ export default function NotificationsScreen() {
                         styles.typeLabel,
                         {
                           color: iconColor,
-                          writingDirection: 'rtl',
+                          writingDirection,
                         },
                       ]}
                     >
@@ -325,7 +324,7 @@ export default function NotificationsScreen() {
                           styles.notificationTitle,
                           {
                             color: colors.text,
-                            writingDirection: 'rtl',
+                            writingDirection,
                             fontWeight: isUnread ? "700" : "600",
                           },
                         ]}
@@ -343,7 +342,7 @@ export default function NotificationsScreen() {
                             styles.notificationBody,
                             {
                               color: colors.textSecondary,
-                              writingDirection: 'rtl',
+                              writingDirection,
                             },
                           ]}
                           numberOfLines={2}
@@ -365,7 +364,7 @@ export default function NotificationsScreen() {
                               styles.notificationBody,
                               {
                                 color: colors.textSecondary,
-                                writingDirection: 'rtl',
+                                writingDirection,
                                 marginBottom: 0,
                               },
                             ]}
@@ -380,7 +379,7 @@ export default function NotificationsScreen() {
                             styles.notificationBody,
                             {
                               color: colors.textSecondary,
-                              writingDirection: 'rtl',
+                              writingDirection,
                             },
                           ]}
                           numberOfLines={2}
@@ -396,7 +395,7 @@ export default function NotificationsScreen() {
                         styles.timestamp,
                         {
                           color: colors.textMuted,
-                          writingDirection: 'rtl',
+                          writingDirection,
                         },
                       ]}
                     >
@@ -472,10 +471,10 @@ export default function NotificationsScreen() {
                 ]}
               >
                 <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection }]}>
                     {isRTL ? "النوع:" : "Type:"}
                   </Text>
-                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection }]}>
                     {getTypeLabel(selectedNotification.type)}
                   </Text>
                 </View>
@@ -485,10 +484,10 @@ export default function NotificationsScreen() {
                   getLocalizedNotificationContent(selectedNotification, isRTL).title
                 ) && (
                   <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection }]}>
                       {isRTL ? "العنوان:" : "Title:"}
                     </Text>
-                    <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.detailValue, { color: colors.text, writingDirection }]}>
                       {getLocalizedNotificationContent(selectedNotification, isRTL).title}
                     </Text>
                   </View>
@@ -496,10 +495,10 @@ export default function NotificationsScreen() {
 
                 {getLocalizedNotificationContent(selectedNotification, isRTL).body && (
                   <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection }]}>
                       {isRTL ? "المحتوى:" : "Content:"}
                     </Text>
-                    <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.detailValue, { color: colors.text, writingDirection }]}>
                       {getLocalizedNotificationContent(selectedNotification, isRTL).body}
                     </Text>
                   </View>
@@ -507,11 +506,11 @@ export default function NotificationsScreen() {
 
                 {selectedNotification.data && Object.keys(selectedNotification.data).length > 0 && (
                   <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
-                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+                    <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection }]}>
                       {isRTL ? "المعلومات الإضافية:" : "Additional Information:"}
                     </Text>
                     {selectedNotification.data.role && (
-                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection }]}>
                         {isRTL ? "الدور: " : "Role: "}
                         {selectedNotification.data.role === 'payer'
                           ? (isRTL ? "الدافع" : "Payer")
@@ -519,19 +518,19 @@ export default function NotificationsScreen() {
                       </Text>
                     )}
                     {selectedNotification.data.amount && (
-                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl', marginTop: 4 }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection, marginTop: 4 }]}>
                         {isRTL ? "المبلغ: " : "Amount: "}
                         {selectedNotification.data.amount} {isRTL ? "ريال" : "SAR"}
                       </Text>
                     )}
                     {selectedNotification.data.service_details && (
-                      <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl', marginTop: 4 }]}>
+                      <Text style={[styles.detailValue, { color: colors.text, writingDirection, marginTop: 4 }]}>
                         {isRTL ? "تفاصيل الخدمة: " : "Service: "}
                         {selectedNotification.data.service_details}
                       </Text>
                     )}
                     {selectedNotification.data.order_id && (
-                      <Text style={[styles.detailValue, { color: colors.textMuted, writingDirection: 'rtl', marginTop: 8, fontSize: 12 }]}>
+                      <Text style={[styles.detailValue, { color: colors.textMuted, writingDirection, marginTop: 8, fontSize: 12 }]}>
                         {isRTL ? "رقم الطلب: " : "Order ID: "}
                         {selectedNotification.data.order_id.slice(0, 8)}
                       </Text>
@@ -540,10 +539,10 @@ export default function NotificationsScreen() {
                 )}
 
                 <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection: 'rtl' }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary, writingDirection }]}>
                     {isRTL ? "التاريخ:" : "Date:"}
                   </Text>
-                  <Text style={[styles.detailValue, { color: colors.text, writingDirection: 'rtl' }]}>
+                  <Text style={[styles.detailValue, { color: colors.text, writingDirection }]}>
                     {new Date(selectedNotification.created_at).toLocaleString(
                       isRTL ? "ar-SA-u-ca-gregory" : "en-US"
                     )}

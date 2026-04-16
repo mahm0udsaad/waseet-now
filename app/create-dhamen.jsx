@@ -74,7 +74,7 @@ export default function CreateDhamenScreen() {
     setShowDatePicker(Platform.OS === 'ios');
     if (date) {
       setSelectedDate(date);
-      const formattedDate = date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+      const formattedDate = date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -341,7 +341,7 @@ export default function CreateDhamenScreen() {
                   onChange={handleDateChange}
                   minimumDate={new Date()}
                   textColor={colors.text}
-                  locale="en-US-u-ca-gregory"
+                  locale="en-US"
                 />
               )}
               

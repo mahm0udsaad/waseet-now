@@ -29,6 +29,7 @@ function ActionRow({
   onPress,
   colors,
   isRTL,
+  writingDirection,
   danger = false,
   disabled = false,
 }) {
@@ -53,14 +54,14 @@ function ActionRow({
         <Icon size={18} color={danger ? colors.error : colors.primary} />
       </View>
       <View style={[styles.actionContent, { alignItems: 'flex-start' }]}>
-        <Text style={[styles.actionTitle, { color: danger ? colors.error : colors.text, writingDirection: 'rtl' }]}>
+        <Text style={[styles.actionTitle, { color: danger ? colors.error : colors.text, writingDirection }]}>
           {title}
         </Text>
         {subtitle ? (
           <Text
             style={[
               styles.actionSubtitle,
-              { color: colors.textSecondary, writingDirection: 'rtl' },
+              { color: colors.textSecondary, writingDirection },
             ]}
           >
             {subtitle}
@@ -79,7 +80,7 @@ function ActionRow({
 export default function SecurityScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, writingDirection } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [signingOutAll, setSigningOutAll] = useState(false);
@@ -226,7 +227,7 @@ export default function SecurityScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Lock size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'مستندات الخصوصية' : 'Privacy Documents'}
             </Text>
           </View>
@@ -237,6 +238,7 @@ export default function SecurityScreen() {
             onPress={() => openExternalUrl(PRIVACY_POLICY_URL)}
             colors={colors}
             isRTL={isRTL}
+            writingDirection={writingDirection}
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <ActionRow
@@ -246,6 +248,7 @@ export default function SecurityScreen() {
             onPress={() => openExternalUrl(TERMS_URL)}
             colors={colors}
             isRTL={isRTL}
+            writingDirection={writingDirection}
           />
         </View>
 
@@ -255,7 +258,7 @@ export default function SecurityScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Shield size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'أمان الحساب' : 'Account Security'}
             </Text>
           </View>
@@ -266,6 +269,7 @@ export default function SecurityScreen() {
             onPress={handlePasswordReset}
             colors={colors}
             isRTL={isRTL}
+            writingDirection={writingDirection}
             disabled={sendingReset}
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -276,6 +280,7 @@ export default function SecurityScreen() {
             onPress={handleSignOutAllDevices}
             colors={colors}
             isRTL={isRTL}
+            writingDirection={writingDirection}
             danger
             disabled={signingOutAll}
           />
@@ -287,7 +292,7 @@ export default function SecurityScreen() {
             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
               <Download size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection: 'rtl' }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, writingDirection }]}>
               {isRTL ? 'البيانات والخصوصية' : 'Data & Privacy'}
             </Text>
           </View>
@@ -298,6 +303,7 @@ export default function SecurityScreen() {
             onPress={handleDataExportRequest}
             colors={colors}
             isRTL={isRTL}
+            writingDirection={writingDirection}
           />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <Pressable

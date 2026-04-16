@@ -567,13 +567,13 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     top: -40,
-    right: -60,
+    end: -60,
   },
   decoCircle2: {
     width: 160,
     height: 160,
     bottom: -20,
-    left: -40,
+    start: -40,
   },
   
   contentContainer: {

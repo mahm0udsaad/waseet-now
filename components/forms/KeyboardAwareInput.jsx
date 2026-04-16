@@ -27,6 +27,7 @@ const KeyboardAwareInput = memo(({
   inputAccessoryViewID,
 }) => {
   const inputRef = useRef(null);
+  const writingDirection = isRTL ? 'rtl' : 'ltr';
 
   return (
     <FadeInView style={styles.inputContainer}>
@@ -44,7 +45,7 @@ const KeyboardAwareInput = memo(({
               styles.textInput,
               {
                 color: colors.text,
-                writingDirection: 'rtl',
+                writingDirection,
                 minHeight: multiline ? 100 : undefined,
               },
             ]}

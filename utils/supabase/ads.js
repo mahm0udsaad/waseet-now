@@ -75,7 +75,8 @@ export async function fetchAdsByType(type) {
     .from("ads")
     .select("*, ad_images(storage_path, sort_order)")
     .eq("type", type)
-    .order("sort_order", { ascending: true })
+    .eq("status", "active")
+    .order("pin_position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -87,6 +88,56 @@ export async function fetchAdsByType(type) {
       publicUrl: buildPublicUrl(img.storage_path),
     })),
   }));
+}
+
+export async function fetchAllAdsByType(type) {
+  const { data, error } = await supabase
+    .from("ads")
+    .select("*, ad_images(storage_path, sort_order), owner:profiles!owner_id(display_name, phone)")
+    .eq("type", type)
+    .order("pin_position", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((ad) => ({
+    ...ad,
+    images: (ad.ad_images || []).map((img) => ({
+      ...img,
+      publicUrl: buildPublicUrl(img.storage_path),
+    })),
+  }));
+}
+
+export async function adminDeleteAd(adId) {
+  const { error } = await supabase.rpc("admin_delete_ad", { p_ad_id: adId });
+  if (error) throw error;
+}
+
+export async function adminSuspendAd(adId, reason = null) {
+  const { error } = await supabase.rpc("admin_suspend_ad", {
+    p_ad_id: adId,
+    p_reason: reason,
+  });
+  if (error) throw error;
+}
+
+export async function adminUnsuspendAd(adId) {
+  const { error } = await supabase.rpc("admin_unsuspend_ad", { p_ad_id: adId });
+  if (error) throw error;
+}
+
+export async function adminSetPinPosition(adId, position) {
+  const { error } = await supabase.rpc("admin_set_pin_position", {
+    p_ad_id: adId,
+    p_position: position,
+  });
+  if (error) throw error;
+}
+
+export async function adminClearPinPosition(adId) {
+  const { error } = await supabase.rpc("admin_clear_pin_position", { p_ad_id: adId });
+  if (error) throw error;
 }
 
 export async function fetchAdById(adId) {

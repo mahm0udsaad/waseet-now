@@ -26,13 +26,17 @@ export default function PromotionalBanners() {
   const { width } = useWindowDimensions();
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [cards, setCards] = useState(DEFAULT_HOME_SLIDERS);
+  const [containerWidth, setContainerWidth] = useState(0);
   const { colors } = useTheme();
   const { isRTL } = useLanguage();
-  const contentWidth = Math.min(width, 760);
-  const cardWidth = Math.max(contentWidth - 40, 280);
   const slideGap = 12;
+  const cardWidth = containerWidth || Math.min(width, 760);
   const slideWidth = cardWidth + slideGap;
   const scrollViewRef = useRef(null);
+  const snapOffsets = useMemo(
+    () => cards.map((_, i) => i * slideWidth),
+    [cards, slideWidth]
+  );
 
   const iconMap = useMemo(
     () => ({
@@ -112,24 +116,27 @@ export default function PromotionalBanners() {
   };
 
   return (
-    <View style={styles.carouselContainer}>
+    <View
+      style={styles.carouselContainer}
+      onLayout={(event) => {
+        const nextWidth = event.nativeEvent.layout.width;
+        setContainerWidth((currentWidth) =>
+          currentWidth === nextWidth ? currentWidth : nextWidth
+        );
+      }}
+    >
       <Animated.ScrollView
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
-        snapToInterval={slideWidth}
-        snapToAlignment="start"
+        snapToOffsets={snapOffsets}
         disableIntervalMomentum
         bounces={false}
         scrollEventThrottle={16}
         onMomentumScrollEnd={handleScrollEnd}
-        contentContainerStyle={[
-          styles.sliderTrack,
-          {
-            paddingHorizontal: 20,
-          },
-        ]}
+        style={{ direction: 'ltr' }}
+        contentContainerStyle={styles.sliderTrack}
       >
         {promotionalCards.map((card, index) => (
           <View
@@ -138,7 +145,7 @@ export default function PromotionalBanners() {
               styles.slideItem,
               {
                 width: cardWidth,
-                marginEnd: index === promotionalCards.length - 1 ? 0 : slideGap,
+                marginRight: index === promotionalCards.length - 1 ? 0 : slideGap,
               },
             ]}
           >
@@ -163,8 +170,8 @@ export default function PromotionalBanners() {
                 <Text style={styles.promoPatternText}>وسيط الان</Text>
               </View>
 
-              <View style={[styles.promoCircle, { top: -20, right: -30 }]} />
-              <View style={[styles.promoCircle, { bottom: -20, left: -30, width: 80, height: 80 }]} />
+              <View style={[styles.promoCircle, { top: -20, end: -30 }]} />
+              <View style={[styles.promoCircle, { bottom: -20, start: -30, width: 80, height: 80 }]} />
 
               <View style={styles.promoContent}>
                 <View style={[styles.promoHeader, { flexDirection: 'row' }]}>
@@ -225,7 +232,7 @@ const styles = StyleSheet.create({
   },
   promoPattern: {
     position: "absolute",
-    right: -30,
+    end: -30,
     top: "50%",
     marginTop: -50,
     opacity: 0.1,
