@@ -610,7 +610,7 @@ export default function ChatScreen() {
     const isHighlighted = item.id === highlightedMessageIdRef.current;
 
     return (
-      <SwipeableMessage onReply={() => handleReply(item)} isMe={isMe} isRTL={isRTL}>
+      <SwipeableMessage onReply={() => handleReply(item)} isMe={isMe}>
         <View style={[
           styles.messageRow,
           { flexDirection: (isMe !== isRTL) ? 'row-reverse' : 'row', marginBottom: isLastInGroup ? 8 : 2 },

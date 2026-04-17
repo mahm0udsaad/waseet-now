@@ -23,6 +23,10 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 const PAID_STATUSES = ['payment_verified', 'paid', 'in_progress', 'completion_requested', 'completed'];
 const PENDING_STATUSES = ['awaiting_admin_transfer_approval', 'payment_submitted'];
 
+// Branded avatar for airport-service conversations — replaces the admin's
+// personal profile picture so the customer always sees the team, not a name.
+const AIRPORT_BRAND_LOGO = require('@/assets/images/logo.png');
+
 const ChatRow = React.memo(function ChatRow({
   item,
   colors,
@@ -30,6 +34,7 @@ const ChatRow = React.memo(function ChatRow({
   writingDirection,
   chatTitle,
   noMessagesLabel,
+  airportTeamLabel,
   onPress,
   getLastMessagePreview,
   formatTime,
@@ -68,11 +73,21 @@ const ChatRow = React.memo(function ChatRow({
     <View>
       <Pressable onPress={handlePress} style={pressableStyle}>
         <View style={styles.avatarContainer}>
-          <Image
-            source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }}
-            style={styles.avatar}
-          />
-          {item.isOnline && (
+          {item.isAirport ? (
+            <View style={[styles.avatar, styles.airportAvatar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Image
+                source={AIRPORT_BRAND_LOGO}
+                style={styles.airportAvatarImage}
+                contentFit="contain"
+              />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: item.avatar || 'https://picsum.photos/seed/chat/200' }}
+              style={styles.avatar}
+            />
+          )}
+          {item.isOnline && !item.isAirport && (
             <View style={[styles.onlineBadge, { borderColor: colors.background }]} />
           )}
         </View>
@@ -81,7 +96,9 @@ const ChatRow = React.memo(function ChatRow({
           <View style={[styles.chatHeader, { flexDirection: 'row' }]}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.chatName, { color: colors.text }]} numberOfLines={1}>
-                {item.name || `${chatTitle} ${item.id.slice(0, 5)}`}
+                {item.isAirport
+                  ? airportTeamLabel
+                  : item.name || `${chatTitle} ${item.id.slice(0, 5)}`}
               </Text>
               {badge}
             </View>
@@ -320,15 +337,18 @@ export default function ChatsListScreen() {
   const filteredChats = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return conversations;
-    return conversations.filter((chat) =>
-      (chat.name || chat.id || '').toLowerCase().includes(q)
-    );
-  }, [conversations, searchQuery]);
+    return conversations.filter((chat) => {
+      const displayName = chat.isAirport ? airportTeamLabel : (chat.name || chat.id || '');
+      return displayName.toLowerCase().includes(q);
+    });
+  }, [conversations, searchQuery, airportTeamLabel]);
 
   const skeletonChats = React.useMemo(
     () => Array.from({ length: 8 }).map((_, idx) => ({ id: `sk-${idx}` })),
     []
   );
+
+  const airportTeamLabel = isRTL ? 'فريق عمل وسيط الان' : 'Wasit Alan Team';
 
   const handleChatPress = useCallback((chat) => {
     const unreadToReset = chat.unreadCount || 0;
@@ -336,16 +356,19 @@ export default function ChatsListScreen() {
     setConversations((prev) =>
       (prev || []).map((c) => (c.id === chat.id ? { ...c, unreadCount: 0 } : c))
     );
+    const displayName = chat.isAirport
+      ? airportTeamLabel
+      : chat.name || `${t.chat.title} ${chat.id.slice(0, 5)}`;
     router.push({
       pathname: "/chat",
       params: {
         id: chat.id,
-        name: chat.name || `${t.chat.title} ${chat.id.slice(0, 5)}`,
+        name: displayName,
         avatar: chat.avatar || "",
         isOnline: chat.isOnline ? "true" : "false"
       }
     });
-  }, [decrementChatUnread, router, t]);
+  }, [decrementChatUnread, router, t, airportTeamLabel]);
 
   const renderItem = useCallback(({ item }) => (
     <ChatRow
@@ -355,11 +378,12 @@ export default function ChatsListScreen() {
       writingDirection={writingDirection}
       chatTitle={t.chat.title}
       noMessagesLabel={isRTL ? 'لا توجد رسائل بعد' : 'No messages yet'}
+      airportTeamLabel={airportTeamLabel}
       onPress={handleChatPress}
       getLastMessagePreview={getLastMessagePreview}
       formatTime={formatTime}
     />
-  ), [colors, isRTL, writingDirection, t.chat.title, handleChatPress, getLastMessagePreview, formatTime]);
+  ), [colors, isRTL, writingDirection, t.chat.title, airportTeamLabel, handleChatPress, getLastMessagePreview, formatTime]);
 
   const Separator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -587,6 +611,16 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
+  },
+  airportAvatar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  airportAvatarImage: {
+    width: 38,
+    height: 38,
   },
   onlineBadge: {
     position: 'absolute',

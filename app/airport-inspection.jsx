@@ -16,10 +16,12 @@ import { showToast } from "@/utils/notifications/inAppStore";
 import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
 import {
   createAirportRequest,
+  ensureAirportChat,
   fetchAirportServicePrice,
   updateAirportRequestPayment,
   uploadAirportDoc,
 } from "@/utils/supabase/airportRequests";
+import { sendMessage as sendChatMessage } from "@/utils/supabase/chat";
 import { ensureSupabaseSession } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -29,6 +31,7 @@ import { StatusBar } from "expo-status-bar";
 import { ImageIcon, Plane, Trash2 } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Platform,
@@ -53,6 +56,8 @@ const NATIONALITIES = [
   { ar: "باكستانية", en: "Pakistani" },
   { ar: "نيبالية", en: "Nepalese" },
 ];
+
+const GREGORIAN_PICKER_LOCALE = "en_US_POSIX@calendar=gregorian";
 
 function formatDate(d) {
   if (!d) return "";
@@ -96,6 +101,13 @@ export default function AirportInspectionScreen() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Post-payment flow: after the payment modal closes we show a full-screen
+  // overlay on this screen while we create the chat + seed initial messages
+  // (3-4 round-trips). This prevents the user from thinking the app froze.
+  const [chatCreating, setChatCreating] = useState(false);
+  const pendingChatInfoRef = useRef(null);
+  const chatTriggeredRef = useRef(false);
 
   useEffect(() => {
     fetchAirportServicePrice()
@@ -150,6 +162,116 @@ export default function AirportInspectionScreen() {
     return null;
   };
 
+  // Open (or reuse) the chat for this airport request and seed it with the
+  // order summary + payment receipt card so the user lands directly in an
+  // active conversation with the team.
+  const openAirportChat = useCallback(
+    async ({ request, userId, method, receiptUri }) => {
+      try {
+        const { conversation_id } = await ensureAirportChat(request.id);
+
+        // 1. Order details text (matches the Damin confirm summary style)
+        const idShort = String(request.id).slice(0, 8);
+        const priceStr = Number(request.price || price).toLocaleString();
+        const summary = isRTL
+          ? `طلب خدمة تفتيش وتوصيل للمطار #${idShort}\n\n` +
+            `الكفيل: ${request.sponsor_name}\n` +
+            `جوال الكفيل: ${request.sponsor_phone}` +
+            (request.sponsor_alt_phone ? ` / ${request.sponsor_alt_phone}` : "") +
+            `\n\n` +
+            `العاملة: ${request.worker_name}\n` +
+            `الجنسية: ${request.worker_nationality}\n` +
+            `تاريخ الرحلة: ${request.flight_date}\n` +
+            `وقت الرحلة: ${request.flight_time}\n\n` +
+            `المبلغ: ${priceStr} ر.س\n` +
+            `طريقة الدفع: ${method === "card" ? "بطاقة ائتمان/خصم" : "تحويل بنكي"}`
+          : `Airport Inspection Request #${idShort}\n\n` +
+            `Sponsor: ${request.sponsor_name}\n` +
+            `Sponsor phone: ${request.sponsor_phone}` +
+            (request.sponsor_alt_phone ? ` / ${request.sponsor_alt_phone}` : "") +
+            `\n\n` +
+            `Worker: ${request.worker_name}\n` +
+            `Nationality: ${request.worker_nationality}\n` +
+            `Flight date: ${request.flight_date}\n` +
+            `Flight time: ${request.flight_time}\n\n` +
+            `Amount: ${priceStr} SAR\n` +
+            `Method: ${method === "card" ? "Credit/Debit Card" : "Bank Transfer"}`;
+
+        await sendChatMessage(conversation_id, summary);
+
+        // 2. Payment receipt card (same shape used by Damin/Taqib)
+        const receiptCard = {
+          type: "payment_receipt",
+          status: method === "card" ? "succeeded" : "pending",
+          amount: Number(request.price || price),
+          currency: "SAR",
+          method,
+          methodLabelAr: method === "card" ? "بطاقة ائتمان/خصم" : "تحويل بنكي",
+          methodLabelEn: method === "card" ? "Credit/Debit Card" : "Bank Transfer",
+          reference: request.id,
+          createdAt: new Date().toISOString(),
+          airport_request_id: request.id,
+        };
+        await sendChatMessage(conversation_id, null, [receiptCard]);
+
+        // 3. For bank transfer: also drop the uploaded receipt into the chat
+        // so the admin can see it directly in the conversation.
+        if (method !== "card" && receiptUri) {
+          try {
+            await sendChatMessage(conversation_id, null, [
+              {
+                type: "image",
+                uri: receiptUri,
+                name: `airport-receipt-${request.id}.jpg`,
+                mimeType: "image/jpeg",
+              },
+            ]);
+          } catch (imgErr) {
+            console.warn("Failed to attach receipt image to chat:", imgErr);
+          }
+        }
+
+        // Navigate to the chat — replace so back goes to home, not this form.
+        router.replace({
+          pathname: "/chat",
+          params: {
+            conversationId: conversation_id,
+            name: isRTL ? "فريق عمل وسيط الان" : "Wasit Alan Team",
+          },
+        });
+      } catch (chatErr) {
+        // Chat seeding failed — don't fail the whole submission; the
+        // payment/request row is already saved. Fall back to the success
+        // screen so the user can still find their request. Clear the overlay
+        // so the fallback screen renders cleanly.
+        console.warn("Failed to open airport chat:", chatErr);
+        setChatCreating(false);
+        router.replace("/airport-success");
+      }
+    },
+    [isRTL, price, router]
+  );
+
+  // Run chat creation + navigation AFTER the payment modal has closed, so:
+  //   - The modal's own submit spinner only covers upload+update (quick).
+  //   - A full-screen overlay on this screen covers the longer chat creation
+  //     (4 round-trips), so the user never sees a frozen, no-feedback form.
+  useEffect(() => {
+    if (!chatCreating) return;
+    if (chatTriggeredRef.current) return;
+    const info = pendingChatInfoRef.current;
+    if (!info) return;
+
+    chatTriggeredRef.current = true;
+    // Small delay lets the modal finish its dismiss animation before we
+    // replace the route underneath it.
+    const t = setTimeout(() => {
+      openAirportChat(info);
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [chatCreating, openAirportChat]);
+
   const handleSubmit = async () => {
     const error = validate();
     if (error) {
@@ -191,7 +313,9 @@ export default function AirportInspectionScreen() {
         initialPhone: sponsorPhone.trim(),
         onPaymentSubmitted: async (paymentInfo) => {
           try {
-            // Bank transfer path: upload receipt then mark awaiting approval
+            // Bank transfer path: upload receipt then mark awaiting approval.
+            // Modal's own spinner covers this; chat creation + navigation are
+            // handed off to the overlay effect on this screen (post-modal).
             let paymentRef = null;
             if (paymentInfo?.receiptUri) {
               paymentRef = await uploadAirportDoc(
@@ -204,7 +328,19 @@ export default function AirportInspectionScreen() {
               method: paymentInfo?.paymentMethod || "bank_transfer",
               ref: paymentRef,
             });
-            router.replace("/airport-success");
+
+            // Stash the info the overlay effect needs, then flip the flag.
+            // The modal will close on `return true`; the effect fires ~250ms
+            // later and performs chat creation + navigation behind a
+            // full-screen "preparing your chat" overlay.
+            pendingChatInfoRef.current = {
+              request,
+              userId,
+              method: paymentInfo?.paymentMethod || "bank_transfer",
+              receiptUri: paymentInfo?.receiptUri || null,
+            };
+            chatTriggeredRef.current = false;
+            setChatCreating(true);
             return true;
           } catch (err) {
             console.error("Airport payment submit failed", err);
@@ -410,7 +546,13 @@ export default function AirportInspectionScreen() {
               mode="date"
               minimumDate={new Date()}
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              locale="en-US"
+              // Force English Gregorian wheels even when the device region
+              // prefers an Islamic calendar.
+              locale={GREGORIAN_PICKER_LOCALE}
+              calendar="gregorian"
+              themeVariant="dark"
+              textColor="#FFFFFF"
+              accentColor="#FFFFFF"
               onChange={(event, selected) => {
                 if (Platform.OS !== "ios") setShowDatePicker(false);
                 if (event.type === "set" && selected) setFlightDate(selected);
@@ -433,7 +575,11 @@ export default function AirportInspectionScreen() {
               value={flightTime || new Date()}
               mode="time"
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              locale="en-US"
+              locale={GREGORIAN_PICKER_LOCALE}
+              calendar="gregorian"
+              themeVariant="dark"
+              textColor="#FFFFFF"
+              accentColor="#FFFFFF"
               onChange={(event, selected) => {
                 if (Platform.OS !== "ios") setShowTimePicker(false);
                 if (event.type === "set" && selected) setFlightTime(selected);
@@ -587,6 +733,29 @@ export default function AirportInspectionScreen() {
           </ScrollView>
         </View>
       </NativeBottomSheet>
+
+      {/* Full-screen overlay shown while we create the chat + seed initial
+          messages right after the payment modal closes. Keeps the user
+          informed and prevents them from tapping submit again. */}
+      {chatCreating && (
+        <View
+          style={[styles.chatOverlay, { backgroundColor: colors.background + "E6" }]}
+          pointerEvents="auto"
+          testID="airport-chat-creating-overlay"
+        >
+          <View style={[styles.chatOverlayCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.chatOverlayTitle, { color: colors.text, writingDirection }]}>
+              {isRTL ? "جاري فتح المحادثة" : "Preparing your chat"}
+            </Text>
+            <Text style={[styles.chatOverlaySub, { color: colors.textSecondary, writingDirection }]}>
+              {isRTL
+                ? "يتم إنشاء المحادثة وإرسال تفاصيل طلبك لفريق العمل..."
+                : "Creating the conversation and sending your request details to the team..."}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -716,6 +885,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     alignItems: "flex-end",
     marginVertical: spacing.sm,
+  },
+
+  // Post-payment chat-creation overlay
+  chatOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  chatOverlayCard: {
+    width: "100%",
+    maxWidth: 340,
+    padding: spacing.xl,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  chatOverlayTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  chatOverlaySub: {
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
   },
 
   // Bottom sheet

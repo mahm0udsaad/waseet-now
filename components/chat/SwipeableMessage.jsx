@@ -5,13 +5,17 @@ import { useTheme } from "@/utils/theme/store";
 
 const SWIPE_THRESHOLD = 50;
 
-function SwipeableMessage({ children, onReply, isMe, isRTL }) {
+function SwipeableMessage({ children, onReply, isMe }) {
   const { colors } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
   const replyOpacity = useRef(new Animated.Value(0)).current;
 
-  // Layout is always RTL (forceRTL), so swipe direction is always -1.
-  const swipeDirection = -1;
+  // Bubble is visually on the right for `isMe`, on the left for others in both
+  // LTR and RTL (see MessageBubble alignSelf + messageRow flexDirection). The
+  // swipe should always pull the bubble toward the screen center:
+  //   - right-side bubble (isMe): swipe left  → dx < 0 → direction = -1
+  //   - left-side bubble  (other): swipe right → dx > 0 → direction = +1
+  const swipeDirection = isMe ? -1 : 1;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -49,11 +53,13 @@ function SwipeableMessage({ children, onReply, isMe, isRTL }) {
 
   return (
     <View style={styles.wrapper}>
-      {/* Reply icon behind the message */}
+      {/* Reply icon sits on the bubble's outer edge — the side the bubble
+          slides away from as the user swipes. */}
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.replyIcon,
-          isRTL ? styles.replyIconRight : styles.replyIconLeft,
+          isMe ? styles.replyIconRight : styles.replyIconLeft,
           {
             opacity: replyOpacity,
             transform: [{ scale: replyOpacity }],
@@ -86,11 +92,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: -1,
   },
+  // Use physical left/right so the icon stays pinned to the bubble's visual
+  // side regardless of RTL (the bubble's position is driven by isMe, not RTL).
   replyIconLeft: {
-    start: -8,
+    left: -8,
   },
   replyIconRight: {
-    end: -8,
+    right: -8,
   },
   replyIconCircle: {
     width: 32,

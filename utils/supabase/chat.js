@@ -141,7 +141,7 @@ export async function fetchConversations() {
   if (conversationIds.length === 0) return [];
 
   // Steps 2-6: Run all independent queries in parallel
-  const [convResult, membersResult, ordersResult, unreadResult] = await Promise.all([
+  const [convResult, membersResult, ordersResult, unreadResult, airportResult] = await Promise.all([
     // Step 2: Fetch conversations with their last message
     supabase
       .from("conversations")
@@ -183,6 +183,14 @@ export async function fetchConversations() {
       .neq("actor_id", userId)
       .is("read_at", null)
       .in("conversation_id", conversationIds),
+
+    // Step 6b: Flag airport-service conversations so the UI can replace the
+    // admin's display_name with the branded "Wasit Alan Team" label.
+    supabase
+      .from("airport_inspection_requests")
+      .select("conversation_id")
+      .in("conversation_id", conversationIds)
+      .not("conversation_id", "is", null),
   ]);
 
   if (convResult.error) throw convResult.error;
@@ -235,17 +243,30 @@ export async function fetchConversations() {
     }
   }
 
+  // Build a set of airport-service conversation IDs so the caller can swap the
+  // admin's display_name for the branded team label.
+  const airportConvIds = new Set();
+  if (!airportResult.error && airportResult.data) {
+    for (const r of airportResult.data) {
+      if (r.conversation_id) airportConvIds.add(r.conversation_id);
+    }
+  }
+
   // Step 7: Assemble results (pure mapping, no async)
   const result = (conversations || []).map((conv) => {
     const lastMessage = conv.messages?.[0] || null;
     const otherUserId = otherUserMap.get(conv.id) || null;
     const profile = otherUserId ? profileMap.get(otherUserId) : null;
+    const isAirport = airportConvIds.has(conv.id);
 
     return {
       id: conv.id,
       type: conv.type || "dm",
       adId: conv.ad_id || null,
       otherUserId,
+      // Airport-service chats always show the branded team label, never the
+      // admin's personal display_name. The component localizes this flag.
+      isAirport,
       name: conv.type === "group" ? "Group chat" : (profile?.display_name || "User"),
       avatar: profile?.avatar_url || null,
       isOnline: false,

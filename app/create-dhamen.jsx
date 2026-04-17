@@ -29,6 +29,8 @@ import { borderRadius, hairlineWidth, spacing } from "@/utils/native/layout";
 import { useTheme } from "@/utils/theme/store";
 import { getSupabaseSession } from "@/utils/supabase/client";
 
+const GREGORIAN_PICKER_LOCALE = "en_US_POSIX@calendar=gregorian";
+
 export default function CreateDhamenScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -341,7 +343,8 @@ export default function CreateDhamenScreen() {
                   onChange={handleDateChange}
                   minimumDate={new Date()}
                   textColor={colors.text}
-                  locale="en-US"
+                  locale={GREGORIAN_PICKER_LOCALE}
+                  calendar="gregorian"
                 />
               )}
               

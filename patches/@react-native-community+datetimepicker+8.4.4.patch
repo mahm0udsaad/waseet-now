@@ -1,0 +1,29 @@
+diff --git a/node_modules/@react-native-community/datetimepicker/ios/RNDateTimePickerManager.m b/node_modules/@react-native-community/datetimepicker/ios/RNDateTimePickerManager.m
+index 0a69f5c..be1028c 100644
+--- a/node_modules/@react-native-community/datetimepicker/ios/RNDateTimePickerManager.m
++++ b/node_modules/@react-native-community/datetimepicker/ios/RNDateTimePickerManager.m
+@@ -195,4 +195,24 @@ + (NSString*) datepickerStyleToString: (UIDatePickerStyle) style  API_AVAILABLE(
+     }
+ }
+
++// Kafel patch: allow explicitly pinning the picker calendar so Saudi-region
++// devices don't fall back to Hijri. Accepts an NSCalendarIdentifier string
++// (e.g. "gregorian", "islamic"). Without this the `locale` prop alone is not
++// enough — UIDatePicker ignores `locale.calendar` when the device region
++// prefers a different calendar.
++RCT_CUSTOM_VIEW_PROPERTY(calendar, NSString, RNDateTimePicker)
++{
++    if (json) {
++        NSString *identifier = [RCTConvert NSString:json];
++        NSCalendar *calendar = [NSCalendar calendarWithIdentifier:identifier];
++        if (calendar != nil) {
++            view.calendar = calendar;
++        } else {
++            RCTLogWarn(@"Unknown calendar identifier '%@'; leaving picker calendar unchanged", identifier);
++        }
++    } else {
++        view.calendar = nil;
++    }
++}
++
+ @end
