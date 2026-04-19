@@ -8,10 +8,12 @@ import {
   ChevronUp,
   HelpCircle,
   Info,
+  LifeBuoy,
   Mail,
   Phone,
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
+import SupportTicketModal from '@/components/support/SupportTicketModal';
 
 const SUPPORT_EMAIL = 'support@wasitalan.com';
 const SUPPORT_PHONE = '+966536300031';
@@ -40,6 +42,7 @@ function FAQItem({ question, answer, colors, isRTL, writingDirection }) {
 export default function HelpScreen() {
   const { colors, isDark } = useTheme();
   const { t, isRTL, writingDirection } = useTranslation();
+  const [ticketOpen, setTicketOpen] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -56,6 +59,33 @@ export default function HelpScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Open ticket CTA */}
+        <Pressable
+          onPress={() => setTicketOpen(true)}
+          style={({ pressed }) => [
+            styles.ticketCta,
+            {
+              backgroundColor: colors.primary,
+              opacity: pressed ? 0.9 : 1,
+              flexDirection: 'row',
+            },
+          ]}
+        >
+          <View style={styles.ticketIconWrap}>
+            <LifeBuoy size={22} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.ticketTitle, { writingDirection }]}>
+              {isRTL ? 'فتح تذكرة دعم' : 'Open a support ticket'}
+            </Text>
+            <Text style={[styles.ticketSub, { writingDirection }]}>
+              {isRTL
+                ? 'تواصل مع فريق وسيط مباشرة وسنرد عليك بأسرع وقت.'
+                : 'Reach our team directly and get a fast response.'}
+            </Text>
+          </View>
+        </Pressable>
+
         {/* FAQ Section */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={[styles.sectionHeader, { flexDirection: 'row' }]}>
@@ -150,6 +180,11 @@ export default function HelpScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <SupportTicketModal
+        visible={ticketOpen}
+        onClose={() => setTicketOpen(false)}
+      />
     </View>
   );
 }
@@ -233,5 +268,31 @@ const styles = StyleSheet.create({
   aboutValue: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  // Ticket CTA
+  ticketCta: {
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    gap: 12,
+  },
+  ticketIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  ticketTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  ticketSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

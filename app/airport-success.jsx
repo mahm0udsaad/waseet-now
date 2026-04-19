@@ -31,7 +31,7 @@ export default function AirportSuccessScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [opacity, scale]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

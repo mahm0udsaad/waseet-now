@@ -16,6 +16,7 @@ import {
   FileText,
   Briefcase,
   Shield,
+  Plane,
   AlertCircle,
 } from 'lucide-react-native';
 import { useTheme } from '@/utils/theme/store';
@@ -24,10 +25,12 @@ import FadeInView from "@/components/ui/FadeInView";
 import { useOrders } from '@/hooks/useOrders';
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { NativeButton } from '@/components/native';
+import SwipeableOrderCard from '@/components/orders/SwipeableOrderCard';
 import { confirmDaminOrderParticipation } from '@/utils/supabase/daminOrders';
 import { getSupabaseSession } from '@/utils/supabase/client';
 import { showToast } from '@/utils/notifications/inAppStore';
 import { hapticFeedback } from '@/utils/native/haptics';
+import { useHiddenOrdersStore } from '@/utils/orders/hiddenOrdersStore';
 
 const STATUS_COLORS = {
   completed: '#10B981',
@@ -95,6 +98,7 @@ const ORDER_ICON_MAP = {
   taqib: { Icon: Briefcase, color: '#4F46E5' },
   tanazul: { Icon: FileText, color: '#059669' },
   dhamen: { Icon: Shield, color: '#D97706' },
+  airport: { Icon: Plane, color: '#0EA5E9' },
 };
 
 const OrderIcon = React.memo(function OrderIcon({ type, colors }) {
@@ -146,12 +150,60 @@ export default function MyOrdersScreen() {
     { id: 'completion_requested', label: isRTL ? 'بانتظار تأكيد المستفيد' : 'Awaiting Buyer Confirmation' },
     { id: 'completed', label: isRTL ? 'مكتمل' : 'Completed' },
     { id: 'cancelled', label: isRTL ? 'ملغي' : 'Cancelled' },
+    { id: 'archived', label: isRTL ? 'المؤرشفة' : 'Archived' },
   ], [isRTL]);
 
-  const filteredOrders = useMemo(
-    () => (activeFilter === 'all' ? orders : orders.filter((o) => o.status === activeFilter)),
-    [orders, activeFilter]
-  );
+  const archivedIds = useHiddenOrdersStore((s) => s.archivedIds);
+  const deletedIds = useHiddenOrdersStore((s) => s.deletedIds);
+  const archiveOrder = useHiddenOrdersStore((s) => s.archive);
+  const unarchiveOrder = useHiddenOrdersStore((s) => s.unarchive);
+  const deleteOrderFromView = useHiddenOrdersStore((s) => s.deleteFromView);
+
+  const filteredOrders = useMemo(() => {
+    // Deleted rows are always hidden. Archived rows are only shown when the
+    // user picks the Archived filter.
+    const deletedSet = new Set(deletedIds);
+    const archivedSet = new Set(archivedIds);
+    const base = orders.filter((o) => !deletedSet.has(o.id));
+
+    if (activeFilter === 'archived') {
+      return base.filter((o) => archivedSet.has(o.id));
+    }
+    const visible = base.filter((o) => !archivedSet.has(o.id));
+    if (activeFilter === 'all') return visible;
+    return visible.filter((o) => o.status === activeFilter);
+  }, [orders, activeFilter, archivedIds, deletedIds]);
+
+  const handleArchive = useCallback((id) => {
+    archiveOrder(id);
+    showToast({
+      type: 'success',
+      title: isRTL ? 'تمت الأرشفة' : 'Archived',
+      message: isRTL
+        ? 'تم نقل الطلب إلى المؤرشفة'
+        : 'Moved to archived',
+    });
+  }, [archiveOrder, isRTL]);
+
+  const handleUnarchive = useCallback((id) => {
+    unarchiveOrder(id);
+    showToast({
+      type: 'success',
+      title: isRTL ? 'تمت الاستعادة' : 'Restored',
+      message: isRTL ? 'تمت استعادة الطلب' : 'Order restored',
+    });
+  }, [unarchiveOrder, isRTL]);
+
+  const handleDeleteFromView = useCallback((id) => {
+    deleteOrderFromView(id);
+    showToast({
+      type: 'success',
+      title: isRTL ? 'تم الحذف من القائمة' : 'Removed from list',
+      message: isRTL
+        ? 'تم إخفاء الطلب من هذا الجهاز فقط'
+        : 'Hidden on this device only',
+    });
+  }, [deleteOrderFromView, isRTL]);
   const handleRefresh = useCallback(() => {
     refetch(true);
   }, [refetch]);
@@ -219,11 +271,36 @@ export default function MyOrdersScreen() {
         (item.originalDaminStatus === 'created' || item.originalDaminStatus === 'pending_confirmations');
     }
 
+    const isArchivedRow = activeFilter === 'archived';
+
     return (
       <FadeInView delay={Math.min(index, 8) * 40}>
+        <SwipeableOrderCard
+          archived={isArchivedRow}
+          onArchive={() => handleArchive(item.id)}
+          onUnarchive={() => handleUnarchive(item.id)}
+          onDelete={() => handleDeleteFromView(item.id)}
+        >
         <Pressable
           testID={`order-card-${index}`}
           onPress={() => {
+            if (item.isAirportOrder) {
+              // Airport requests don't have a dedicated details page — route
+              // to the chat if one exists, otherwise fall back to the list
+              // screen (which also shows status + pending notes).
+              if (item.conversation_id) {
+                router.push({
+                  pathname: "/chat",
+                  params: {
+                    conversationId: item.conversation_id,
+                    name: isRTL ? "فريق عمل وسيط الان" : "Wasit Alan Team",
+                  },
+                });
+              } else {
+                router.push("/airport-requests");
+              }
+              return;
+            }
             const pathname = item.isDaminOrder ? "/damin-order-details" : "/order-details";
             router.push({
               pathname,
@@ -265,11 +342,13 @@ export default function MyOrdersScreen() {
               <View style={styles.cardContent}>
                   <Text style={[styles.cardTitle, { color: colors.text, writingDirection }]}>{adTitle}</Text>
                   <Text style={[styles.providerName, { color: colors.textSecondary }]}>
-                    {isDaminOrder
-                      ? (userRole === 'payer'
-                          ? (isRTL ? 'صاحب الطلب' : 'Order Owner')
-                          : (isRTL ? 'مقدم الخدمة' : 'Service Provider'))
-                      : roleLabel}
+                    {item.isAirportOrder
+                      ? (isRTL ? 'فريق وسيط الان' : 'Wasit Alan Team')
+                      : isDaminOrder
+                        ? (userRole === 'payer'
+                            ? (isRTL ? 'صاحب الطلب' : 'Order Owner')
+                            : (isRTL ? 'مقدم الخدمة' : 'Service Provider'))
+                        : roleLabel}
                   </Text>
                   <Text style={[styles.amount, { color: colors.primary }]}>{formattedAmount}</Text>
               </View>
@@ -298,9 +377,22 @@ export default function MyOrdersScreen() {
             </Pressable>
           )}
         </Pressable>
+        </SwipeableOrderCard>
       </FadeInView>
     );
-  }, [colors, isRTL, writingDirection, router, currentUserId, actionLoading, handleQuickConfirm]);
+  }, [
+    colors,
+    isRTL,
+    writingDirection,
+    router,
+    currentUserId,
+    actionLoading,
+    handleQuickConfirm,
+    activeFilter,
+    handleArchive,
+    handleUnarchive,
+    handleDeleteFromView,
+  ]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -7,6 +7,8 @@ const INITIAL_FORM_DATA = {
   location: "",
   requestTitle: "",
   description: "",
+  officeName: "",
+  officeAddress: "",
 };
 
 export const useTaqibForm = (isRTL) => {
@@ -28,7 +30,13 @@ export const useTaqibForm = (isRTL) => {
   }, []);
 
   const validateForm = useCallback(() => {
-    if (!formData.location || !formData.requestTitle || !formData.description) {
+    if (
+      !formData.location ||
+      !formData.requestTitle ||
+      !formData.description ||
+      !formData.officeName ||
+      !formData.officeAddress
+    ) {
       Alert.alert(
         isRTL ? "تنبيه" : "Alert",
         isRTL ? "يرجى تعبئة جميع الحقول المطلوبة" : "Please fill all required fields"
@@ -49,7 +57,10 @@ export const useTaqibForm = (isRTL) => {
         title: formData.requestTitle || (isRTL ? "خدمات تعقيب" : "Taqib Services"),
         description: formData.description,
         location: formData.location || null,
-        metadata: {},
+        metadata: {
+          office_name: formData.officeName,
+          office_address: formData.officeAddress,
+        },
       });
 
       // Reset form so if user comes back it's clean
@@ -68,7 +79,12 @@ export const useTaqibForm = (isRTL) => {
     }
   }, [validateForm, formData, isRTL, router, resetForm]);
 
-  const isFormValid = formData.location && formData.requestTitle && formData.description;
+  const isFormValid =
+    formData.location &&
+    formData.requestTitle &&
+    formData.description &&
+    formData.officeName &&
+    formData.officeAddress;
 
   const openCityModal = useCallback(() => {
     setShowCityModal(true);

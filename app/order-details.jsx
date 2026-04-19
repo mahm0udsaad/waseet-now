@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as StoreReview from 'expo-store-review';
 import {
   View,
   Text,
@@ -246,6 +247,10 @@ export default function OrderDetailsScreen() {
                   : (isRTL ? 'تم تأكيدك، بانتظار الطرف الآخر' : 'Your confirmation recorded, waiting for the other party'),
               });
               await refetch();
+              // Request App Store review after successful order completion (peak satisfaction moment)
+              if (result.completed && await StoreReview.hasAction()) {
+                await StoreReview.requestReview();
+              }
             } catch (err) {
               console.error('Failed to confirm completion:', err);
               showToast({

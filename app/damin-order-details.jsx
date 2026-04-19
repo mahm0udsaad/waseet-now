@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import * as StoreReview from 'expo-store-review';
 import {
   View,
   Text,
@@ -225,11 +226,7 @@ export default function DaminOrderDetailsScreen() {
     );
   }, [navigation, router]);
 
-  useEffect(() => {
-    loadOrder();
-  }, [id]);
-
-  const loadOrder = async ({ silent = false } = {}) => {
+  const loadOrder = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
       const orderData = await fetchDaminOrderById(id);
@@ -282,7 +279,11 @@ export default function DaminOrderDetailsScreen() {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadOrder();
+  }, [loadOrder]);
 
   const handleRefresh = async () => {
     if (refreshing || loading || actionLoading) return;
@@ -449,7 +450,7 @@ export default function DaminOrderDetailsScreen() {
     };
 
     handlePayResult();
-  }, [params.payResult, id, isRTL, order, navigation, router]);
+  }, [params.payResult, id, isRTL, order, navigation, router, loadOrder]);
 
   // Handle card payment via Paymob
   const handleCardPayment = async (paymentMethod = 'card') => {
@@ -739,6 +740,10 @@ export default function DaminOrderDetailsScreen() {
               });
 
               await loadOrder();
+              // Request App Store review after successful damin order completion
+              if (await StoreReview.hasAction()) {
+                await StoreReview.requestReview();
+              }
             } catch (err) {
               console.error('Failed to confirm completion:', err);
               showToast({

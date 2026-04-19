@@ -14,7 +14,7 @@ export default function DaminPendingModalRoute() {
     if (!hasOrder.current && !order) {
       router.back();
     }
-  }, []);
+  }, [order]);
 
   const handleConfirm = async (orderId) => {
     await onConfirm?.(orderId);

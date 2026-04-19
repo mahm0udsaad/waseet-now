@@ -389,6 +389,46 @@ export default function RootLayout() {
   const splashHiddenRef = useRef(false);
   const splashHideInFlightRef = useRef(false);
   const startupReady = isReady && appReady && isAuthChecked;
+  // Refs mirroring router + navigationReady so the notification handler and
+  // flusher always read the latest values without being in effect deps.
+  // Without this, the setup effect re-registered notification listeners every
+  // time the router reference churned, causing getLastNotificationResponseAsync()
+  // to return null on re-registration (iOS only serves the launch response once).
+  const rootRouterRef = useRef(router);
+  useEffect(() => { rootRouterRef.current = router; }, [router]);
+  const navigationReadyRef = useRef(navigationReady);
+  useEffect(() => { navigationReadyRef.current = navigationReady; }, [navigationReady]);
+  const startupReadyRef = useRef(startupReady);
+  useEffect(() => { startupReadyRef.current = startupReady; }, [startupReady]);
+
+  // Flush any queued notification deep-link route. Deferred by one tick so the
+  // initial <Redirect /> in app/index.jsx has time to reconcile to /(tabs)
+  // before we push /chat on top — otherwise the redirect can overwrite the push
+  // and the user lands on the home tab instead of the chat screen.
+  const flushPendingNotificationRoute = useCallback(() => {
+    if (!pendingNotificationRouteRef.current) {
+      console.log('[NotifRoute] flush skipped — no pending route');
+      return;
+    }
+    if (!navigationReadyRef.current || !startupReadyRef.current) {
+      console.log('[NotifRoute] flush deferred — nav/startup not ready', {
+        navigationReady: navigationReadyRef.current,
+        startupReady: startupReadyRef.current,
+      });
+      return;
+    }
+    const route = pendingNotificationRouteRef.current;
+    pendingNotificationRouteRef.current = null;
+    console.log('[NotifRoute] flushing', route);
+    setTimeout(() => {
+      try {
+        rootRouterRef.current?.push(route);
+        console.log('[NotifRoute] pushed', route);
+      } catch (error) {
+        console.warn('[NotifRoute] push failed:', error);
+      }
+    }, 0);
+  }, []);
   useInAppNotificationsListener(startupReady);
   const {
     pendingOrder: pendingDaminOrder,
@@ -421,7 +461,7 @@ export default function RootLayout() {
   useEffect(() => {
     console.log('[RootLayout] navigationReady:', navigationReady,
       'rootState keys:', rootNavigationState ? Object.keys(rootNavigationState) : 'null');
-  }, [navigationReady]);
+  }, [navigationReady, rootNavigationState]);
 
   // Apply a better Arabic UI font globally (best-effort).
   useEffect(() => {
@@ -514,13 +554,21 @@ export default function RootLayout() {
           handledNotificationIdsRef.current.add(notificationId);
         }
 
-        if (!route) return;
-
-        if (!navigationReady) {
-          pendingNotificationRouteRef.current = route;
-        } else {
-          router.push(route);
+        if (!route) {
+          console.log('[NotifRoute] no route derived from data', data);
+          return;
         }
+
+        // Always queue the route and let the flusher handle navigation.
+        // This keeps the handler free of router/navigationReady closures and
+        // guarantees the push is scheduled after any in-flight redirect.
+        pendingNotificationRouteRef.current = route;
+        console.log('[NotifRoute] queued', {
+          route,
+          navigationReady: navigationReadyRef.current,
+          startupReady: startupReadyRef.current,
+        });
+        flushPendingNotificationRoute();
 
         try {
           await Notif.clearLastNotificationResponseAsync();
@@ -561,7 +609,12 @@ export default function RootLayout() {
       mounted = false;
       cleanupRef.current?.();
     };
-  }, [navigationReady, startupReady, router]);
+    // Intentionally only depend on startupReady: the handler reads `router`
+    // and `navigationReady` via refs, so there is no stale-closure risk, and
+    // re-running this effect on router reference changes caused iOS to drop
+    // the launch-tap response (getLastNotificationResponseAsync returns null
+    // after the first call).
+  }, [startupReady, flushPendingNotificationRoute]);
 
   // Hard timeout to prevent infinite splash screen if any initializer hangs
   useEffect(() => {
@@ -579,7 +632,7 @@ export default function RootLayout() {
     }, 15000);
 
     return () => clearTimeout(failsafe);
-  }, [startupReady]);
+  }, [appReady, isAuthChecked, isReady, navigationReady, router, startupReady]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -635,12 +688,9 @@ export default function RootLayout() {
   }, [fatalError, startupReady, startupTimedOut]);
 
   useEffect(() => {
-    if (!navigationReady || !startupReady || !pendingNotificationRouteRef.current) return;
-
-    const route = pendingNotificationRouteRef.current;
-    pendingNotificationRouteRef.current = null;
-    router.push(route);
-  }, [navigationReady, router, startupReady]);
+    if (!navigationReady || !startupReady) return;
+    flushPendingNotificationRoute();
+  }, [navigationReady, startupReady, flushPendingNotificationRoute]);
 
   return (
     <ErrorBoundary>
@@ -724,6 +774,14 @@ export default function RootLayout() {
               options={{
                 headerShown: true,
                 title: isRTL ? 'إيصالاتي' : 'My Receipts',
+                headerLargeTitle: false,
+              }}
+            />
+            <Stack.Screen
+              name="profile/disputes"
+              options={{
+                headerShown: true,
+                title: isRTL ? 'بلاغاتي' : 'My Reports',
                 headerLargeTitle: false,
               }}
             />

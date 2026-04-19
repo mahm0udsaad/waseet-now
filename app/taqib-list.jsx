@@ -223,7 +223,10 @@ export default function TaqibListScreen() {
                   ]}
                 >
                   {(() => {
-                    const titleText = formatDisplayText(ad.title || "", isRTL);
+                    const officeNameText = formatDisplayText(
+                      ad.metadata?.office_name || ad.title || "",
+                      isRTL
+                    );
                     const descriptionText = formatDisplayText(
                       ad.description || (isRTL ? "لا يوجد وصف" : "No description"),
                       isRTL
@@ -250,9 +253,10 @@ export default function TaqibListScreen() {
                             writingDirection,
                           },
                         ]}
-                        numberOfLines={2}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
                       >
-                        {titleText}
+                        {officeNameText}
                       </Text>
                       <Text
                         style={[
@@ -262,7 +266,7 @@ export default function TaqibListScreen() {
                             writingDirection,
                           },
                         ]}
-                        numberOfLines={1}
+                        numberOfLines={2}
                         ellipsizeMode="tail"
                       >
                         {descriptionText}

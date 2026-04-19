@@ -45,7 +45,7 @@ function FadeInView({
       return () => clearTimeout(timer);
     }
     sequence.start();
-  }, []);
+  }, [delay, duration, opacity, spring, translate]);
 
   const transform =
     direction === "right"

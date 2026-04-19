@@ -13,7 +13,7 @@ export default function PaymentModalRoute() {
     if (!hasCallbacks.current && !onCardPayment && !onPaymentSubmitted) {
       router.back();
     }
-  }, []);
+  }, [onCardPayment, onPaymentSubmitted]);
 
   return (
     <>

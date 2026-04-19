@@ -371,6 +371,40 @@ export default function TaqibAdDetailsScreen() {
           {/* Details Grid */}
           <FadeInView delay={100} spring style={styles.section}>
              <View style={styles.grid}>
+                {/* Office Name */}
+                {adData.metadata?.office_name ? (
+                  <View style={styles.gridItem}>
+                     <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
+                        <NativeIcon name="briefcase" size={20} color={colors.text} />
+                     </View>
+                     <View style={{ flex: 1, alignItems: 'flex-start', direction: textContainerDirection }}>
+                        <Text style={[styles.gridLabel, { color: colors.textSecondary, writingDirection }]}>
+                          {isRTL ? "اسم المكتب" : "Office Name"}
+                        </Text>
+                        <Text style={[styles.gridValue, { color: colors.text, writingDirection }]}>
+                          {adData.metadata.office_name}
+                        </Text>
+                     </View>
+                  </View>
+                ) : null}
+
+                {/* Office Address */}
+                {adData.metadata?.office_address ? (
+                  <View style={styles.gridItem}>
+                     <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>
+                        <NativeIcon name="map" size={20} color={colors.text} />
+                     </View>
+                     <View style={{ flex: 1, alignItems: 'flex-start', direction: textContainerDirection }}>
+                        <Text style={[styles.gridLabel, { color: colors.textSecondary, writingDirection }]}>
+                          {isRTL ? "عنوان المكتب" : "Office Address"}
+                        </Text>
+                        <Text style={[styles.gridValue, { color: colors.text, writingDirection }]}>
+                          {adData.metadata.office_address}
+                        </Text>
+                     </View>
+                  </View>
+                ) : null}
+
                 {/* Location */}
                 <View style={styles.gridItem}>
                    <View style={[styles.gridIcon, { backgroundColor: colors.surfaceHighlight }]}>

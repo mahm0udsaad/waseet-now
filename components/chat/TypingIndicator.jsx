@@ -14,7 +14,7 @@ function Dot({ delay }) {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [anim, delay]);
 
   return (
     <Animated.View
@@ -39,7 +39,7 @@ export default function TypingIndicator({ visible }) {
       duration: 200,
       useNativeDriver: true,
     }).start();
-  }, [visible]);
+  }, [fadeAnim, visible]);
 
   if (!visible) return null;
 

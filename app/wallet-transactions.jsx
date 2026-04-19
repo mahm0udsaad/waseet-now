@@ -11,7 +11,7 @@ import {
   Wallet,
   XCircle,
 } from 'lucide-react-native';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -34,6 +34,8 @@ export default function WalletTransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const transactionCountRef = useRef(0);
+  transactionCountRef.current = transactions.length;
 
   const PAGE_SIZE = 30;
 
@@ -49,7 +51,7 @@ export default function WalletTransactionsScreen() {
         setHasMore(txData.length >= PAGE_SIZE);
       } else {
         setLoadingMore(true);
-        const txData = await getWalletTransactions({ limit: PAGE_SIZE, offset: transactions.length });
+        const txData = await getWalletTransactions({ limit: PAGE_SIZE, offset: transactionCountRef.current });
         setTransactions(prev => [...prev, ...txData]);
         setHasMore(txData.length >= PAGE_SIZE);
       }
@@ -60,22 +62,22 @@ export default function WalletTransactionsScreen() {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [transactions.length]);
+  }, []);
 
   useEffect(() => {
     loadTransactions(true);
-  }, []);
+  }, [loadTransactions]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadTransactions(true);
-  }, []);
+  }, [loadTransactions]);
 
   const onEndReached = useCallback(() => {
     if (!loadingMore && hasMore && !loading) {
       loadTransactions(false);
     }
-  }, [loadingMore, hasMore, loading]);
+  }, [loadingMore, hasMore, loading, loadTransactions]);
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]

@@ -334,6 +334,8 @@ export default function ChatsListScreen() {
     }
   }, [isRTL]);
 
+  const airportTeamLabel = isRTL ? 'فريق عمل وسيط الان' : 'Wasit Alan Team';
+
   const filteredChats = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return conversations;
@@ -347,8 +349,6 @@ export default function ChatsListScreen() {
     () => Array.from({ length: 8 }).map((_, idx) => ({ id: `sk-${idx}` })),
     []
   );
-
-  const airportTeamLabel = isRTL ? 'فريق عمل وسيط الان' : 'Wasit Alan Team';
 
   const handleChatPress = useCallback((chat) => {
     const unreadToReset = chat.unreadCount || 0;

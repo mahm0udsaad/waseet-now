@@ -12,12 +12,13 @@ import { StatusBar } from "expo-status-bar";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ChevronRight, FileText, Image as ImageIcon, Calendar } from "lucide-react-native";
+import { ChevronRight, FileText, Image as ImageIcon, Calendar, AlertTriangle } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
 import { useTranslation } from "@/utils/i18n/store";
 import { supabase } from "@/utils/supabase/client";
 import FadeInView from "@/components/ui/FadeInView";
 import * as WebBrowser from "expo-web-browser";
+import DisputeSubmitModal from "@/components/disputes/DisputeSubmitModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const MEDIA_CELL_SIZE = (SCREEN_WIDTH - 4) / 3;
@@ -37,6 +38,7 @@ export default function ChatInfoScreen() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingMedia, setLoadingMedia] = useState(true);
   const [loadingReceipts, setLoadingReceipts] = useState(true);
+  const [disputeOpen, setDisputeOpen] = useState(false);
 
   // Fetch other user profile details
   useEffect(() => {
@@ -279,8 +281,51 @@ export default function ChatInfoScreen() {
           )}
         </FadeInView>
 
+        {/* Report this user / conversation */}
+        <FadeInView delay={220} style={styles.section}>
+          <Pressable
+            onPress={() => setDisputeOpen(true)}
+            style={({ pressed }) => [
+              styles.reportButton,
+              {
+                backgroundColor: (colors.danger || "#ef4444") + "12",
+                borderColor: (colors.danger || "#ef4444") + "55",
+                opacity: pressed ? 0.85 : 1,
+                flexDirection: "row",
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.reportIconWrap,
+                { backgroundColor: (colors.danger || "#ef4444") + "22" },
+              ]}
+            >
+              <AlertTriangle size={18} color={colors.danger || "#ef4444"} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.reportTitle, { color: colors.danger || "#ef4444" }]}>
+                {isRTL ? "تقديم بلاغ على المحادثة" : "Report this conversation"}
+              </Text>
+              <Text style={[styles.reportSub, { color: colors.textMuted }]}>
+                {isRTL
+                  ? "بلّغ فريق وسيط عن أي مشكلة في هذه المحادثة."
+                  : "Let our team know about any issue with this chat."}
+              </Text>
+            </View>
+          </Pressable>
+        </FadeInView>
+
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>
+
+      <DisputeSubmitModal
+        visible={disputeOpen}
+        onClose={() => setDisputeOpen(false)}
+        conversationId={conversationId}
+        reportedUserId={otherUserId}
+        reportedUserName={displayName}
+      />
     </View>
   );
 }
@@ -436,5 +481,30 @@ const styles = StyleSheet.create({
   },
   receiptDate: {
     fontSize: 12,
+  },
+
+  // Report
+  reportButton: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: "center",
+    gap: 12,
+  },
+  reportIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  reportSub: {
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

@@ -4,7 +4,6 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { NativeIcon } from '@/components/native/NativeIcon';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
-import { useTranslation } from '@/utils/i18n/store';
 import { getNotificationRoute } from '@/utils/notifications/routing';
 import { useInAppNotificationsStore } from '@/utils/notifications/inAppStore';
 import { useTheme } from '@/utils/theme/store';
@@ -31,7 +30,6 @@ const ACCENTS = {
 
 export default function InAppToast() {
   const { colors, isDark } = useTheme();
-  const { isRTL } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

@@ -51,7 +51,7 @@ export default function WalletOverviewScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isRTL]);
 
   useEffect(() => {
     loadWallet();

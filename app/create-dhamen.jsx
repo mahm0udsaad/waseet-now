@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CountryPickerModal from "@/components/CountryPickerModal";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -32,7 +32,6 @@ import { getSupabaseSession } from "@/utils/supabase/client";
 const GREGORIAN_PICKER_LOCALE = "en_US_POSIX@calendar=gregorian";
 
 export default function CreateDhamenScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t, isRTL, writingDirection } = useTranslation();
@@ -83,7 +82,7 @@ export default function CreateDhamenScreen() {
       });
       updateFormData("servicePeriodStart", formattedDate);
     }
-  }, [updateFormData, isRTL]);
+  }, [updateFormData]);
 
   const showDatePickerModal = useCallback(() => {
     hapticFeedback.selection();

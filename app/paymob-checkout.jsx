@@ -53,7 +53,6 @@ export default function PaymobCheckoutScreen() {
       try {
         const params = new URL(url).searchParams;
         const success = params.get("success");
-        const pending = params.get("pending");
 
         if (success === "true") {
           setResult({ status: "succeeded" });

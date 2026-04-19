@@ -15,7 +15,7 @@ function ScalePressable({ onPress, style, children, scaleValue = 0.95, ...props 
       damping: 15,
       stiffness: 150,
     }).start();
-  }, []);
+  }, [scale, scaleValue]);
 
   const handlePressOut = useCallback(() => {
     Animated.spring(scale, {
@@ -24,7 +24,7 @@ function ScalePressable({ onPress, style, children, scaleValue = 0.95, ...props 
       damping: 15,
       stiffness: 150,
     }).start();
-  }, []);
+  }, [scale]);
 
   return (
     <Pressable

@@ -219,7 +219,7 @@ export default function CreateTanazulScreen() {
         </ScrollView>
       </FadeInView>
     );
-  }, [formData.profession, formData.gender, professions, colors, isRTL, updateFormData]);
+  }, [formData.profession, formData.gender, professions, colors, isRTL, writingDirection, updateFormData]);
 
   // Render gender selector
   const renderGenderSelector = useCallback(() => (
@@ -282,7 +282,7 @@ export default function CreateTanazulScreen() {
         </NativePressable>
       </View>
     </FadeInView>
-  ), [formData.gender, colors, isRTL, updateFormData]);
+  ), [formData.gender, colors, isRTL, writingDirection, updateFormData]);
 
   // Form Step (Data Entry)
   const renderFormStep = useCallback(() => (
@@ -547,6 +547,7 @@ export default function CreateTanazulScreen() {
     loading,
     colors,
     isRTL,
+    writingDirection,
     handleTogglePledge,
     handlePreviousStep,
     handleSubmitWithHaptic,

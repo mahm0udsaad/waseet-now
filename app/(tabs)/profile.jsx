@@ -21,6 +21,7 @@ import {
   Package,
   Receipt,
   Shield,
+  ShieldAlert,
   Trash2,
   User,
   Wallet,
@@ -100,6 +101,7 @@ export default function ProfileScreen() {
       section: t.profile.support,
       items: [
         { id: 'security', icon: Shield, label: t.profile.security, route: '/profile/security' },
+        { id: 'disputes', icon: ShieldAlert, label: t.profile.myDisputes, route: '/profile/disputes' },
         { id: 'help', icon: HelpCircle, label: t.profile.help, route: '/profile/help' },
       ],
     },
@@ -159,7 +161,7 @@ export default function ProfileScreen() {
     } finally {
       setAdsLoading(false);
     }
-  }, [currentUserId]);
+  }, [currentUserId, isRTL]);
 
   const loadOrdersCount = useCallback(async (userIdOverride) => {
     const userId = userIdOverride || currentUserId;
@@ -180,7 +182,7 @@ export default function ProfileScreen() {
       console.error('Error loading orders count:', e);
       showToast({ id: 'orders-count-error', title: isRTL ? 'خطأ' : 'Error', body: isRTL ? 'فشل تحميل عدد الطلبات' : 'Failed to load orders count', type: 'error' });
     }
-  }, [currentUserId]);
+  }, [currentUserId, isRTL]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

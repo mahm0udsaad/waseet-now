@@ -3,12 +3,11 @@ import FadeInView from "@/components/ui/FadeInView";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { NativeButton, NativeIcon } from "@/components/native";
 import { useTranslation } from "@/utils/i18n/store";
-import { spacing } from "@/utils/native/layout";
 import { fetchMyAirportRequests } from "@/utils/supabase/airportRequests";
 import { useTheme } from "@/utils/theme/store";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ChevronLeft, ChevronRight, MessageCircle, Plane } from "lucide-react-native";
+import { MessageCircle, Plane } from "lucide-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Pressable,
@@ -43,7 +42,7 @@ function StatusBadge({ status, isRTL }) {
 export default function AirportRequestsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { isRTL } = useTranslation();
+  const { isRTL, writingDirection } = useTranslation();
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,51 +85,53 @@ export default function AirportRequestsScreen() {
     );
     const hasChat = !!item.conversation_id;
     const canChat = hasChat && item.status !== "cancelled" && item.status !== "rejected";
+    const statusConfig = STATUS_CONFIG[item.status] || { color: colors.textMuted };
+    const statusColor = statusConfig.color;
 
     return (
       <FadeInView delay={index * 80}>
         <View
           style={[
             styles.card,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderColor: statusColor + "45",
+              boxShadow: "0 2px 10px rgba(15, 23, 42, 0.03)",
+            },
           ]}
         >
-          {/* Header */}
-          <View style={styles.cardHeader}>
-            <View style={styles.headerStart}>
-              <Text style={[styles.cardId, { color: colors.textMuted }]}>
-                {item.id.slice(0, 8)}
-              </Text>
-              <View style={[styles.dot, { backgroundColor: colors.border }]} />
-              <Text style={[styles.cardDate, { color: colors.textMuted }]}>{date}</Text>
-            </View>
-            <StatusBadge status={item.status} isRTL={isRTL} />
-          </View>
+          <View style={[styles.statusAccent, { backgroundColor: statusColor }]} />
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={styles.cardInner}>
+            <View style={[styles.cardHeader, { flexDirection: "row" }]}>
+              <View style={[styles.titleGroup, { flexDirection: "row" }]}>
+                <View style={[styles.inlineIcon, { backgroundColor: colors.primary + "14" }]}>
+                  <Plane size={12} color={colors.primary} />
+                </View>
+                <Text
+                  style={[styles.workerName, { color: colors.text, writingDirection }]}
+                  numberOfLines={2}
+                >
+                  {item.worker_name}
+                </Text>
+              </View>
 
-          {/* Body */}
-          <View style={styles.cardBody}>
-            <View style={[styles.iconCircle, { backgroundColor: colors.primary + "15" }]}>
-              <Plane size={22} color={colors.primary} />
+              <View style={styles.headerMeta}>
+                <Text style={[styles.cardDate, { color: colors.textMuted }]}>{date}</Text>
+                <StatusBadge status={item.status} isRTL={isRTL} />
+              </View>
             </View>
+
             <View style={styles.cardContent}>
-              <Text style={[styles.workerName, { color: colors.text, writingDirection: isRTL ? "rtl" : "ltr" }]}>
-                {item.worker_name}
+              <Text style={[styles.detail, { color: colors.textSecondary, writingDirection }]} numberOfLines={2}>
+                {item.worker_nationality} - {item.flight_date}
               </Text>
-              <Text style={[styles.detail, { color: colors.textSecondary }]}>
-                {item.worker_nationality} — {item.flight_date}
+              <Text style={[styles.requestId, { color: colors.textMuted, writingDirection }]} numberOfLines={1}>
+                {isRTL ? "رقم الطلب" : "Request"} #{item.id.slice(0, 8)}
               </Text>
               <Text style={[styles.price, { color: colors.primary }]}>
                 {Number(item.price).toLocaleString()} {isRTL ? "ر.س" : "SAR"}
               </Text>
-            </View>
-            <View style={styles.arrowWrap}>
-              {isRTL ? (
-                <ChevronLeft size={20} color={colors.textMuted} />
-              ) : (
-                <ChevronRight size={20} color={colors.textMuted} />
-              )}
             </View>
           </View>
 
@@ -219,20 +220,20 @@ export default function AirportRequestsScreen() {
                       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       pointerEvents="none"
                     >
-                      <View style={styles.cardHeader}>
-                        <View style={styles.headerStart}>
-                          <Skeleton height={10} radius={6} width={64} />
-                          <View style={[styles.dot, { backgroundColor: colors.border }]} />
-                          <Skeleton height={10} radius={6} width={84} />
+                      <View style={styles.cardInner}>
+                        <View style={styles.cardHeader}>
+                          <View style={styles.titleGroup}>
+                            <Skeleton width={22} height={22} radius={11} />
+                            <Skeleton height={16} radius={8} width="58%" />
+                          </View>
+                          <View style={styles.headerMeta}>
+                            <Skeleton height={10} radius={6} width={76} />
+                            <Skeleton height={22} radius={11} width={96} />
+                          </View>
                         </View>
-                        <Skeleton height={20} radius={10} width={86} />
-                      </View>
-                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                      <View style={styles.cardBody}>
-                        <Skeleton width={48} height={48} radius={24} />
                         <View style={styles.cardContent}>
-                          <Skeleton height={14} radius={8} width="70%" />
-                          <Skeleton height={12} radius={8} width="50%" style={{ marginTop: 8 }} />
+                          <Skeleton height={12} radius={8} width="48%" />
+                          <Skeleton height={12} radius={8} width="34%" style={{ marginTop: 8 }} />
                           <Skeleton height={14} radius={8} width="40%" style={{ marginTop: 8 }} />
                         </View>
                       </View>
@@ -266,55 +267,82 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   list: { padding: 20, paddingBottom: 100 },
   card: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    marginBottom: 14,
+    marginBottom: 12,
     overflow: "hidden",
+    position: "relative",
+  },
+  statusAccent: {
+    position: "absolute",
+    start: 0,
+    top: 14,
+    bottom: 14,
+    width: 4,
+    borderTopEndRadius: 4,
+    borderBottomEndRadius: 4,
+  },
+  cardInner: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    gap: 8,
   },
   cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerStart: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cardId: { fontSize: 12, fontWeight: "600" },
-  cardDate: { fontSize: 12 },
-  dot: { width: 3, height: 3, borderRadius: 1.5 },
-  divider: { height: 1 },
-  cardBody: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
     gap: 12,
   },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  titleGroup: {
+    flex: 1,
+    alignItems: "center",
+    gap: 8,
+  },
+  inlineIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  cardContent: { flex: 1 },
-  workerName: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
-  detail: { fontSize: 13, marginBottom: 4 },
-  price: { fontSize: 15, fontWeight: "800" },
-  arrowWrap: { paddingStart: 4 },
+  headerMeta: {
+    alignItems: "flex-end",
+    gap: 8,
+    flexShrink: 0,
+  },
+  cardDate: {
+    fontSize: 12,
+    fontVariant: ["tabular-nums"],
+  },
+  cardContent: {
+    gap: 4,
+    alignItems: "flex-start",
+  },
+  workerName: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "700",
+  },
+  detail: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  requestId: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  price: { fontSize: 15, fontWeight: "800", marginTop: 2 },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
     gap: 5,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: "700" },
+  statusText: { fontSize: 11, fontWeight: "800" },
   chatButton: {
     flexDirection: "row",
     alignItems: "center",

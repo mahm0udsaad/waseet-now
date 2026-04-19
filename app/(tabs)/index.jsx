@@ -3,7 +3,7 @@ import HomeFixedHeader, { FIXED_HEADER_HEIGHT } from "@/components/HomeFixedHead
 import { NativeIcon } from "@/components/native/NativeIcon";
 import PromotionalBanners from "@/components/PromotionalBanners";
 import { BorderRadius, Shadows, Spacing } from "@/constants/theme";
-import { Plane, Sparkles, ChevronLeft, ChevronRight } from "lucide-react-native";
+import { Plane } from "lucide-react-native";
 import { pickRTLValue, useLanguage } from "@/utils/i18n/store";
 import { showToast, useInAppNotificationsStore } from "@/utils/notifications/inAppStore";
 import { fetchMyNotifications } from "@/utils/supabase/notifications";
@@ -159,62 +159,44 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             ))}
+            <View style={styles.serviceCardWrapper}>
+              <Pressable
+                testID="service-airport-inspection"
+                onPress={() => router.push("/airport-inspection")}
+                style={({ pressed }) => [
+                  styles.serviceCard,
+                  styles.airportServiceCard,
+                  {
+                    backgroundColor: colors.surface,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                    borderColor: "#D4AF37",
+                  },
+                  Shadows.small,
+                ]}
+              >
+                <View style={styles.airportAccent} />
+                <View style={styles.airportServiceIconBox}>
+                  <Plane size={28} color="#D4AF37" />
+                </View>
+                <View style={styles.serviceInfo}>
+                  <Text style={[styles.serviceTitle, { color: colors.text, writingDirection }]}>
+                    {isRTL
+                      ? "خدمة تفتيش وتوصيل للمطار"
+                      : "Airport Inspection & Delivery"}
+                  </Text>
+                  <Text style={[styles.serviceSubtitle, { color: colors.textSecondary, writingDirection }]} numberOfLines={2}>
+                    {isRTL
+                      ? "نوفر لك خدمة متكاملة لتوصيل العاملة للمطار"
+                      : "Complete worker airport transfer service"}
+                  </Text>
+                </View>
+                <View style={styles.airportArrowCircle}>
+                  <NativeIcon name={pickRTLValue(isRTL, "left", "right")} size={16} color="#D4AF37" />
+                </View>
+              </Pressable>
+            </View>
           </View>
         </View>
-
-        {/* Airport Inspection Service Card */}
-        <Pressable
-          onPress={() => router.push("/airport-inspection")}
-          style={({ pressed }) => [
-            styles.airportCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: "#D4AF37",
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            },
-            Shadows.small,
-          ]}
-        >
-          <View style={styles.airportGlow} />
-          <View style={styles.airportBadgeRow}>
-            <View style={styles.airportBadge}>
-              <Sparkles size={12} color="#D4AF37" />
-              <Text style={[styles.airportBadgeText, { writingDirection }]}>
-                {isRTL ? "مميز" : "PREMIUM"}
-              </Text>
-            </View>
-            <Text style={[styles.airportProvider, { color: colors.textMuted, writingDirection }]}>
-              {isRTL ? "خدمة وسيط" : "Waseet Service"}
-            </Text>
-          </View>
-          <View style={styles.airportMain}>
-            <View style={styles.airportIconCircle}>
-              <Plane size={24} color="#D4AF37" />
-            </View>
-            <View style={styles.airportTextWrap}>
-              <Text style={[styles.airportTitle, { color: colors.text, writingDirection }]}>
-                {isRTL
-                  ? "خدمة تفتيش وتوصيل للمطار"
-                  : "Airport Inspection & Delivery"}
-              </Text>
-              <Text style={[styles.airportSubtitle, { color: colors.textSecondary, writingDirection }]}>
-                {isRTL
-                  ? "نوفر لك خدمة متكاملة لتوصيل العاملة للمطار"
-                  : "Complete worker airport transfer service"}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.airportFooter}>
-            <Text style={[styles.airportFooterNote, { color: colors.textMuted, writingDirection }]}>
-              {isRTL ? "اطلب الآن" : "Request now"}
-            </Text>
-            {isRTL ? (
-              <ChevronLeft size={16} color="#D4AF37" />
-            ) : (
-              <ChevronRight size={16} color="#D4AF37" />
-            )}
-          </View>
-        </Pressable>
 
       </AppScrollView>
     </View>
@@ -280,84 +262,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  airportCard: {
-    borderRadius: 20,
-    padding: Spacing.m,
-    marginBottom: Spacing.xxl,
-    borderWidth: 2,
+  airportServiceCard: {
+    borderWidth: 1.5,
     overflow: "hidden",
     position: "relative",
   },
-  airportGlow: {
+  airportAccent: {
     position: "absolute",
-    top: -40,
-    end: -40,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(212, 175, 55, 0.08)",
+    start: 0,
+    top: 16,
+    bottom: 16,
+    width: 4,
+    borderTopEndRadius: 4,
+    borderBottomEndRadius: 4,
+    backgroundColor: "#D4AF37",
   },
-  airportBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  airportBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(212, 175, 55, 0.12)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  airportBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#D4AF37",
-  },
-  airportProvider: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  airportMain: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 14,
-  },
-  airportIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(212, 175, 55, 0.10)",
+  airportServiceIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.l,
+    backgroundColor: "rgba(212, 175, 55, 0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
-  airportTextWrap: {
-    flex: 1,
-  },
-  airportTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-  airportSubtitle: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  airportFooter: {
-    flexDirection: "row",
+  airportArrowCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(212, 175, 55, 0.15)",
-    paddingTop: 10,
-  },
-  airportFooterNote: {
-    fontSize: 12,
-    fontWeight: "600",
+    justifyContent: "center",
   },
 });

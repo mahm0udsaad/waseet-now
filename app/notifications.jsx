@@ -14,10 +14,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   Bell,
-  MessageCircle,
-  ShoppingBag,
   Info,
+  MessageCircle,
   Paperclip,
+  ShoppingBag,
   X,
 } from "lucide-react-native";
 import { useTheme } from "@/utils/theme/store";
@@ -43,6 +43,7 @@ export default function NotificationsScreen() {
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
 
   const gradientColors = isDark
     ? [colors.background, colors.backgroundSecondary]
@@ -93,6 +94,20 @@ export default function NotificationsScreen() {
       String(b.created_at || '').localeCompare(String(a.created_at || ''))
     );
   }, [notifications]);
+
+  const unreadCount = React.useMemo(
+    () => notifications.filter((notification) => !notification.read_at).length,
+    [notifications]
+  );
+
+  const filteredNotifications = React.useMemo(() => {
+    if (activeFilter === "unread") {
+      return groupedNotifications.filter(
+        (notification) => !notification.read_at || notification.messageCount > 0
+      );
+    }
+    return groupedNotifications;
+  }, [activeFilter, groupedNotifications]);
 
   // Format timestamp
   const formatTimestamp = useCallback((dateString) => {
@@ -240,7 +255,7 @@ export default function NotificationsScreen() {
       <AppScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          groupedNotifications.length === 0 && { flexGrow: 1 },
+          filteredNotifications.length === 0 && { flexGrow: 1 },
         ]}
         alwaysBounceVertical
         refreshControl={
@@ -253,20 +268,85 @@ export default function NotificationsScreen() {
           />
         }
       >
-        {groupedNotifications.length === 0 ? (
+        {groupedNotifications.length > 0 && (
+          <FadeInView delay={30} style={[styles.filterBar, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, flexDirection: 'row' }]}>
+            {[
+              { id: "all", label: isRTL ? "الكل" : "All", count: groupedNotifications.length },
+              { id: "unread", label: isRTL ? "غير مقروءة" : "Unread", count: unreadCount },
+            ].map((filter) => {
+              const isActive = activeFilter === filter.id;
+              return (
+                <Pressable
+                  key={filter.id}
+                  onPress={() => setActiveFilter(filter.id)}
+                  style={({ pressed }) => [
+                    styles.filterPill,
+                    {
+                      backgroundColor: isActive ? colors.primary : "transparent",
+                      borderColor: isActive ? colors.primary : "transparent",
+                      opacity: pressed ? 0.75 : 1,
+                      boxShadow: isActive
+                        ? "0 6px 16px rgba(216, 58, 58, 0.22)"
+                        : "0 0 0 rgba(0, 0, 0, 0)",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      { color: isActive ? "#FFFFFF" : colors.textSecondary, writingDirection },
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.filterCount,
+                      {
+                        backgroundColor: isActive ? "rgba(255, 255, 255, 0.22)" : colors.background,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterCountText,
+                        { color: isActive ? "#FFFFFF" : colors.textMuted },
+                      ]}
+                    >
+                      {filter.count}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </FadeInView>
+        )}
+
+        {filteredNotifications.length === 0 ? (
           <View style={styles.emptyState}>
-            <Bell size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {isRTL ? "لا توجد إشعارات" : "No notifications yet"}
+            <View style={[styles.emptyIconCircle, { backgroundColor: colors.surfaceSecondary }]}>
+              <Bell size={36} color={colors.textMuted} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text, writingDirection }]}>
+              {activeFilter === "unread"
+                ? (isRTL ? "لا توجد إشعارات غير مقروءة" : "No unread notifications")
+                : (isRTL ? "لا توجد إشعارات" : "No notifications yet")}
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary, writingDirection }]}>
+              {activeFilter === "unread"
+                ? (isRTL ? "تمت قراءة كل التنبيهات الحالية" : "Everything here has already been read")
+                : (isRTL ? "ستظهر الرسائل والطلبات والتحديثات هنا" : "Messages, orders, and account updates will appear here")}
             </Text>
           </View>
         ) : (
-          groupedNotifications.map((notification, index) => {
+          filteredNotifications.map((notification, index) => {
             const Icon = getTypeIcon(notification.type);
             const iconColor = getTypeColor(notification.type);
-            const isUnread = !notification.read_at;
+            const isUnread = !notification.read_at || notification.messageCount > 0;
             const typeLabel = getTypeLabel(notification.type);
             const localizedContent = getLocalizedNotificationContent(notification, isRTL);
+            const hasCustomTitle = shouldShowTitle(typeLabel, localizedContent.title);
+            const displayTitle = hasCustomTitle ? localizedContent.title : typeLabel;
 
             return (
               <FadeInView
@@ -280,22 +360,19 @@ export default function NotificationsScreen() {
                     {
                       backgroundColor: isUnread
                         ? colors.surface
-                        : colors.background,
+                        : colors.surface + "CC",
                       borderColor: isUnread ? colors.primary + "30" : colors.border,
                       opacity: pressed ? 0.7 : 1,
                       flexDirection: 'row',
+                      boxShadow: isUnread
+                        ? "0 10px 24px rgba(15, 23, 42, 0.08)"
+                        : "0 2px 10px rgba(15, 23, 42, 0.03)",
                     },
                   ]}
                 >
-                  {/* Icon */}
-                  <View
-                    style={[
-                      styles.iconContainer,
-                      { backgroundColor: iconColor + "20" },
-                    ]}
-                  >
-                    <Icon size={20} color={iconColor} />
-                  </View>
+                  {isUnread && (
+                    <View style={[styles.unreadAccent, { backgroundColor: colors.primary }]} />
+                  )}
 
                   {/* Content */}
                   <View
@@ -304,35 +381,59 @@ export default function NotificationsScreen() {
                       { alignItems: 'flex-start' },
                     ]}
                   >
-                    {/* Type Label */}
-                    <Text
-                      style={[
-                        styles.typeLabel,
-                        {
-                          color: iconColor,
-                          writingDirection,
-                        },
-                      ]}
-                    >
-                      {typeLabel}
-                    </Text>
-
-                    {/* Title */}
-                    {shouldShowTitle(typeLabel, localizedContent.title) && (
-                      <Text
-                        style={[
-                          styles.notificationTitle,
-                          {
-                            color: colors.text,
-                            writingDirection,
-                            fontWeight: isUnread ? "700" : "600",
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {localizedContent.title}
-                      </Text>
-                    )}
+                    <View style={[styles.notificationHeader, { flexDirection: 'row' }]}>
+                      <View style={[styles.headerTitleGroup, { flexDirection: 'row' }]}>
+                        <View style={[styles.inlineTypeIcon, { backgroundColor: iconColor + "14" }]}>
+                          <Icon size={12} color={iconColor} />
+                        </View>
+                        <Text
+                          style={[
+                            styles.notificationTitle,
+                            {
+                              color: colors.text,
+                              writingDirection,
+                              fontWeight: isUnread ? "700" : "600",
+                            },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {displayTitle}
+                        </Text>
+                      </View>
+                      <View style={styles.headerMeta}>
+                        <Text
+                          style={[
+                            styles.timestamp,
+                            {
+                              color: colors.textMuted,
+                              writingDirection,
+                            },
+                          ]}
+                        >
+                          {formatTimestamp(notification.created_at)}
+                        </Text>
+                        {isUnread && notification.messageCount <= 1 && (
+                          <View
+                            style={[
+                              styles.inlineUnreadDot,
+                              { backgroundColor: colors.primary },
+                            ]}
+                          />
+                        )}
+                        {isUnread && notification.messageCount > 1 && (
+                          <View
+                            style={[
+                              styles.inlineMessageCountBadge,
+                              { backgroundColor: colors.primary },
+                            ]}
+                          >
+                            <Text style={styles.messageCountText}>
+                              {notification.messageCount > 99 ? "99+" : notification.messageCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
 
                     {/* Body */}
                     {localizedContent.body && (
@@ -389,40 +490,8 @@ export default function NotificationsScreen() {
                       )
                     )}
 
-                    {/* Timestamp */}
-                    <Text
-                      style={[
-                        styles.timestamp,
-                        {
-                          color: colors.textMuted,
-                          writingDirection,
-                        },
-                      ]}
-                    >
-                      {formatTimestamp(notification.created_at)}
-                    </Text>
                   </View>
 
-                  {/* Unread Indicator or Message Count */}
-                  {isUnread && notification.messageCount > 1 ? (
-                    <View
-                      style={[
-                        styles.messageCountBadge,
-                        { backgroundColor: colors.primary },
-                      ]}
-                    >
-                      <Text style={styles.messageCountText}>
-                        {notification.messageCount > 99 ? "99+" : notification.messageCount}
-                      </Text>
-                    </View>
-                  ) : isUnread ? (
-                    <View
-                      style={[
-                        styles.unreadDot,
-                        { backgroundColor: colors.primary },
-                      ]}
-                    />
-                  ) : null}
                 </Pressable>
               </FadeInView>
             );
@@ -584,75 +653,143 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
+    gap: 14,
   },
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
+    paddingVertical: 72,
+    paddingHorizontal: 24,
   },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 16,
+  emptyIconCircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
-  notificationCard: {
-    borderWidth: 1,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 6,
+  },
+  filterBar: {
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    position: "relative",
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+    marginBottom: 16,
   },
-  iconContainer: {
-    width: 44,
-    height: 44,
+  filterPill: {
+    flex: 1,
+    minHeight: 40,
     borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  filterCount: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
     alignItems: "center",
     justifyContent: "center",
   },
+  filterCountText: {
+    fontSize: 11,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    lineHeight: 13,
+    textAlign: "center",
+  },
+  notificationCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 12,
+    position: "relative",
+    overflow: "hidden",
+  },
+  unreadAccent: {
+    position: "absolute",
+    start: 0,
+    top: 14,
+    bottom: 14,
+    width: 4,
+    borderTopEndRadius: 4,
+    borderBottomEndRadius: 4,
+  },
   notificationContent: {
     flex: 1,
-    marginStart: 12,
-    marginEnd: 12,
+    gap: 7,
   },
-  typeLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-    textTransform: "uppercase",
+  notificationHeader: {
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerTitleGroup: {
+    flex: 1,
+    alignItems: "center",
+    gap: 8,
+  },
+  inlineTypeIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   notificationTitle: {
-    fontSize: 15,
-    marginBottom: 4,
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 21,
   },
   notificationBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 6,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  headerMeta: {
+    alignItems: "flex-end",
+    gap: 7,
+    flexShrink: 0,
   },
   timestamp: {
     fontSize: 12,
-    marginTop: 2,
+    flexShrink: 0,
+    fontVariant: ["tabular-nums"],
   },
   attachmentRow: {
     alignItems: "center",
     gap: 6,
-    marginBottom: 6,
   },
-  unreadDot: {
+  inlineUnreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    position: "absolute",
-    top: 12,
-    end: 12,
   },
-  messageCountBadge: {
+  inlineMessageCountBadge: {
     minWidth: 24,
     height: 24,
     borderRadius: 12,
-    position: "absolute",
-    top: 8,
-    end: 8,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,

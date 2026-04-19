@@ -110,6 +110,29 @@ export default function CreateTaqibScreen() {
               />
             </NativeFormSection>
 
+            <NativeFormSection
+              title={isRTL ? "بيانات المكتب" : "OFFICE INFO"}
+            >
+              <NativeFormTextField
+                label={isRTL ? "اسم المكتب" : "Office Name"}
+                value={formData.officeName}
+                onChangeText={(text) => updateFormData("officeName", text)}
+                placeholder={isRTL ? "اسم مكتب التعقيب" : "Office name"}
+                testID="taqib-office-name-input"
+                required
+              />
+
+              <NativeFormTextField
+                label={isRTL ? "عنوان المكتب" : "Office Address"}
+                value={formData.officeAddress}
+                onChangeText={(text) => updateFormData("officeAddress", text)}
+                placeholder={isRTL ? "الحي، الشارع، رقم المبنى..." : "District, street, building no..."}
+                testID="taqib-office-address-input"
+                required
+                isLast
+              />
+            </NativeFormSection>
+
             <NativeFormSection>
               <NativeFormTextField
                 label={isRTL ? "عنوان الإعلان" : "Post Title"}
@@ -119,7 +142,7 @@ export default function CreateTaqibScreen() {
                 testID="taqib-title-input"
                 required
               />
-              
+
               <NativeFormTextField
                 label={isRTL ? "الوصف" : "Description"}
                 value={formData.description}
