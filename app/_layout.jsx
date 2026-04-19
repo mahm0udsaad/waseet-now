@@ -929,13 +929,9 @@ export default function RootLayout() {
             <Stack.Screen
               name="payment-modal"
               options={{
-                presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+                presentation: 'modal',
                 headerShown: false,
                 title: isRTL ? 'الدفع' : 'Payment',
-                sheetGrabberVisible: true,
-                sheetCornerRadius: 24,
-                sheetExpandsWhenScrolledToEdge: true,
-                sheetAllowedDetents: [0.95],
               }}
             />
             <Stack.Screen

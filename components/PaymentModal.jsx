@@ -66,7 +66,7 @@ export default function PaymentModal({ onClose }) {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     };
 
-    // Wait for LayoutAnimation to finish before scrolling
+    // Wait for LayoutAnimation to finish before scrolling.
     const timer = setTimeout(scrollIntoView, 350);
 
     return () => clearTimeout(timer);
@@ -197,12 +197,13 @@ export default function PaymentModal({ onClose }) {
           style={styles.content}
           contentContainerStyle={[
             styles.contentContainer,
-            { paddingBottom: insets.bottom + 120 },
+            { paddingBottom: Math.max(insets.bottom, 16) + 160 },
           ]}
           showsVerticalScrollIndicator={false}
           scrollIndicatorInsets={{ bottom: insets.bottom + 24 }}
-          contentInsetAdjustmentBehavior="always"
-          automaticallyAdjustKeyboardInsets
+          contentInsetAdjustmentBehavior={Platform.OS === "ios" ? "always" : "automatic"}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          alwaysBounceVertical
           bounces
           nestedScrollEnabled
           keyboardShouldPersistTaps="handled"
