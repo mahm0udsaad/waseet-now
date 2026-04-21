@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import * as StoreReview from 'expo-store-review';
+import { maybeRequestReview } from '@/utils/native/storeReview';
 import {
   View,
   Text,
@@ -740,10 +740,10 @@ export default function DaminOrderDetailsScreen() {
               });
 
               await loadOrder();
-              // Request App Store review after successful damin order completion
-              if (await StoreReview.hasAction()) {
-                await StoreReview.requestReview();
-              }
+              // Request App Store review after a successful damin completion.
+              // Eligibility (event-count threshold, debounce, platform support)
+              // is enforced inside the helper — safe to call on every success.
+              maybeRequestReview('damin_service_completed');
             } catch (err) {
               console.error('Failed to confirm completion:', err);
               showToast({

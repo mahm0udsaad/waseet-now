@@ -224,11 +224,11 @@ export default function TaqibListScreen() {
                 >
                   {(() => {
                     const officeNameText = formatDisplayText(
-                      ad.metadata?.office_name || ad.title || "",
+                      ad.metadata?.office_name || (isRTL ? "مكتب" : "Office"),
                       isRTL
                     );
-                    const descriptionText = formatDisplayText(
-                      ad.description || (isRTL ? "لا يوجد وصف" : "No description"),
+                    const adTitleText = formatDisplayText(
+                      ad.title || (isRTL ? "بدون عنوان" : "Untitled"),
                       isRTL
                     );
 
@@ -269,7 +269,7 @@ export default function TaqibListScreen() {
                         numberOfLines={2}
                         ellipsizeMode="tail"
                       >
-                        {descriptionText}
+                        {adTitleText}
                       </Text>
                     </View>
                     <Pressable style={[styles.adArrow, { backgroundColor: colors.surfaceSecondary }]}>

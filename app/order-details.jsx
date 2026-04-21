@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as StoreReview from 'expo-store-review';
+import { maybeRequestReview } from '@/utils/native/storeReview';
 import {
   View,
   Text,
@@ -247,9 +247,11 @@ export default function OrderDetailsScreen() {
                   : (isRTL ? 'تم تأكيدك، بانتظار الطرف الآخر' : 'Your confirmation recorded, waiting for the other party'),
               });
               await refetch();
-              // Request App Store review after successful order completion (peak satisfaction moment)
-              if (result.completed && await StoreReview.hasAction()) {
-                await StoreReview.requestReview();
+              // Request App Store review only after a FULLY completed order
+              // (both parties confirmed + funds released) — the peak-satisfaction
+              // moment. Helper handles throttle/debounce + platform support.
+              if (result.completed) {
+                maybeRequestReview('order_fully_completed');
               }
             } catch (err) {
               console.error('Failed to confirm completion:', err);

@@ -7,4 +7,5 @@ export * from './haptics';
 export * from './typography';
 export * from './layout';
 export * from './icons';
+export * from './storeReview';
 
