@@ -38,10 +38,17 @@ export async function getSupabaseSession() {
   if (cachedSession && !isSessionExpired(cachedSession)) return cachedSession;
   // Clear stale cache so we fetch fresh
   cachedSession = null;
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (sessionData?.session?.user) {
-    cachedSession = sessionData.session;
-    return cachedSession;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user) {
+      cachedSession = sessionData.session;
+      return cachedSession;
+    }
+  } catch (error) {
+    // Network failure (AuthRetryableFetchError / "Network request failed") —
+    // treat as "no session" so callers route to signin gracefully instead of
+    // promoting the error to the fatal overlay.
+    console.warn("[getSupabaseSession] failed:", error?.message || error);
   }
   return null;
 }

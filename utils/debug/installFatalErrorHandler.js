@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { setFatalError } from './fatalErrorStore';
+import { isNetworkError } from './isNetworkError';
 
 let installed = false;
 const WRAPPED_HANDLER = Symbol.for('kafel.wrappedGlobalErrorHandler');
@@ -71,8 +72,13 @@ export function installFatalErrorHandler() {
       Object.defineProperty(globalThis, 'RN$handleException', {
         value: (error, isFatal, reportToConsole) => {
           const payload = serializeError(error, isFatal);
-          setFatalError(payload);
           logFatalError(payload);
+
+          // Don't promote transient network errors to the fatal overlay —
+          // they're recoverable and handled at their call sites.
+          if (!isNetworkError(error)) {
+            setFatalError(payload);
+          }
 
           if (shouldInterceptFatalError(isFatal)) {
             return true;
@@ -95,8 +101,13 @@ export function installFatalErrorHandler() {
 
     const wrappedHandler = (error, isFatal) => {
       const payload = serializeError(error, isFatal);
-      setFatalError(payload);
       logFatalError(payload);
+
+      // Don't promote transient network errors to the fatal overlay —
+      // they're recoverable and handled at their call sites.
+      if (!isNetworkError(error)) {
+        setFatalError(payload);
+      }
 
       if (shouldInterceptFatalError(isFatal)) {
         return;

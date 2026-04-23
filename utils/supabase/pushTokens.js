@@ -1,6 +1,7 @@
 import { supabase, ensureSupabaseSession } from "./client";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
+import { isNetworkError } from "../debug/isNetworkError";
 
 /**
  * Upsert the current device's Expo push token
@@ -11,7 +12,17 @@ export async function upsertMyPushToken(expoPushToken) {
     return;
   }
 
-  const session = await ensureSupabaseSession();
+  let session;
+  try {
+    session = await ensureSupabaseSession();
+  } catch (error) {
+    if (isNetworkError(error)) {
+      // Offline at startup — skip silently; we'll retry on next TOKEN_REFRESHED.
+      console.warn("[upsertMyPushToken] Offline, skipping token registration");
+      return;
+    }
+    throw error;
+  }
   const userId = session.user.id;
 
   const platform = Platform.OS;
@@ -33,6 +44,10 @@ export async function upsertMyPushToken(expoPushToken) {
     );
 
   if (error) {
+    if (isNetworkError(error)) {
+      console.warn("[upsertMyPushToken] Offline, skipping token registration");
+      return;
+    }
     console.error("[upsertMyPushToken] Error:", error);
     throw error;
   }

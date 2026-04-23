@@ -29,9 +29,75 @@ import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AppState, Platform, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, WifiOff, AlertTriangle, RefreshCw } from 'lucide-react-native';
+import * as Updates from 'expo-updates';
+import { isNetworkError } from '@/utils/debug/isNetworkError';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+async function reloadApp() {
+  try {
+    await Updates.reloadAsync();
+  } catch (_e) {
+    // expo-updates may be unavailable in dev — fall back to dev reload.
+    try {
+      const DevSettings = require('react-native').DevSettings;
+      DevSettings?.reload?.();
+    } catch (_) {
+      /* noop */
+    }
+  }
+}
+
+function FriendlyErrorScreen({ error, onRetry, retryLabel }) {
+  const [showDetails, setShowDetails] = useState(false);
+  const network = isNetworkError(error);
+  const message = error?.message || String(error || '');
+  const stack = error?.stack || '';
+
+  const title = network ? 'لا يوجد اتصال بالإنترنت' : 'حدث خطأ غير متوقع';
+  const titleEn = network ? 'No Internet Connection' : 'Something went wrong';
+  const body = network
+    ? 'يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.'
+    : 'واجهنا مشكلة أثناء تشغيل التطبيق. يمكنك المحاولة مرة أخرى.';
+  const bodyEn = network
+    ? 'Please check your connection and try again.'
+    : "We ran into a problem while starting the app. Please try again.";
+  const Icon = network ? WifiOff : AlertTriangle;
+  const iconColor = network ? '#38BDF8' : '#FBBF24';
+
+  return (
+    <View style={errorStyles.container}>
+      <View style={[errorStyles.iconWrap, { backgroundColor: network ? 'rgba(56,189,248,0.12)' : 'rgba(251,191,36,0.12)' }]}>
+        <Icon size={40} color={iconColor} />
+      </View>
+      <Text style={errorStyles.title}>{title}</Text>
+      <Text style={errorStyles.titleEn}>{titleEn}</Text>
+      <Text style={errorStyles.body}>{body}</Text>
+      <Text style={errorStyles.bodyEn}>{bodyEn}</Text>
+
+      <Pressable onPress={onRetry} style={({ pressed }) => [errorStyles.primaryBtn, pressed && { opacity: 0.85 }]}>
+        <RefreshCw size={18} color="#fff" />
+        <Text style={errorStyles.primaryBtnText}>{retryLabel || 'إعادة المحاولة'}</Text>
+      </Pressable>
+
+      {!!message && (
+        <Pressable onPress={() => setShowDetails((v) => !v)} style={errorStyles.detailsToggle}>
+          <Text style={errorStyles.detailsToggleText}>
+            {showDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+          </Text>
+        </Pressable>
+      )}
+
+      {showDetails && (
+        <ScrollView style={errorStyles.debugBox} contentContainerStyle={errorStyles.debugContent}>
+          <Text style={errorStyles.debugText}>{message}</Text>
+          {!!stack && <Text style={errorStyles.debugStack}>{stack}</Text>}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -46,25 +112,17 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const err = this.state.error;
-      const errMsg = err?.message || String(err || 'Unknown error');
-      const errStack = err?.stack || '';
       return (
-        <View style={errorStyles.container}>
-          <Text style={errorStyles.emoji}>⚠️</Text>
-          <Text style={errorStyles.title}>حدث خطأ غير متوقع</Text>
-          <Text style={errorStyles.subtitle}>An unexpected error occurred</Text>
-          <ScrollView style={errorStyles.debugBox} contentContainerStyle={errorStyles.debugContent}>
-            <Text style={errorStyles.debugText}>{errMsg}</Text>
-            <Text style={errorStyles.debugStack}>{errStack}</Text>
-          </ScrollView>
-          <Pressable
-            onPress={() => this.setState({ hasError: false, error: null })}
-            style={errorStyles.button}
-          >
-            <Text style={errorStyles.buttonText}>إعادة المحاولة / Retry</Text>
-          </Pressable>
-        </View>
+        <FriendlyErrorScreen
+          error={this.state.error}
+          onRetry={() => {
+            if (isNetworkError(this.state.error)) {
+              reloadApp();
+              return;
+            }
+            this.setState({ hasError: false, error: null });
+          }}
+        />
       );
     }
     return this.props.children;
@@ -77,105 +135,60 @@ const errorStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0A1A2F',
-    padding: 40,
+    paddingHorizontal: 32,
+    paddingVertical: 48,
   },
-  emoji: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: '700', color: '#F2F5FA', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#9AA4B2', marginBottom: 12, textAlign: 'center' },
+  iconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  title: { fontSize: 22, fontWeight: '700', color: '#F2F5FA', marginBottom: 4, textAlign: 'center' },
+  titleEn: { fontSize: 14, color: '#9AA4B2', marginBottom: 16, textAlign: 'center' },
+  body: { fontSize: 15, color: '#CBD5E1', marginBottom: 4, textAlign: 'center', lineHeight: 22 },
+  bodyEn: { fontSize: 13, color: '#94A3B8', marginBottom: 28, textAlign: 'center', lineHeight: 20 },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#D83A3A',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  detailsToggle: { marginTop: 20, padding: 8 },
+  detailsToggleText: { color: '#64748B', fontSize: 13, textDecorationLine: 'underline' },
   debugBox: {
-    maxHeight: 200,
+    maxHeight: 180,
     width: '100%',
+    marginTop: 12,
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.24)',
     borderRadius: 12,
     backgroundColor: '#020617',
-    marginBottom: 16,
   },
   debugContent: { padding: 12 },
-  debugText: { color: '#FEE2E2', fontSize: 13, fontWeight: '600', marginBottom: 8 },
-  debugStack: { color: '#94A3B8', fontSize: 11, lineHeight: 16 },
-  button: {
-    backgroundColor: '#D83A3A',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  debugText: { color: '#FEE2E2', fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  debugStack: { color: '#94A3B8', fontSize: 10, lineHeight: 14 },
 });
 
 function FatalErrorOverlay({ fatalError }) {
   return (
-    <View style={fatalErrorStyles.container}>
-      <Text style={fatalErrorStyles.title}>Startup JS Fatal Error</Text>
-      <Text style={fatalErrorStyles.meta}>
-        {fatalError.name} | {fatalError.jsEngine} | {fatalError.platform} {fatalError.platformVersion}
-      </Text>
-      <Text style={fatalErrorStyles.message}>{fatalError.message}</Text>
-      <ScrollView style={fatalErrorStyles.stackBox} contentContainerStyle={fatalErrorStyles.stackContent}>
-        <Text style={fatalErrorStyles.stack}>{fatalError.stack || 'No stack available.'}</Text>
-      </ScrollView>
-      <Pressable onPress={clearFatalError} style={fatalErrorStyles.button}>
-        <Text style={fatalErrorStyles.buttonText}>Dismiss</Text>
-      </Pressable>
+    <View style={StyleSheet.absoluteFill}>
+      <FriendlyErrorScreen
+        error={fatalError}
+        onRetry={() => {
+          clearFatalError();
+          reloadApp();
+        }}
+      />
     </View>
   );
 }
-
-const fatalErrorStyles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-    backgroundColor: '#08111F',
-    paddingTop: 72,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-  },
-  title: {
-    color: '#F8FAFC',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  meta: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  message: {
-    color: '#FEE2E2',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  stackBox: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.24)',
-    borderRadius: 14,
-    backgroundColor: '#020617',
-  },
-  stackContent: {
-    padding: 14,
-  },
-  stack: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  button: {
-    marginTop: 16,
-    alignSelf: 'flex-start',
-    backgroundColor: '#D83A3A',
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 const queryClient = new QueryClient({
   defaultOptions: {
