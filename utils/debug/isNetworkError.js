@@ -32,3 +32,28 @@ export function isNetworkError(error) {
 
   return NETWORK_ERROR_SUBSTRINGS.some((needle) => message.includes(needle));
 }
+
+// Debounce network-offline toasts so retries/parallel failures
+// don't spam the user with duplicate banners.
+let lastOfflineToastAt = 0;
+const OFFLINE_TOAST_COOLDOWN_MS = 5000;
+
+export function notifyOffline() {
+  const now = Date.now();
+  if (now - lastOfflineToastAt < OFFLINE_TOAST_COOLDOWN_MS) return;
+  lastOfflineToastAt = now;
+
+  // Lazy require to avoid circular imports at module init
+  try {
+    const { showToast } = require('@/utils/notifications/inAppStore');
+    showToast({
+      id: 'network-offline',
+      type: 'warning',
+      title: 'تحقق من اتصالك بالإنترنت',
+      body: 'يبدو أنك غير متصل. يرجى التحقق من الشبكة والمحاولة مرة أخرى.',
+      duration: 6000,
+    });
+  } catch (_e) {
+    // Toast system not available (e.g. during very early startup) — ignore.
+  }
+}

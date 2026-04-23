@@ -1,7 +1,7 @@
 import { supabase, ensureSupabaseSession } from "./client";
 import { Platform } from "react-native";
 import * as Device from "expo-device";
-import { isNetworkError } from "../debug/isNetworkError";
+import { isNetworkError, notifyOffline } from "../debug/isNetworkError";
 
 /**
  * Upsert the current device's Expo push token
@@ -17,7 +17,8 @@ export async function upsertMyPushToken(expoPushToken) {
     session = await ensureSupabaseSession();
   } catch (error) {
     if (isNetworkError(error)) {
-      // Offline at startup — skip silently; we'll retry on next TOKEN_REFRESHED.
+      // Offline at startup — skip silently; retry on next TOKEN_REFRESHED.
+      // Don't toast here since the session fetch catch already does.
       console.warn("[upsertMyPushToken] Offline, skipping token registration");
       return;
     }

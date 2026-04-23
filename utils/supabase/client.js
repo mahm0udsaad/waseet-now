@@ -1,6 +1,7 @@
 import "react-native-url-polyfill/auto";
 import * as SecureStore from "expo-secure-store";
 import { createClient } from "@supabase/supabase-js";
+import { isNetworkError, notifyOffline } from "../debug/isNetworkError";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -46,9 +47,10 @@ export async function getSupabaseSession() {
     }
   } catch (error) {
     // Network failure (AuthRetryableFetchError / "Network request failed") —
-    // treat as "no session" so callers route to signin gracefully instead of
-    // promoting the error to the fatal overlay.
+    // treat as "no session" so callers route to signin gracefully, and
+    // surface a toast so the user knows why sign-in features may fail.
     console.warn("[getSupabaseSession] failed:", error?.message || error);
+    if (isNetworkError(error)) notifyOffline();
   }
   return null;
 }
