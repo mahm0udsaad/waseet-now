@@ -13,3 +13,4 @@ env:
 
 - runFlow: ../flows/18-browse-taqib-list.yaml
 - runFlow: ../flows/19-create-taqib-ad.yaml
+- runFlow: ../flows/29-taqib-receipt-to-order.yaml

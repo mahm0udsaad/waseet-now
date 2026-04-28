@@ -3,6 +3,13 @@ import { decode } from "base64-arraybuffer";
 import { ensureSupabaseSession, supabase, getSupabaseUser } from "./client";
 import { generateReceiptPdf } from "../receipts/receiptPdf";
 import { createOrder, createOrderNotification } from "./orders";
+import { calculateCommission } from "@/constants/commissionConfig";
+import {
+  assignOrderRole,
+  assignDaminRole,
+  assignReceiptRole,
+  normalizeDaminAmount,
+} from "@/utils/receipts/normalizeReceiptItem";
 
 const CHAT_BUCKET = "chat";
 
@@ -178,13 +185,15 @@ export async function acceptReceipt(receiptId, adTitle = "", isRTL = true) {
 
   // Create order after receipt is accepted
   try {
+    const { total: orderAmount } = calculateCommission(adType, Number(receipt.amount));
+
     const order = await createOrder({
       receipt_id: receipt.id,
       conversation_id: receipt.conversation_id,
       ad_id: receipt.ad_id,
       buyer_id: userId,
       seller_id: receipt.seller_id,
-      amount: receipt.amount,
+      amount: orderAmount,
       currency: receipt.currency,
     });
 
@@ -194,7 +203,7 @@ export async function acceptReceipt(receiptId, adTitle = "", isRTL = true) {
       actor_id: userId,
       order_id: order.id,
       ad_title: adTitle,
-      amount: receipt.amount,
+      amount: orderAmount,
       currency: receipt.currency,
     });
 
@@ -342,26 +351,24 @@ export async function getMyReceipts() {
       currency: o.currency || "SAR",
       status: o.status,
       date: o.created_at,
-      role: o.buyer_id === userId ? "buyer" : "seller",
+      role: assignOrderRole(o, userId),
       pdf_path: o.receipt?.pdf_path || null,
       adType: o.ad?.type || null,
     });
   }
 
   for (const d of daminRes.data || []) {
-    const isPayerSide =
-      d.payer_user_id === userId || d.creator_id === userId;
     items.push({
       id: `damin:${d.id}`,
       kind: "damin",
       originalId: d.id,
       title: d.service_type_or_details || "",
       description: "",
-      amount: Number(d.total_amount ?? d.service_value) || 0,
+      amount: normalizeDaminAmount(d),
       currency: "SAR",
       status: d.status,
       date: d.created_at,
-      role: isPayerSide ? "payer" : "beneficiary",
+      role: assignDaminRole(d, userId),
       pdf_path: null,
       adType: null,
     });
@@ -378,7 +385,7 @@ export async function getMyReceipts() {
       currency: r.currency || "SAR",
       status: r.status,
       date: r.created_at,
-      role: r.seller_id === userId ? "seller" : "buyer",
+      role: assignReceiptRole(r, userId),
       pdf_path: r.pdf_path || null,
       adType: r.ad?.type || null,
     });

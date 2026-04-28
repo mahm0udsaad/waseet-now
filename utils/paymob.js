@@ -12,7 +12,7 @@ const PUBLIC_KEY = process.env.EXPO_PUBLIC_PAYMOB_PUBLIC_KEY || "";
  * Normalize various Paymob status strings to our standard terminal states.
  * Returns "succeeded", "failed", "canceled", or null if still pending.
  */
-function normalizePaymobStatus(raw) {
+export function normalizePaymobStatus(raw) {
   const s = (raw || "").toLowerCase().trim();
 
   // Success variants

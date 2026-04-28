@@ -1,0 +1,64 @@
+appId: com.mahm09d.kafel
+
+---
+
+# Flow 29: Full Taqib receipt → order flow with commission verification
+# Verifies: commission is applied (order amount > base amount) for taqib service type
+# Requires: Taqib ad created, buyer started chat with seller
+
+# --- Seller creates receipt ---
+- runFlow: ../helpers/login-seller.yaml
+
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+- assertVisible:
+    id: "chat-text-input"
+
+- tapOn:
+    id: "chat-receipt-btn"
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "receipt-desc-input"
+- inputText: "رسوم خدمة تعقيب"
+
+- tapOn:
+    id: "receipt-amount-input"
+- inputText: ${TEST_AMOUNT}
+
+- tapOn:
+    id: "receipt-create-btn"
+- waitForAnimationToEnd
+- assertVisible: "${TEST_AMOUNT}"
+
+# --- Buyer accepts receipt ---
+- runFlow: ../helpers/login-buyer.yaml
+
+- tapOn:
+    id: "tab-chats"
+- waitForAnimationToEnd
+- tapOn:
+    index: 0
+- waitForAnimationToEnd
+- assertVisible: "${TEST_AMOUNT}"
+
+- tapOn:
+    id: "receipt-accept-btn"
+- waitForAnimationToEnd
+
+# --- Verify order created with commission ---
+# taqib commission = 10%, so order amount must be > TEST_AMOUNT
+# For TEST_AMOUNT=4999 → order should show 5498 or 5499 (rounded)
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "order-card-0"
+# Base amount alone must NOT be the order total
+- assertNotVisible: "${TEST_AMOUNT} SAR"
+# Order status should be awaiting payment, not paid
+- assertVisible: "بانتظار الدفع"

@@ -24,3 +24,14 @@ appId: com.mahm09d.kafel
 - tapOn:
     id: "receipt-accept-btn"
 - waitForAnimationToEnd
+
+# Go to orders and verify the order was created with commission included.
+# TEST_AMOUNT=4999 with 10% taqib commission → order amount = 5498.90
+# We check the orders list shows a value > TEST_AMOUNT (i.e. commission was added).
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "order-card-0"
+# The order amount must NOT equal the base amount (commission must be included)
+- assertNotVisible: "${TEST_AMOUNT} SAR"

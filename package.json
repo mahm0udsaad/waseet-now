@@ -18,7 +18,19 @@
     "qa:production": "npm run lint && npm run qa:critical",
     "e2e:production-readiness": "maestro test .maestro/suites/production-readiness.yaml",
     "production-check": "npm run lint && npm run e2e:production-readiness",
-    "e2e:full": "npm run qa:production && npm run e2e:production-readiness"
+    "e2e:full": "npm run qa:production && npm run e2e:production-readiness",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js", "**/__tests__/**/*.test.ts"],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "transform": {
+      "^.+\\.[jt]sx?$": ["babel-jest", { "configFile": "./babel.jest.config.js" }]
+    }
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.0",
@@ -77,9 +89,14 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.2",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
+    "babel-jest": "^30.3.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "jest": "^30.3.0",
+    "jest-expo": "^55.0.16",
     "patch-package": "8.0.1",
     "postinstall-postinstall": "^2.1.0",
     "sharp": "^0.34.5",

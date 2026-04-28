@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { fetchUserOrders, fetchOrderById } from "@/utils/supabase/orders";
 import { fetchUserDaminOrders } from "@/utils/supabase/daminOrders";
 import { fetchMyAirportRequests } from "@/utils/supabase/airportRequests";
+import { normalizeDaminStatus } from "@/utils/orders/normalizeDaminStatus";
 
 // Airport requests we treat as "running" — i.e. still in the active lifecycle.
 // Terminal-negative states are excluded so the main orders list only shows
@@ -60,16 +61,7 @@ export function useOrders() {
         amount: order.total_amount,
         currency: 'SAR',
         originalDaminStatus: order.status,
-        // Map damin order status to regular order status for display
-        status: order.status === 'created' || order.status === 'pending_confirmations'
-          ? 'pending_payment'
-          : order.status === 'both_confirmed'
-          ? 'paid'
-          : order.status === 'awaiting_payment'
-          ? 'awaiting_payment'
-          : order.status === 'payment_submitted'
-          ? 'payment_submitted'
-          : order.status,
+        status: normalizeDaminStatus(order.status),
         isDaminOrder: true,
       }));
 

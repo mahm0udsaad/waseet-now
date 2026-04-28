@@ -25,3 +25,12 @@ appId: com.mahm09d.kafel
 
 # Verify confirmation recorded
 - assertVisible: "تم التأكيد"
+
+# Go back to orders list and verify status is "awaiting payment", NOT "paid"
+- tapOn:
+    id: "tab-orders"
+- waitForAnimationToEnd
+- assertVisible:
+    text: "بانتظار الدفع"
+    index: 0
+- assertNotVisible: "مدفوع"

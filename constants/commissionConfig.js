@@ -12,6 +12,7 @@
 
 import { create } from "zustand";
 import { fetchCommissionSettings } from "@/utils/supabase/commissionSettings";
+import { applyCommission } from "@/utils/commission/applyCommission";
 
 // ─── Hardcoded defaults (used as fallback) ─────────────────────────────────
 
@@ -118,21 +119,9 @@ export const COMMISSION_CONFIG = new Proxy(
  * Calculate commission based on ad type and price.
  */
 export const calculateCommission = (adType, price = 0) => {
-  const config = useCommissionStore.getState().config[adType];
-
-  if (!config) {
-    return { commission: 0, total: price, config: null };
-  }
-
-  let commission = 0;
-
-  if (config.type === "fixed") {
-    commission = config.value;
-  } else if (config.type === "percentage") {
-    commission = (price * config.value) / 100;
-  }
-
-  return { commission, total: price + commission, config };
+  const config = useCommissionStore.getState().config[adType] ?? null;
+  const { commission, total } = applyCommission(config, price);
+  return { commission, total, config };
 };
 
 /**

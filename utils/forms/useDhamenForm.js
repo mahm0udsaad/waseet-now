@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { Alert } from "react-native";
 import { getCommissionConfig } from "@/constants/commissionConfig";
+import { applyCommission } from "@/utils/commission/applyCommission";
 import { getCountryName } from "@/utils/countries";
 
 const INITIAL_FORM_DATA = {
@@ -40,17 +41,17 @@ export const useDhamenForm = (isRTL, userPhone, serviceProviderCountry, serviceP
   // Calculations
   const calculations = useMemo(() => {
     const daminConfig = getCommissionConfig().damin;
-    const rate = daminConfig?.value ?? 10;
     const valueAmount = parseFloat(formData.value) || 0;
-    const commission = valueAmount * (rate / 100);
-    const total = valueAmount + commission;
-
+    const config = daminConfig
+      ? { type: daminConfig.type, value: daminConfig.value }
+      : { type: "percentage", value: 10 };
+    const { commission, total } = applyCommission(config, valueAmount);
     return {
       value: valueAmount,
       commission,
       tax: 0,
       total,
-      commissionRate: rate,
+      commissionRate: config.value,
     };
   }, [formData.value]);
 
