@@ -5,11 +5,47 @@ import {
   fetchMessages,
   subscribeToMessages,
   sendMessage as supabaseSendMessage,
+  sendSystemMessage,
 } from "@/utils/supabase/chat";
 import { getSupabaseUser, supabase } from "@/utils/supabase/client";
 import { markConversationNotificationsRead } from "@/utils/supabase/notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
+
+// Build the content string for the ad-details system message that opens every
+// new Tanazul conversation. Uses metadata stored on the ad row.
+function buildAdDetailsContent(ad, isRTL) {
+  const meta = ad.metadata || {};
+  const lines = [];
+
+  const title = ad.title || "";
+  if (title) {
+    lines.push(isRTL ? `الإعلان: ${title}` : `Ad: ${title}`);
+  }
+
+  const profLabel = isRTL
+    ? meta.profession_label_ar || meta.profession || ""
+    : meta.profession_label_en || meta.profession || "";
+  if (profLabel) {
+    lines.push(isRTL ? `المهنة: ${profLabel}` : `Profession: ${profLabel}`);
+  }
+
+  const price = ad.price != null ? Number(ad.price) : null;
+  if (price != null && price > 0) {
+    const formatted = price.toLocaleString();
+    lines.push(isRTL ? `السعر: ${formatted} ر.س` : `Price: ${formatted} SAR`);
+  }
+
+  if (meta.nationality) {
+    lines.push(isRTL ? `الجنسية: ${meta.nationality}` : `Nationality: ${meta.nationality}`);
+  }
+
+  if (meta.contractDuration) {
+    lines.push(isRTL ? `مدة العقد: ${meta.contractDuration}` : `Contract: ${meta.contractDuration}`);
+  }
+
+  return lines.join("\n");
+}
 
 export function useChatConversation(params, t, isRTL) {
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -54,6 +90,8 @@ export function useChatConversation(params, t, isRTL) {
   tRef.current = t;
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   // Resolve current user + conversation id
   useEffect(() => {
@@ -217,7 +255,44 @@ export function useChatConversation(params, t, isRTL) {
     const load = async () => {
       setLoadingMessages(true);
       try {
-        await refreshMessagesRef.current?.();
+        const loaded = await refreshMessagesRef.current?.();
+
+        // If this is an ad-based conversation with no messages yet, drop the
+        // ad-details system card. Works whether the chat was opened from the
+        // ad detail screen or from the chats list (covers existing empty chats).
+        if (loaded?.length === 0) {
+          try {
+            // adId may come from route params (tanazul-details nav) or from
+            // the conversations table (chats-list nav — only has conversationId).
+            const p = paramsRef.current;
+            let adId = Array.isArray(p.adId) ? p.adId[0] : p.adId;
+
+            if (!adId) {
+              const { data: convRow } = await supabase
+                .from("conversations")
+                .select("ad_id")
+                .eq("id", conversationId)
+                .maybeSingle();
+              adId = convRow?.ad_id || null;
+            }
+
+            if (adId) {
+              const { data: adRow } = await supabase
+                .from("ads")
+                .select("title, price, metadata")
+                .eq("id", adId)
+                .maybeSingle();
+
+              if (adRow) {
+                const content = buildAdDetailsContent(adRow, isRTLRef.current);
+                if (content) await sendSystemMessage(conversationId, content);
+                // real-time subscription will push it into the message list automatically
+              }
+            }
+          } catch (sysErr) {
+            console.warn("[useChatConversation] ad-details system message error:", sysErr?.message);
+          }
+        }
       } catch (error) {
         const message =
           error?.message ||

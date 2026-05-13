@@ -362,6 +362,31 @@ export async function sendMessage(conversationId, content, attachments = [], { r
   };
 }
 
+// Inserts a system-type message (no notification, rendered as an info card).
+// Used to drop ad-details as the first message in a new Tanazul conversation.
+// Pass `metadata` with `card_type` to control the icon/colour in SystemMessageCard.
+export async function sendSystemMessage(conversationId, content, metadata = null) {
+  const session = await ensureSupabaseSession();
+  const userId = session.user.id;
+
+  const row = {
+    conversation_id: conversationId,
+    sender_id: userId,
+    content,
+    type: "system",
+  };
+  if (metadata) row.metadata = metadata;
+
+  const { data, error } = await supabase
+    .from("messages")
+    .insert(row)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export function subscribeToMessages(conversationId, onInsert, onUpdate) {
   if (!conversationId) {
     console.warn("[subscribeToMessages] No conversationId provided");

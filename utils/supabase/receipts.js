@@ -4,6 +4,7 @@ import { ensureSupabaseSession, supabase, getSupabaseUser } from "./client";
 import { generateReceiptPdf } from "../receipts/receiptPdf";
 import { createOrder, createOrderNotification } from "./orders";
 import { calculateCommission } from "@/constants/commissionConfig";
+import { digitsOnly } from "@/utils/normalizeDigits";
 import {
   assignOrderRole,
   assignDaminRole,
@@ -302,7 +303,7 @@ export async function getMyReceipts() {
   // Build damin OR filter, matching both user IDs and phone-number forms
   let daminOrFilter = `creator_id.eq.${userId},payer_user_id.eq.${userId},beneficiary_user_id.eq.${userId}`;
   if (userPhone) {
-    const digits = String(userPhone).replace(/[^0-9]/g, "");
+    const digits = digitsOnly(userPhone);
     const withPlus = "+" + digits;
     daminOrFilter +=
       `,payer_phone.eq.${digits},beneficiary_phone.eq.${digits}` +
@@ -394,4 +395,3 @@ export async function getMyReceipts() {
   items.sort((a, b) => new Date(b.date) - new Date(a.date));
   return { items, userId };
 }
-

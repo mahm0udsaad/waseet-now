@@ -1,6 +1,7 @@
 import MessageBubble from "@/components/chat/MessageBubble";
 import SwipeableMessage from "@/components/chat/SwipeableMessage";
 import SystemMessageCard from "@/components/chat/SystemMessageCard";
+import SupportMessageCard from "@/components/chat/SupportMessageCard";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
@@ -9,7 +10,7 @@ import { useChatConversation } from "@/hooks/useChatConversation";
 import { useChatTyping } from "@/hooks/useChatTyping";
 import { useChatReceipt } from "@/hooks/useChatReceipt";
 import { useChatOrders } from "@/hooks/useChatOrders";
-import { useChatPayments } from "@/hooks/useChatPayments";
+import { useChatPayments, sendPaymentInstructionMessage } from "@/hooks/useChatPayments";
 import { useTranslation } from "@/utils/i18n/store";
 import { acceptReceipt, fetchReceiptById } from "@/utils/supabase/receipts";
 import { hapticFeedback } from "@/utils/native/haptics";
@@ -456,6 +457,13 @@ export default function ChatScreen() {
               };
               await handleSendMessage("", [paymentLinkAttachment]);
 
+              // Show payment instructions in chat so the buyer sees bank details immediately
+              try {
+                await sendPaymentInstructionMessage(conversationId, updatedReceipt.amount, isRTL);
+              } catch (instrErr) {
+                console.warn("[handleAcceptReceipt] Failed to send payment instruction message:", instrErr?.message);
+              }
+
               // Mark receipt as accepted so the button hides immediately
               setLocalAcceptedReceiptIds((prev) => new Set([...prev, receiptId]));
 
@@ -592,9 +600,21 @@ export default function ChatScreen() {
       nextMessage.sender_id !== item.sender_id ||
       (new Date(nextMessage.created_at) - new Date(item.created_at) > 5 * 60 * 1000);
 
-    // System message
+    // System message (automated info card)
     if (item.type === 'system') {
-       return <SystemMessageCard content={item.content} />;
+      return <SystemMessageCard content={item.content} type={item.metadata?.card_type || 'ad_details'} />;
+    }
+
+    // Support message (sent by admin/support team from the dashboard)
+    if (item.type === 'support') {
+      const meta = (item.attachments || []).find((a) => a.type === 'support_metadata') || {};
+      return (
+        <SupportMessageCard
+          content={item.content}
+          senderName={meta.sender_name}
+          senderRole={meta.sender_role}
+        />
+      );
     }
 
     // Read current values from refs

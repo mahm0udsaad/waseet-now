@@ -1,5 +1,6 @@
 import { ensureSupabaseSession, supabase } from "./client";
 import { getCommissionConfig } from "@/constants/commissionConfig";
+import { digitsOnly } from "@/utils/normalizeDigits";
 
 /**
  * Get damin order context for a chat conversation.
@@ -234,9 +235,9 @@ export async function fetchUserDaminOrders() {
   // Also match by phone number so beneficiary can see orders before linking.
   // Phone formats vary: auth stores "201279119364", orders may store "+201279119364"
   if (userPhone) {
-    const digitsOnly = userPhone.replace(/[^0-9]/g, '');
-    const withPlus = '+' + digitsOnly;
-    orFilter += `,payer_phone.eq.${digitsOnly},beneficiary_phone.eq.${digitsOnly}`;
+    const normalizedPhone = digitsOnly(userPhone);
+    const withPlus = '+' + normalizedPhone;
+    orFilter += `,payer_phone.eq.${normalizedPhone},beneficiary_phone.eq.${normalizedPhone}`;
     orFilter += `,payer_phone.eq.${withPlus},beneficiary_phone.eq.${withPlus}`;
   }
 

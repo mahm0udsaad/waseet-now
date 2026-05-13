@@ -1,5 +1,6 @@
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { useTranslation } from "@/utils/i18n/store";
+import { digitsOnly } from "@/utils/normalizeDigits";
 import { supabase } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import { LinearGradient } from "expo-linear-gradient";
@@ -197,7 +198,7 @@ export default function OtpScreen() {
               ref={hiddenInputRef}
               value={otp}
               onChangeText={(text) => {
-                const cleaned = String(text || "").replace(/[^0-9]/g, "").slice(0, 6);
+                const cleaned = digitsOnly(text).slice(0, 6);
                 setOtp(cleaned);
                 if (cleaned.length === 6) handleVerify(cleaned);
               }}

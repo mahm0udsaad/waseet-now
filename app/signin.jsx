@@ -4,6 +4,7 @@ import AppPrimaryButton from "@/components/expo-ui/app-primary-button";
 import KeyboardAvoidingAnimatedView from "@/components/KeyboardAvoidingAnimatedView";
 import { COUNTRIES, getCountryName } from "@/utils/countries";
 import { useTranslation } from "@/utils/i18n/store";
+import { digitsOnly } from "@/utils/normalizeDigits";
 import { supabase } from "@/utils/supabase/client";
 import { useTheme } from "@/utils/theme/store";
 import { Spacing } from "@/constants/theme";
@@ -156,7 +157,7 @@ export default function SignInScreen() {
             placeholderTextColor={colors.textMuted}
             value={phoneNumber}
             onChangeText={(text) => {
-              const cleaned = text.replace(/[^0-9]/g, "").replace(/^0+/, "");
+              const cleaned = digitsOnly(text).replace(/^0+/, "");
               setPhoneNumber(cleaned);
             }}
             keyboardType="phone-pad"

@@ -1,4 +1,5 @@
 import "react-native-url-polyfill/auto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { createClient } from "@supabase/supabase-js";
 import { isNetworkError, notifyOffline } from "../debug/isNetworkError";
@@ -10,17 +11,29 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("Supabase env vars are missing. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
 }
 
-// SecureStore adapter for Supabase auth — stores session tokens in the
-// device keychain/keystore instead of plaintext AsyncStorage.
-const SecureStoreAdapter = {
-  getItem: (key) => SecureStore.getItemAsync(key),
-  setItem: (key, value) => SecureStore.setItemAsync(key, value),
-  removeItem: (key) => SecureStore.deleteItemAsync(key),
-};
+// One-time migration: move any pre-existing session out of SecureStore so users
+// who upgrade don't get signed out. Runs fire-and-forget at module load.
+const LEGACY_SESSION_KEYS = [
+  `sb-${(supabaseUrl || "").replace(/^https?:\/\//, "").split(".")[0]}-auth-token`,
+  "supabase.auth.token",
+];
+(async () => {
+  try {
+    for (const key of LEGACY_SESSION_KEYS) {
+      if (!key) continue;
+      const existing = await SecureStore.getItemAsync(key).catch(() => null);
+      if (existing) {
+        const already = await AsyncStorage.getItem(key);
+        if (!already) await AsyncStorage.setItem(key, existing);
+        await SecureStore.deleteItemAsync(key).catch(() => {});
+      }
+    }
+  } catch {}
+})();
 
 export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
   auth: {
-    storage: SecureStoreAdapter,
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

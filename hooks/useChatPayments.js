@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
-import { sendMessage as sendChatMessage } from "@/utils/supabase/chat";
+import { sendMessage as sendChatMessage, sendSystemMessage } from "@/utils/supabase/chat";
 import { checkPaymobStatus, createPaymobIntention } from "@/utils/paymob";
 import {
   confirmDaminCardPayment,
@@ -17,6 +17,36 @@ import {
   uploadOrderTransferReceipt,
 } from "@/utils/supabase/orders";
 import { usePaymentFlowStore } from "@/utils/payments/paymentFlowStore";
+
+// Sends the escrow-hold info card that appears after a confirmed card payment.
+// Explicitly names Waseet Alan as the custodian and explains funds are locked until both parties confirm.
+async function sendEscrowHoldMessage(convId, amount, isRTL) {
+  const formatted = Number(amount || 0).toLocaleString();
+  const content = isRTL
+    ? `تم الدفع — المبلغ محتجز لدى وسيط الان\nتم استلام ${formatted} ر.س بنجاح وسيبقى محتجزاً لدى وسيط الان حتى اكتمال الخدمة وتأكيدها من كلا الطرفين. لن يُحوَّل للبائع إلا بعد موافقة الطرفين.`
+    : `Payment received — held by Waseet Alan\nSAR ${formatted} has been successfully received and is securely held by Waseet Alan until the service is completed and confirmed by both parties. Funds will only be released to the seller once both sides confirm.`;
+  await sendSystemMessage(convId, content, { card_type: "payment" });
+}
+
+// Sends a lighter escrow-pending card for bank-transfer submissions that are
+// still awaiting admin approval — funds are not locked yet.
+async function sendEscrowPendingMessage(convId, amount, isRTL) {
+  const formatted = Number(amount || 0).toLocaleString();
+  const content = isRTL
+    ? `في انتظار تأكيد التحويل\nبعد مراجعة الإدارة وتأكيد استلام ${formatted} ر.س، سيُحتجز المبلغ لدى وسيط الان حتى اكتمال الخدمة وتأكيدها من كلا الطرفين.`
+    : `Awaiting transfer confirmation\nOnce admin verifies receipt of SAR ${formatted}, the amount will be held by Waseet Alan until the service is completed and confirmed by both parties.`;
+  await sendSystemMessage(convId, content, { card_type: "payment" });
+}
+
+// Sends payment instructions to the buyer immediately after a receipt is accepted.
+// Shows bank account details so the buyer can start a transfer without opening the payment modal.
+export async function sendPaymentInstructionMessage(convId, amount, isRTL) {
+  const formatted = Number(amount || 0).toLocaleString();
+  const content = isRTL
+    ? `تعليمات الدفع — ${formatted} ر.س\nاضغط على "ادفع الآن" أو حوّل المبلغ مباشرة:\n\n• بطاقة ائتمانية/مدى (Visa · Mastercard · Mada)\n• تحويل بنكي:\n  البنك: مصرف الراجحي\n  اسم الحساب: مؤسسة وسيط الان\n  رقم الحساب: 646000010006087777004\n  IBAN: SA2380000646608017777004\n\nاكتب رقم جوالك في خانة البيان عند التحويل، ثم أرفق الإيصال داخل التطبيق.`
+    : `Payment Instructions — SAR ${formatted}\nTap "Pay Now" or transfer directly:\n\n• Credit/Debit Card (Visa · Mastercard · Mada)\n• Bank Transfer:\n  Bank: AlRajhi Bank\n  Account Name: Waseet Alan Est.\n  Account No: 646000010006087777004\n  IBAN: SA2380000646608017777004\n\nWrite your phone number in the transfer narrative, then attach the receipt inside the app.`;
+  await sendSystemMessage(convId, content, { card_type: "payment" });
+}
 
 /**
  * Handles all payment flows (card + bank transfer) for both regular and damin orders.
@@ -125,6 +155,7 @@ export function useChatPayments({
                   createdAt: new Date().toISOString(),
                   order_id: orderId,
                 }]);
+                await sendEscrowHoldMessage(convId, params.amount, isRTL);
               }
             } catch (msgErr) {
               console.warn("[DaminPay] Failed to send payment receipt:", msgErr);
@@ -217,6 +248,7 @@ export function useChatPayments({
                   createdAt: new Date().toISOString(),
                   order_id: orderId,
                 }]);
+                await sendEscrowHoldMessage(convId, params.amount, isRTL);
               }
             } catch (msgErr) {
               console.warn("[RegularPay] Failed to send payment receipt:", msgErr);
@@ -336,7 +368,10 @@ export function useChatPayments({
           ? `تم إرسال إيصال التحويل البنكي\nالمبلغ: ${amount} ر.س\nسيتم مراجعته من قبل الإدارة.`
           : `Bank transfer receipt submitted\nAmount: ${amount} SAR\nUnder admin review.`;
         if (conversationId) {
-          try { await sendChatMessage(conversationId, msg); } catch {}
+          try {
+            await sendChatMessage(conversationId, msg);
+            await sendEscrowPendingMessage(conversationId, ctx.amount, isRTL);
+          } catch {}
         }
 
         try {
@@ -374,6 +409,10 @@ export function useChatPayments({
           order_id: orderId,
           createdAt: new Date().toISOString(),
         }]);
+
+        try {
+          await sendEscrowPendingMessage(conversationId, ctx.amount, isRTL);
+        } catch {}
 
         Alert.alert(
           isRTL ? "تم" : "Done",

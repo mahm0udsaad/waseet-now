@@ -26,6 +26,7 @@ import { useDhamenForm } from "@/utils/forms/useDhamenForm";
 import { useTranslation } from "@/utils/i18n/store";
 import { hapticFeedback } from "@/utils/native/haptics";
 import { borderRadius, hairlineWidth, spacing } from "@/utils/native/layout";
+import { digitsOnly } from "@/utils/normalizeDigits";
 import { useTheme } from "@/utils/theme/store";
 import { getSupabaseSession } from "@/utils/supabase/client";
 
@@ -97,7 +98,7 @@ export default function CreateDhamenScreen() {
   }, [selectedProviderCountry, serviceProviderLocalNumber, updateFormData]);
 
   const handleProviderPhoneChange = useCallback((text) => {
-    const cleaned = text.replace(/[^0-9]/g, "");
+    const cleaned = digitsOnly(text);
     setServiceProviderLocalNumber(cleaned);
   }, []);
 
